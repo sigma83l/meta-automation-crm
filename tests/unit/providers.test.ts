@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFakeAiProvider } from "@/src/modules/ai/providers/fake-ai-provider";
+import { createDeterministicAiProvider } from "@/src/modules/ai/providers/deterministic-provider";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
 import { createFakeMessagingProvider } from "@/src/modules/integrations/providers/fake-messaging-provider";
 import { syntheticInboundFixture, syntheticWorkspace } from "@/tests/fixtures/synthetic";
@@ -86,20 +86,30 @@ describe("provider seams", () => {
   });
 
   it("requires human review when fake AI has no approved knowledge", async () => {
-    const provider = createFakeAiProvider();
+    const provider = createDeterministicAiProvider();
     const result = await provider.generateStructuredReply({
       workspaceId: syntheticWorkspace.id,
       conversationId: "conv-synthetic-001",
-      language: "en",
-      customerMessage: "What is the price?",
-      approvedKnowledge: []
+      messages: [{ role: "customer", content: "What is the price?" }],
+      requiredFields: [],
+      faqItems: [],
+      priceItems: [],
+      policy: {
+        primaryLanguage: "en",
+        fallbackLanguage: "en",
+        forbiddenClaims: [],
+        escalationKeywords: [],
+        lowConfidenceThreshold: 0.65
+      },
+      classification: "synthetic",
+      demoMode: true
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.needsHuman).toBe(true);
       expect(result.value.confidence).toBeLessThan(0.5);
-      expect(result.value.synthetic).toBe(true);
+      expect(result.value.knowledgeItemIds).toEqual([]);
     }
   });
 });

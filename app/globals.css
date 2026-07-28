@@ -1055,6 +1055,19 @@ main {
     position: static;
   }
 
+  .customer-actions,
+  .customer-actions form {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .customer-actions input,
+  .customer-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
   .control-brief {
     min-height: auto;
     padding: 24px;
@@ -1108,5 +1121,92 @@ main {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+.settings-stack {
+  display: grid;
+  gap: 20px;
+  max-width: 1100px;
+}
+.settings-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #dbe2e8);
+  border-radius: 18px;
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+.settings-card h2 {
+  margin: 0;
+}
+.form-grid,
+.settings-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.settings-card label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+.settings-card input,
+.settings-card textarea,
+.settings-card select {
+  width: 100%;
+  border: 1px solid #cbd5df;
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #14242d;
+}
+.settings-card textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+.settings-card .wide {
+  grid-column: 1 / -1;
+}
+.settings-card .check {
+  display: flex;
+  align-items: center;
+}
+.settings-card .check input {
+  width: auto;
+}
+.warning-box {
+  border-inline-start: 4px solid #d97706;
+  background: #fff7e6;
+  padding: 12px;
+  border-radius: 8px;
+}
+.credential-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-block-end: 1px solid #e5eaf0;
+  padding-block: 10px;
+}
+.credential-row span {
+  margin-inline-end: auto;
+}
+.form-status {
+  background: #e8f7ee;
+  border: 1px solid #9ed5b4;
+  border-radius: 10px;
+  padding: 12px;
+}
+@media (max-width: 760px) {
+  .form-grid,
+  .settings-columns {
+    grid-template-columns: 1fr;
+  }
+  .settings-card .wide {
+    grid-column: auto;
+  }
+  .credential-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

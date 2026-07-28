@@ -3,9 +3,10 @@
 Independent production-candidate foundation for workspace-isolated Instagram
 and WhatsApp automation with AI-assisted CRM workflows.
 
-Prompt 2 adds the workspace-scoped CRM/inbox graph, content-verified private
-media, and secure Excel/complete ZIP exports. Provider connections, outbound
-adapters and cloud deployment remain absent.
+The current checkpoint includes workspace-scoped CRM/inbox, private media,
+secure Excel/ZIP exports, structured business knowledge, strict AI contracts,
+synthetic Demo privacy gates, and encrypted BYOK. Real provider connections,
+outbound adapters, and cloud deployment remain absent.
 
 ## Requirements
 
@@ -37,6 +38,8 @@ pnpm test:e2e:auth
 ```
 
 CRM is available at `/crm` and the no-send inbox foundation at `/inbox`.
+Business profile, FAQs, pricing, AI style, and credential status are available
+at `/settings`.
 Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
 
 Do not put real credentials into `.env.example`, fixtures, logs, issues, or

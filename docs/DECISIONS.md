@@ -74,3 +74,20 @@ One, selected, filtered and full-workspace exports share one collector
 interface. Synchronous generation is capped; large work uses the durable event
 seam. ZIP paths are generated, workbook formulas neutralized, secret-shaped
 keys removed and downloads expire.
+
+## D-014 — Structured knowledge before RAG
+
+V1 uses profiles, FAQs, and price items. Document ingestion and vector retrieval
+wait for explicit authorization, provenance, retention, and evaluation designs.
+
+## D-015 — AI privacy mode is an invariant
+
+Free Gemini accepts explicit synthetic Demo input only. Paid/BYOK failures never
+fall back across that boundary. Strict schema and policy checks run before a
+reply can become eligible for sending.
+
+## D-016 — BYOK uses authenticated envelopes
+
+Keys use server-only AES-256-GCM with random IV, auth tag, and version. Members
+see masked metadata; a service-role adapter receives an already trusted
+workspace and owns store, test, rotate, and delete.

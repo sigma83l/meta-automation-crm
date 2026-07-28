@@ -9,8 +9,8 @@ Run one stage at a time. Continue only after the prior report is accepted as
    workspace creation, RLS, private Storage, and cross-tenant denial tests.
 3. **Prompt 2 — CRM and export (implemented):** customers, conversations,
    private media, Excel, and complete ZIP.
-4. **Prompt 3 — Business knowledge and AI:** structured knowledge, paid default,
-   encrypted BYOK, privacy gates.
+4. **Prompt 3 — Business knowledge and AI (implemented):** structured knowledge,
+   paid default, encrypted BYOK, privacy gates.
 5. **Prompt 4 — Meta connections:** OAuth/embedded signup contracts, verified
    webhooks, deduplication, and complete sandbox behavior.
 6. **Prompt 5 — Automation engine:** durable state machine, policy-before-send,

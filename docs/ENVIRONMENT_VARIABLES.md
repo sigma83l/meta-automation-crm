@@ -14,6 +14,11 @@ settings.
 | `LIVE_PROVIDER_SEND_ENABLED`     | Server-only                    | Environment-level live-send gate; insufficient by itself     |
 | `LIVE_TEST_RECIPIENT_ALLOWLIST`  | Server-only                    | Explicit non-production recipient allowlist                  |
 | `CREDENTIAL_ENCRYPTION_KEY`      | Server-only                    | Versioned encryption for workspace BYOK/provider credentials |
+| `PLATFORM_AI_PROVIDER`           | Server-only                    | Selects the paid platform provider adapter                   |
+| `PLATFORM_GEMINI_API_KEY`        | Server-only                    | Paid platform Gemini credential                              |
+| `PLATFORM_OPENAI_API_KEY`        | Server-only                    | Paid platform OpenAI credential                              |
+| `PLATFORM_ANTHROPIC_API_KEY`     | Server-only                    | Paid platform Anthropic credential                           |
+| `AI_PROVIDER_TIMEOUT_MS`         | Server-only                    | Provider request deadline                                    |
 | `ENABLE_EMAIL_CONFIRMATION`      | Server-only                    | Enables future confirmation-required application behavior    |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Browser-safe public credential | Renders the Turnstile widget                                 |
 | `TURNSTILE_SECRET_KEY`           | Server-only                    | Verifies Turnstile tokens                                    |

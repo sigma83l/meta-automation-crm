@@ -10,6 +10,8 @@ export type AppErrorCode =
   | "AUTH_SESSION_EXPIRED"
   | "AUTH_EMAIL_CONFIRMATION_REQUIRED"
   | "AUTH_CSRF_FAILED"
+  | "AI_PRIVACY_BLOCKED"
+  | "AI_CREDENTIAL_UNAVAILABLE"
   | "UNEXPECTED_ERROR";
 
 export type AppError = Readonly<{

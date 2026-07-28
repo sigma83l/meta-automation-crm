@@ -163,7 +163,12 @@ describe.runIf(enabled)("local Supabase auth and tenant isolation", () => {
 });
 
 async function resolvedId(client: SupabaseClient) {
-  const { data, error } = await client.rpc("resolve_workspace", { workspace_hint: null });
+  let result = await client.rpc("resolve_workspace", { workspace_hint: null });
+  if (result.error?.code === "PGRST303") {
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    result = await client.rpc("resolve_workspace", { workspace_hint: null });
+  }
+  const { data, error } = result;
   expect(error).toBeNull();
   return (data as { workspace_id: string }[])[0]!.workspace_id;
 }

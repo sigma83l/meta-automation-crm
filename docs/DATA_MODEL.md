@@ -23,3 +23,15 @@ Prompt 2 has no provider-send path. `message_attachments` binds messages to
 private files. `customer_automation_references` stores safe current/source
 references. `crm_audit_events` and `export_jobs` record sensitive actions and
 export lifecycle.
+
+## Structured business knowledge and AI
+
+- `business_profiles`: one brand, language/style, hours/timezone, policy,
+  confidence, retention, and AI-mode row per workspace.
+- `business_faq_items` and `business_price_items`: approved structured facts.
+- `workspace_ai_credentials`: server-written encrypted envelopes and masked
+  status; plaintext is not a field.
+- `ai_execution_audit_events`: metadata-only lifecycle evidence.
+
+All use forced RLS. Credential envelope writes are additionally denied to the
+browser role.

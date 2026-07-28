@@ -42,6 +42,19 @@ Password reset still requires production SMTP.
 Prompt 2 export objects are short lived and private. Production still requires
 a scheduled cleanup worker and formal retention/legal-hold approval.
 
+## Prompt 3 AI and credential controls
+
+Free Gemini is denied for every non-synthetic classification and cannot be a
+fallback. Context is bounded. Customer instructions cannot alter tenant,
+consent, opt-out, service-window, or send rules. Invalid output, unapproved
+knowledge, missing facts, injection patterns, and low confidence fail closed to
+human review.
+
+BYOK writes are server-only after trusted workspace resolution; the browser has
+no credential-table write grants. AES-256-GCM uses random IVs, authentication
+tags, and versions. Responses, audits, exports, analytics, fixtures, and client
+bundles contain no plaintext. Deletion resets dependent AI selection.
+
 ## Incident-safe defaults
 
 Missing configuration means pending or denied, never an implicit live fallback.

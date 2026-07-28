@@ -97,3 +97,16 @@ only a resolved workspace/customer scope, removes secret-like fields, builds
 the workbook, references generated relative ZIP paths, and emits a manifest.
 Small exports run synchronously; `crm/export.requested` and
 `ExportJobDispatcher` define the durable seam for large exports.
+
+## Business knowledge and AI modules
+
+V1 knowledge is one workspace profile plus structured FAQ and price rows.
+`AiProvider` is the application-owned interface; SDK types stop at adapters.
+Context minimization, mode privacy, strict output validation, and human-review
+guardrails run before any future send.
+
+BYOK credentials cross a server-only seam. Membership resolves the trusted
+workspace before the service-role adapter stores an AES-256-GCM envelope.
+Members may read masked metadata but receive no credential-table write grants.
+Paid/BYOK and free synthetic Demo modes are explicit; no automatic fallback
+crosses privacy classifications.

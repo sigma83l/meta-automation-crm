@@ -8,7 +8,7 @@ export function WorkspaceShell({
   workspaceName,
   children
 }: {
-  active: "crm" | "inbox";
+  active: "crm" | "inbox" | "settings";
   workspaceName: string;
   children: ReactNode;
 }) {
@@ -37,6 +37,9 @@ export function WorkspaceShell({
           <Link href="/inbox" aria-current={active === "inbox" ? "page" : undefined}>
             <span className="nav-glyph">IN</span>Inbox
           </Link>
+          <Link href="/settings" aria-current={active === "settings" ? "page" : undefined}>
+            <span className="nav-glyph">AI</span>Business & AI
+          </Link>
         </nav>
         <div className="safety-lock">
           <span className="status-light" />
@@ -50,7 +53,7 @@ export function WorkspaceShell({
         <header className="topbar">
           <div>
             <span className="eyebrow">Workspace data</span>
-            <h1>{active === "crm" ? "CRM" : "Inbox"}</h1>
+            <h1>{active === "crm" ? "CRM" : active === "inbox" ? "Inbox" : "Business & AI"}</h1>
           </div>
           <div className="topbar-actions">
             <span className="environment-chip">Private</span>

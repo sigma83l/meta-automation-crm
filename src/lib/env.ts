@@ -16,6 +16,11 @@ const serverEnvironmentSchema = z.object({
   LIVE_PROVIDER_SEND_ENABLED: z.enum(["true", "false"]).default("false"),
   LIVE_TEST_RECIPIENT_ALLOWLIST: z.string().default(""),
   CREDENTIAL_ENCRYPTION_KEY: optionalNonEmpty,
+  PLATFORM_AI_PROVIDER: z.enum(["gemini", "openai", "anthropic"]).default("gemini"),
+  PLATFORM_GEMINI_API_KEY: optionalNonEmpty,
+  PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
+  PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
+  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalNonEmpty,
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
@@ -40,6 +45,11 @@ export type ServerEnvironment = Readonly<{
   liveProviderSendEnabled: boolean;
   liveTestRecipientAllowlist: readonly string[];
   credentialEncryptionKey?: string;
+  platformAiProvider: "gemini" | "openai" | "anthropic";
+  platformGeminiApiKey?: string;
+  platformOpenAiApiKey?: string;
+  platformAnthropicApiKey?: string;
+  aiProviderTimeoutMs: number;
   enableEmailConfirmation: boolean;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
@@ -78,6 +88,17 @@ export function parseServerEnvironment(
     ...(parsed.CREDENTIAL_ENCRYPTION_KEY
       ? { credentialEncryptionKey: parsed.CREDENTIAL_ENCRYPTION_KEY }
       : {}),
+    platformAiProvider: parsed.PLATFORM_AI_PROVIDER,
+    ...(parsed.PLATFORM_GEMINI_API_KEY
+      ? { platformGeminiApiKey: parsed.PLATFORM_GEMINI_API_KEY }
+      : {}),
+    ...(parsed.PLATFORM_OPENAI_API_KEY
+      ? { platformOpenAiApiKey: parsed.PLATFORM_OPENAI_API_KEY }
+      : {}),
+    ...(parsed.PLATFORM_ANTHROPIC_API_KEY
+      ? { platformAnthropicApiKey: parsed.PLATFORM_ANTHROPIC_API_KEY }
+      : {}),
+    aiProviderTimeoutMs: parsed.AI_PROVIDER_TIMEOUT_MS,
     enableEmailConfirmation: parsed.ENABLE_EMAIL_CONFIRMATION === "true",
     ...(parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY
       ? { turnstileSiteKey: parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY }
