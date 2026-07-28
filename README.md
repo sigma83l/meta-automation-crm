@@ -5,8 +5,9 @@ and WhatsApp automation with AI-assisted CRM workflows.
 
 The current checkpoint includes workspace-scoped CRM/inbox, private media,
 secure Excel/ZIP exports, structured business knowledge, strict AI contracts,
-synthetic Demo privacy gates, and encrypted BYOK. Real provider connections,
-outbound adapters, and cloud deployment remain absent.
+synthetic Demo privacy gates, encrypted BYOK, three durable automation recipes,
+and a responsive business-owner panel. Real provider connections, outbound
+adapters, and cloud deployment remain absent.
 
 ## Requirements
 
@@ -43,6 +44,8 @@ at `/settings`.
 Workspace WhatsApp/Instagram sandbox connections and Meta readiness are at
 `/connections`. Live multi-business setup remains blocked by client-owned Meta
 assets, review, and Advanced Access.
+The resumable setup is at `/onboarding`; the seven-step recipe builder and
+emergency controls are at `/automations`.
 Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
 
 Do not put real credentials into `.env.example`, fixtures, logs, issues, or
@@ -73,4 +76,6 @@ pnpm test:e2e
 - No remote Git repository or cloud project is connected.
 
 See `docs/ARCHITECTURE.md`, `docs/SECURITY_THREAT_MODEL.md`, and
-`docs/INFRASTRUCTURE_SETUP.md` before extending the foundation.
+`docs/INFRASTRUCTURE_SETUP.md` before extending the foundation. Owner workflows
+are documented in `docs/USER_GUIDE.md`; route and state coverage are in
+`docs/ROUTE_MAP.md` and `docs/UI_STATE_MATRIX.md`.

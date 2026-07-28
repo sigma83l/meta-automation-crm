@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const protectedPrefixes = [
   "/dashboard",
   "/onboarding",
+  "/automations",
   "/crm",
   "/inbox",
   "/settings",

@@ -70,7 +70,7 @@ email_sent = 12
 sms_sent = 0
 anonymous_users = 0
 token_refresh = 60
-sign_in_sign_ups = 30
+sign_in_sign_ups = 100
 token_verifications = 30
 web3 = 0
 

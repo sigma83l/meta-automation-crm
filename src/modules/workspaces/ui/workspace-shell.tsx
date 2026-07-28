@@ -8,7 +8,7 @@ export function WorkspaceShell({
   workspaceName,
   children
 }: {
-  active: "crm" | "inbox" | "settings" | "connections";
+  active: "overview" | "automations" | "crm" | "inbox" | "settings" | "connections";
   workspaceName: string;
   children: ReactNode;
 }) {
@@ -28,8 +28,11 @@ export function WorkspaceShell({
           <small>Private tenant</small>
         </div>
         <nav aria-label="Main navigation">
-          <Link href="/dashboard">
+          <Link href="/dashboard" aria-current={active === "overview" ? "page" : undefined}>
             <span className="nav-glyph">OV</span>Overview
+          </Link>
+          <Link href="/automations" aria-current={active === "automations" ? "page" : undefined}>
+            <span className="nav-glyph">AU</span>Automations
           </Link>
           <Link href="/crm" aria-current={active === "crm" ? "page" : undefined}>
             <span className="nav-glyph">CR</span>CRM
@@ -37,11 +40,11 @@ export function WorkspaceShell({
           <Link href="/inbox" aria-current={active === "inbox" ? "page" : undefined}>
             <span className="nav-glyph">IN</span>Inbox
           </Link>
-          <Link href="/settings" aria-current={active === "settings" ? "page" : undefined}>
-            <span className="nav-glyph">AI</span>Business & AI
-          </Link>
           <Link href="/connections" aria-current={active === "connections" ? "page" : undefined}>
-            <span className="nav-glyph">ME</span>Meta connections
+            <span className="nav-glyph">IN</span>Integrations
+          </Link>
+          <Link href="/settings" aria-current={active === "settings" ? "page" : undefined}>
+            <span className="nav-glyph">SE</span>Settings
           </Link>
         </nav>
         <div className="safety-lock">
@@ -57,13 +60,17 @@ export function WorkspaceShell({
           <div>
             <span className="eyebrow">Workspace data</span>
             <h1>
-              {active === "crm"
-                ? "CRM"
-                : active === "inbox"
-                  ? "Inbox"
-                  : active === "connections"
-                    ? "Meta connections"
-                    : "Business & AI"}
+              {active === "overview"
+                ? "Overview"
+                : active === "automations"
+                  ? "Automations"
+                  : active === "crm"
+                    ? "CRM"
+                    : active === "inbox"
+                      ? "Inbox"
+                      : active === "connections"
+                        ? "Integrations"
+                        : "Settings"}
             </h1>
           </div>
           <div className="topbar-actions">
@@ -73,6 +80,21 @@ export function WorkspaceShell({
         </header>
         {children}
       </main>
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        <Link href="/dashboard" aria-current={active === "overview" ? "page" : undefined}>
+          Home
+        </Link>
+        <Link href="/automations" aria-current={active === "automations" ? "page" : undefined}>
+          Automations
+        </Link>
+        <Link className="mobile-create" href="/automations#new">
+          + Create
+        </Link>
+        <Link href="/crm" aria-current={active === "crm" ? "page" : undefined}>
+          CRM
+        </Link>
+        <Link href="/settings">More</Link>
+      </nav>
     </div>
   );
 }

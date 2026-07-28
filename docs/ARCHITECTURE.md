@@ -84,6 +84,22 @@ motion. The signature two-lane signal represents WhatsApp and Instagram
 converging on one locked send gate. It is original work; donor branding, assets,
 and code were not copied.
 
+Prompt 6 completes the owner surface around that system. `WorkspaceShell`
+provides one desktop/tablet rail and a five-item mobile bar. Route components
+resolve the trusted workspace on the server; client components receive only the
+minimum operational data and call CSRF-protected routes for mutations.
+
+The automation creator is a seven-step stateful form. Creation carries a
+per-attempt idempotency key, persists a bounded configuration in an immutable
+version, and refreshes the server-rendered list without a hard navigation.
+Emergency pause, queued-step cancellation, safe test, activation, takeover and
+resume are real server operations, not visual placeholders.
+
+Responsive CSS uses logical properties and has an explicit 390 px RTL
+regression. Inbox is three-pane on desktop, two-pane on tablet and single-pane
+with back navigation on mobile. Loading, empty, warning, disconnected, reauth,
+partial-data and failure states remain explicit text rather than color alone.
+
 ## CRM, media and export modules
 
 The CRM repository interface hides workspace resolution, validation, related

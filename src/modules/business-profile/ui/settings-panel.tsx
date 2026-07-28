@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import type { BusinessProfile, CredentialStatus, FaqItem, PriceItem } from "../contracts";
 
@@ -311,6 +312,31 @@ export function SettingsPanel({
         </label>
         <button>Encrypt and store</button>
       </form>
+      <section className="settings-card" aria-labelledby="workspace-controls">
+        <h2 id="workspace-controls">Workspace controls</h2>
+        <div className="settings-management-grid">
+          <article>
+            <strong>Security</strong>
+            <span>Server sessions, CSRF protection, encrypted credentials</span>
+            <Link href="/connections">Review connections</Link>
+          </article>
+          <article>
+            <strong>Data retention</strong>
+            <span>{profile.retentionDays} days · adjustable in Business Profile</span>
+            <a href="#workspace-controls">Review retention</a>
+          </article>
+          <article>
+            <strong>Exports</strong>
+            <span>Workspace-scoped Excel and complete ZIP packages</span>
+            <Link href="/crm">Open CRM exports</Link>
+          </article>
+          <article>
+            <strong>Account</strong>
+            <span>Private workspace membership and session controls</span>
+            <Link href="/dashboard">Return to overview</Link>
+          </article>
+        </div>
+      </section>
     </div>
   );
 }
