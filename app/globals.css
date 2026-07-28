@@ -1197,6 +1197,27 @@ main {
   border-radius: 10px;
   padding: 12px;
 }
+.connection-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.connection-card h3 {
+  margin: 4px 0;
+  text-transform: capitalize;
+}
+.connection-card p {
+  margin: 0;
+  color: var(--muted);
+}
+.connection-actions {
+  margin-inline-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 @media (max-width: 760px) {
   .form-grid,
   .settings-columns {
@@ -1208,5 +1229,12 @@ main {
   .credential-row {
     align-items: stretch;
     flex-direction: column;
+  }
+  .connection-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .connection-actions {
+    margin-inline-start: 0;
   }
 }

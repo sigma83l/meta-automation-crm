@@ -20,6 +20,14 @@ export type FoundationEventMap = {
       requestedBy: string;
     };
   };
+  "meta/webhook.received": {
+    data: {
+      webhookEventId: string;
+      trustedWorkspaceId: string;
+      channel: "whatsapp" | "instagram";
+      providerEventId: string;
+    };
+  };
 };
 
 export const inngestFoundationContract = Object.freeze({

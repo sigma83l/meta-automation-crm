@@ -11,8 +11,8 @@ Run one stage at a time. Continue only after the prior report is accepted as
    private media, Excel, and complete ZIP.
 4. **Prompt 3 — Business knowledge and AI (implemented):** structured knowledge,
    paid default, encrypted BYOK, privacy gates.
-5. **Prompt 4 — Meta connections:** OAuth/embedded signup contracts, verified
-   webhooks, deduplication, and complete sandbox behavior.
+5. **Prompt 4 — Meta connections (implemented locally):** OAuth/embedded signup
+   contracts, verified webhooks, deduplication, and complete sandbox behavior.
 6. **Prompt 5 — Automation engine:** durable state machine, policy-before-send,
    idempotency, retries, and three recipes.
 7. **Prompt 6 — Owner experience:** onboarding, responsive panel, recovery

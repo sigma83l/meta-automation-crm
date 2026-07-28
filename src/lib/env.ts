@@ -21,6 +21,11 @@ const serverEnvironmentSchema = z.object({
   PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
   PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
+  META_APP_ID: optionalNonEmpty,
+  META_APP_SECRET: optionalNonEmpty,
+  META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
+  META_OAUTH_REDIRECT_URL: z.url().optional(),
+  META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalNonEmpty,
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
@@ -50,6 +55,11 @@ export type ServerEnvironment = Readonly<{
   platformOpenAiApiKey?: string;
   platformAnthropicApiKey?: string;
   aiProviderTimeoutMs: number;
+  metaAppId?: string;
+  metaAppSecret?: string;
+  metaWebhookVerifyToken?: string;
+  metaOauthRedirectUrl?: string;
+  metaConnectionMode: "sandbox" | "live";
   enableEmailConfirmation: boolean;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
@@ -99,6 +109,15 @@ export function parseServerEnvironment(
       ? { platformAnthropicApiKey: parsed.PLATFORM_ANTHROPIC_API_KEY }
       : {}),
     aiProviderTimeoutMs: parsed.AI_PROVIDER_TIMEOUT_MS,
+    ...(parsed.META_APP_ID ? { metaAppId: parsed.META_APP_ID } : {}),
+    ...(parsed.META_APP_SECRET ? { metaAppSecret: parsed.META_APP_SECRET } : {}),
+    ...(parsed.META_WEBHOOK_VERIFY_TOKEN
+      ? { metaWebhookVerifyToken: parsed.META_WEBHOOK_VERIFY_TOKEN }
+      : {}),
+    ...(parsed.META_OAUTH_REDIRECT_URL
+      ? { metaOauthRedirectUrl: parsed.META_OAUTH_REDIRECT_URL }
+      : {}),
+    metaConnectionMode: parsed.META_CONNECTION_MODE,
     enableEmailConfirmation: parsed.ENABLE_EMAIL_CONFIRMATION === "true",
     ...(parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY
       ? { turnstileSiteKey: parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY }

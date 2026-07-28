@@ -110,3 +110,18 @@ workspace before the service-role adapter stores an AES-256-GCM envelope.
 Members may read masked metadata but receive no credential-table write grants.
 Paid/BYOK and free synthetic Demo modes are explicit; no automatic fallback
 crosses privacy classifications.
+
+## Meta connection and webhook modules
+
+Each workspace owns at most one WhatsApp and one Instagram connection.
+Provider account identifiers—not payload workspace fields—route inbound events.
+Live tokens use the existing server-only AES-256-GCM envelope seam; browser
+queries receive only operational metadata.
+
+The public webhook route verifies the untouched request body before JSON
+parsing. Normalization extracts a minimal application event. A service-role-only
+database function atomically resolves the active connection, rejects unknown or
+unhealthy states, deduplicates by provider event ID, persists the normalized
+record, and creates one `meta/webhook.received` outbox row. Provider media URLs
+are transient hints; background download uses the `ProviderMediaDownloader`
+interface and private Storage later.

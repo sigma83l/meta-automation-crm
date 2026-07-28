@@ -40,6 +40,9 @@ pnpm test:e2e:auth
 CRM is available at `/crm` and the no-send inbox foundation at `/inbox`.
 Business profile, FAQs, pricing, AI style, and credential status are available
 at `/settings`.
+Workspace WhatsApp/Instagram sandbox connections and Meta readiness are at
+`/connections`. Live multi-business setup remains blocked by client-owned Meta
+assets, review, and Advanced Access.
 Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
 
 Do not put real credentials into `.env.example`, fixtures, logs, issues, or

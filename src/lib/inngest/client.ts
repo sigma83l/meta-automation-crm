@@ -12,7 +12,8 @@ export function createInngestFoundationClient(): InngestFoundationClient {
     eventNames: Object.freeze<(keyof FoundationEventMap)[]>([
       "app/health.checked",
       "sandbox/message.received",
-      "crm/export.requested"
+      "crm/export.requested",
+      "meta/webhook.received"
     ]),
     sdkAdapterRegistered: false
   });

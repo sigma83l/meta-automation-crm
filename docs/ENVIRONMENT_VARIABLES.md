@@ -19,6 +19,11 @@ settings.
 | `PLATFORM_OPENAI_API_KEY`        | Server-only                    | Paid platform OpenAI credential                              |
 | `PLATFORM_ANTHROPIC_API_KEY`     | Server-only                    | Paid platform Anthropic credential                           |
 | `AI_PROVIDER_TIMEOUT_MS`         | Server-only                    | Provider request deadline                                    |
+| `META_APP_ID`                    | Server-only configuration      | Client-owned Meta App identifier                             |
+| `META_APP_SECRET`                | Server-only                    | OAuth and webhook signature authority                        |
+| `META_WEBHOOK_VERIFY_TOKEN`      | Server-only                    | GET webhook subscription challenge token                     |
+| `META_OAUTH_REDIRECT_URL`        | Server-only configuration      | Exact registered Meta callback URL                           |
+| `META_CONNECTION_MODE`           | Server-only                    | `sandbox` by default; `live` requires verified assets        |
 | `ENABLE_EMAIL_CONFIRMATION`      | Server-only                    | Enables future confirmation-required application behavior    |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Browser-safe public credential | Renders the Turnstile widget                                 |
 | `TURNSTILE_SECRET_KEY`           | Server-only                    | Verifies Turnstile tokens                                    |

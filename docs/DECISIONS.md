@@ -91,3 +91,16 @@ reply can become eligible for sending.
 Keys use server-only AES-256-GCM with random IV, auth tag, and version. Members
 see masked metadata; a service-role adapter receives an already trusted
 workspace and owns store, test, rotate, and delete.
+
+## D-017 — Provider account mapping is tenant authority
+
+Meta payloads never select a workspace. A verified request supplies a provider
+account identifier that resolves through a stored active connection. The
+database performs mapping, state check, deduplication, persistence, and outbox
+creation atomically.
+
+## D-018 — Webhook ACK uses a durable outbox seam
+
+The request path verifies, minimally normalizes, and writes one transactional
+outbox row. Provider-specific work and media downloads are background concerns.
+This preserves quick acknowledgements without losing accepted events.

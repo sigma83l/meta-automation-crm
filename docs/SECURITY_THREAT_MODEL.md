@@ -55,6 +55,20 @@ no credential-table write grants. AES-256-GCM uses random IVs, authentication
 tags, and versions. Responses, audits, exports, analytics, fixtures, and client
 bundles contain no plaintext. Deletion resets dependent AI selection.
 
+## Prompt 4 Meta threats
+
+Webhook forgery is blocked by raw-body App Secret HMAC verification before
+parsing. Replay is bounded by a unique channel/provider-event key. Payload
+workspace IDs are ignored; stored provider-account mappings establish tenant
+authority. Unknown, disabled, disconnected, pending, and reauthorization
+connections cannot persist events.
+
+OAuth state is HMAC-bound to the authenticated workspace, channel, nonce, and
+short expiry. Tokens are encrypted server-side and excluded from browser column
+grants, logs, normalized events, exports, and outbox payloads. Logging uses only
+stable statuses; customer text and media references are not logged. Outbound
+live sending remains unavailable.
+
 ## Incident-safe defaults
 
 Missing configuration means pending or denied, never an implicit live fallback.
