@@ -3,9 +3,9 @@
 Independent production-candidate foundation for workspace-isolated Instagram
 and WhatsApp automation with AI-assisted CRM workflows.
 
-Prompt 1 adds local Supabase authentication, atomic workspace provisioning,
-forced RLS, private Storage policies and protected onboarding/dashboard routes.
-Provider connections, outbound adapters and cloud deployment remain absent.
+Prompt 2 adds the workspace-scoped CRM/inbox graph, content-verified private
+media, and secure Excel/complete ZIP exports. Provider connections, outbound
+adapters and cloud deployment remain absent.
 
 ## Requirements
 
@@ -35,6 +35,9 @@ pnpm test:db
 pnpm test:integration:local
 pnpm test:e2e:auth
 ```
+
+CRM is available at `/crm` and the no-send inbox foundation at `/inbox`.
+Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
 
 Do not put real credentials into `.env.example`, fixtures, logs, issues, or
 chat. Local `.env*` files remain ignored.

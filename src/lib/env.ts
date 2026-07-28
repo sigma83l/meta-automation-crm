@@ -21,7 +21,12 @@ const serverEnvironmentSchema = z.object({
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
   AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(8),
-  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3600).default(60)
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3600).default(60),
+  CRM_MEDIA_MAX_BYTES: z.coerce.number().int().min(1024).max(10485760).default(10485760),
+  CRM_EXPORT_MAX_ROWS: z.coerce.number().int().min(1).max(100000).default(25000),
+  CRM_EXPORT_MAX_FILES: z.coerce.number().int().min(0).max(10000).default(1000),
+  CRM_EXPORT_MAX_BYTES: z.coerce.number().int().min(1048576).max(104857600).default(104857600),
+  CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900)
 });
 
 export type ServerEnvironment = Readonly<{
@@ -41,6 +46,11 @@ export type ServerEnvironment = Readonly<{
   authCaptchaMode: "fake" | "turnstile";
   authRateLimitMaxAttempts: number;
   authRateLimitWindowSeconds: number;
+  crmMediaMaxBytes: number;
+  crmExportMaxRows: number;
+  crmExportMaxFiles: number;
+  crmExportMaxBytes: number;
+  crmExportTtlSeconds: number;
 }>;
 
 export function parseServerEnvironment(
@@ -75,7 +85,12 @@ export function parseServerEnvironment(
     ...(parsed.TURNSTILE_SECRET_KEY ? { turnstileSecretKey: parsed.TURNSTILE_SECRET_KEY } : {}),
     authCaptchaMode: parsed.AUTH_CAPTCHA_MODE,
     authRateLimitMaxAttempts: parsed.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
-    authRateLimitWindowSeconds: parsed.AUTH_RATE_LIMIT_WINDOW_SECONDS
+    authRateLimitWindowSeconds: parsed.AUTH_RATE_LIMIT_WINDOW_SECONDS,
+    crmMediaMaxBytes: parsed.CRM_MEDIA_MAX_BYTES,
+    crmExportMaxRows: parsed.CRM_EXPORT_MAX_ROWS,
+    crmExportMaxFiles: parsed.CRM_EXPORT_MAX_FILES,
+    crmExportMaxBytes: parsed.CRM_EXPORT_MAX_BYTES,
+    crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS
   });
 }
 

@@ -57,3 +57,20 @@ authorized result. RLS and Storage use the same predicate.
 `ENABLE_EMAIL_CONFIRMATION=false` matches the requested launch behavior.
 Schema, callback and UI support enabling it later. This accepts unverified-email
 risk and does not remove the production SMTP requirement for recovery.
+
+## D-011 — CRM relationships enforce workspace twice
+
+Every business row stores `workspace_id`; composite foreign keys prevent
+cross-workspace relationship forgery and forced RLS checks active membership.
+
+## D-012 — Private files are content-verified
+
+Browser MIME, extension and filename are untrusted. Actual magic bytes, size,
+safe generated name, checksum and private metadata are required.
+
+## D-013 — Exports are scoped jobs
+
+One, selected, filtered and full-workspace exports share one collector
+interface. Synchronous generation is capped; large work uses the durable event
+seam. ZIP paths are generated, workbook formulas neutralized, secret-shaped
+keys removed and downloads expire.

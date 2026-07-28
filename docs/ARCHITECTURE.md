@@ -83,3 +83,17 @@ cards, explicit status text, visible focus, logical properties, and restrained
 motion. The signature two-lane signal represents WhatsApp and Instagram
 converging on one locked send gate. It is original work; donor branding, assets,
 and code were not copied.
+
+## CRM, media and export modules
+
+The CRM repository interface hides workspace resolution, validation, related
+contact creation and timeline writes. Its Supabase adapter receives a trusted
+workspace from the session; route bodies cannot establish tenant authority.
+Composite foreign keys and forced RLS provide the second enforcement layer.
+
+The media module validates bytes, generates safe names, checks limits and
+coordinates private Storage with metadata rollback. The export module collects
+only a resolved workspace/customer scope, removes secret-like fields, builds
+the workbook, references generated relative ZIP paths, and emits a manifest.
+Small exports run synchronously; `crm/export.requested` and
+`ExportJobDispatcher` define the durable seam for large exports.

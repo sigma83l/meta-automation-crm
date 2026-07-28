@@ -23,5 +23,10 @@ settings.
 | `SMTP_HOST` / `SMTP_PORT`        | Server-only                    | Production Auth email transport                              |
 | `SMTP_USER` / `SMTP_PASSWORD`    | Server-only                    | Production SMTP authentication                               |
 | `SMTP_FROM`                      | Server-only                    | Approved Auth sender identity                                |
+| `CRM_MEDIA_MAX_BYTES`            | Server-only                    | Maximum accepted private media size                          |
+| `CRM_EXPORT_MAX_ROWS`            | Server-only                    | Maximum rows collected per sheet                             |
+| `CRM_EXPORT_MAX_FILES`           | Server-only                    | Maximum files included in a ZIP                              |
+| `CRM_EXPORT_MAX_BYTES`           | Server-only                    | Maximum accumulated/export ZIP bytes                         |
+| `CRM_EXPORT_TTL_SECONDS`         | Server-only                    | Private export availability window                           |
 
 Secret values must never use a `NEXT_PUBLIC_` prefix.

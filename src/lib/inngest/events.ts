@@ -13,6 +13,13 @@ export type FoundationEventMap = {
       synthetic: true;
     };
   };
+  "crm/export.requested": {
+    data: {
+      jobId: string;
+      trustedWorkspaceId: string;
+      requestedBy: string;
+    };
+  };
 };
 
 export const inngestFoundationContract = Object.freeze({

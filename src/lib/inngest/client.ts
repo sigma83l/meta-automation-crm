@@ -11,7 +11,8 @@ export function createInngestFoundationClient(): InngestFoundationClient {
     id: "meta-automation-crm",
     eventNames: Object.freeze<(keyof FoundationEventMap)[]>([
       "app/health.checked",
-      "sandbox/message.received"
+      "sandbox/message.received",
+      "crm/export.requested"
     ]),
     sdkAdapterRegistered: false
   });

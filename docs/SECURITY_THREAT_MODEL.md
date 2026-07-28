@@ -22,8 +22,8 @@ mapping, RLS, and current policy state.
 | Webhook forgery/replay     | Raw-body HMAC, stored account routing, event idempotency design                     | Prompt 4 signature/replay/dedupe tests        |
 | Duplicate sends            | Idempotency key in provider command                                                 | Prompt 5 crash/retry tests                    |
 | Prompt injection           | App-owned structured output, approved knowledge only, human review fallback         | Prompt 3 adversarial fixtures                 |
-| Unsafe files/SSRF          | No media fetch in foundation                                                        | Prompt 2 MIME/content and Prompt 7 SSRF tests |
-| Spreadsheet/ZIP injection  | No export in foundation                                                             | Prompt 2 formula and path traversal tests     |
+| Unsafe files/SSRF          | Magic-byte MIME allowlist, size cap, private objects, no remote fetch               | Prompt 7 SSRF tests                           |
+| Spreadsheet/ZIP injection  | Formula neutralization, generated relative paths, traversal rejection               | Reopen/manifest regression suite              |
 | Dependency compromise      | Exact versions, lockfile, CI, audit/review                                          | Prompt 7 dependency audit                     |
 
 | Credential stuffing | CAPTCHA seam, bounded local limiter, provider 429 mapping | Distributed limiter before production |
@@ -38,6 +38,9 @@ project and deployed security-header verification remain external gates.
 `ENABLE_EMAIL_CONFIRMATION=false` avoids a verification block but permits
 unverified addresses; enable it before risk policy requires verified ownership.
 Password reset still requires production SMTP.
+
+Prompt 2 export objects are short lived and private. Production still requires
+a scheduled cleanup worker and formal retention/legal-hold approval.
 
 ## Incident-safe defaults
 

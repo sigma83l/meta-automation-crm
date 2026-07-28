@@ -28,12 +28,16 @@
     "db:status": "supabase status",
     "secret:scan": "secretlint \"**/*\"",
     "bundle:scan": "node scripts/check-client-bundle.mjs",
+    "audit:prod": "pnpm audit --prod --audit-level high",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm secret:scan"
   },
   "dependencies": {
+    "@e965/xlsx": "0.20.3",
+    "@marsidev/react-turnstile": "1.5.4",
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.8",
-    "@marsidev/react-turnstile": "1.5.4",
+    "fflate": "0.8.2",
+    "file-type": "21.0.0",
     "inngest": "4.13.0",
     "next": "16.2.12",
     "react": "19.2.8",
