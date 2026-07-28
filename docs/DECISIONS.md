@@ -39,3 +39,21 @@ navigation. The two-channel signal lane is the foundation’s visual signature.
 
 Use pnpm with exact dependency versions and a committed lockfile. Node 22 is the
 CI baseline; locally supported Node versions are constrained in `package.json`.
+
+## D-008 — Database transaction owns signup provisioning
+
+An `auth.users` trigger creates the entire initial workspace graph in one
+Postgres transaction. Application compensation logic is rejected because it can
+leave partial tenants after a crash.
+
+## D-009 — Membership is the sole tenant authority
+
+The session establishes identity; active membership plus active profile and
+workspace establish authority. Client workspace IDs only narrow an already
+authorized result. RLS and Storage use the same predicate.
+
+## D-010 — Confirmation initially disabled
+
+`ENABLE_EMAIL_CONFIRMATION=false` matches the requested launch behavior.
+Schema, callback and UI support enabling it later. This accepts unverified-email
+risk and does not remove the production SMTP requirement for recovery.

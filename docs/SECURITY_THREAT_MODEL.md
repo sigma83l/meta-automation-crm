@@ -15,8 +15,8 @@ mapping, RLS, and current policy state.
 
 | Threat                     | Foundation control                                                                  | Required later proof                          |
 | -------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------- |
-| Cross-workspace IDOR       | Workspace authority contract; no client ID grants authority                         | Prompt 1 RLS/query/Storage denial tests       |
-| Service-role exposure      | Server-only environment contract                                                    | Bundle scan and route review                  |
+| Cross-workspace IDOR       | Forced RLS, membership-derived authority, forged-hint denial, Storage path policies | Live local denial tests pass                  |
+| Service-role exposure      | Server-only module, no browser import, bundle and secret review                     | Repeat on every release                       |
 | Secret leakage             | Ignored local env files, placeholder example, secret scan, non-secret health output | Log/export/browser negative tests             |
 | Unauthorized provider send | Sandbox default, multi-factor live gate, no real adapter                            | Policy-before-send and allowlisted live smoke |
 | Webhook forgery/replay     | Raw-body HMAC, stored account routing, event idempotency design                     | Prompt 4 signature/replay/dedupe tests        |
@@ -26,12 +26,18 @@ mapping, RLS, and current policy state.
 | Spreadsheet/ZIP injection  | No export in foundation                                                             | Prompt 2 formula and path traversal tests     |
 | Dependency compromise      | Exact versions, lockfile, CI, audit/review                                          | Prompt 7 dependency audit                     |
 
-## Foundation limitations
+| Credential stuffing | CAPTCHA seam, bounded local limiter, provider 429 mapping | Distributed limiter before production |
+| User enumeration | Generic login/recovery/account-disabled responses | SMTP delivery review |
+| CSRF/session theft | SSR rotation, secure production cookies, SameSite CSRF cookie | Preview security-header review |
 
-There is no implemented auth, database, RLS, Storage policy, durable function,
-credential encryption, webhook route, rate limiting, CSRF flow, or real
-provider adapter. The UI and health endpoint are not evidence of those controls.
-External infrastructure remains pending.
+## Prompt 1 limitations
+
+Local Auth, RLS and Storage policy enforcement is implemented and tested.
+Production SMTP, Turnstile keys, a distributed rate limiter, a hosted Supabase
+project and deployed security-header verification remain external gates.
+`ENABLE_EMAIL_CONFIRMATION=false` avoids a verification block but permits
+unverified addresses; enable it before risk policy requires verified ownership.
+Password reset still requires production SMTP.
 
 ## Incident-safe defaults
 

@@ -22,9 +22,8 @@ credentials.
 - GitHub CLI: authenticated account detected; no repository write performed.
 - Vercel CLI: authenticated account detected; no project write performed.
 - Docker: installed.
-- Supabase CLI: not installed. Use a repository-local or approved official
-  installation when Prompt 1 needs local integration; do not install globally
-  without approval.
+- Supabase CLI: repository-local `2.110.0`; local Docker stack, migrations, Auth,
+  RLS and private Storage tests verified. No hosted project was created.
 - Meta, Supabase, Inngest, AI billing, DNS, and legal readiness were not
   authenticated or verified and remain `PENDING_OWNER`.
 
@@ -34,3 +33,11 @@ Enter production values only in provider-managed encrypted environment
 settings. Never paste them into prompts, issues, documentation, logs, fixtures,
 Git history, or screenshots. Rotate any value exposed outside the approved
 secret channel.
+
+## Prompt 1 local database
+
+Run `pnpm db:start`, `pnpm db:reset`, `pnpm test:db`, then
+`pnpm test:integration:local`. The wrapper reads local CLI output into child
+process environment without writing credentials. `pnpm db:stop` stops the
+containers. Production requires MANI approval for project creation, region,
+billing, SMTP, redirect URLs and migration deployment.

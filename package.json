@@ -18,17 +18,27 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test",
+    "test:integration:local": "node scripts/with-supabase-env.mjs pnpm vitest run tests/integration",
+    "test:db": "supabase test db",
+    "test:e2e": "node scripts/with-supabase-env.mjs pnpm playwright test",
+    "test:e2e:auth": "node scripts/with-supabase-env.mjs pnpm playwright test tests/e2e/auth.spec.ts",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:status": "supabase status",
     "secret:scan": "secretlint \"**/*\"",
+    "bundle:scan": "node scripts/check-client-bundle.mjs",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm secret:scan"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.8",
+    "@marsidev/react-turnstile": "1.5.4",
     "inngest": "4.13.0",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "0.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -41,6 +51,7 @@
     "eslint-config-next": "16.2.12",
     "prettier": "3.9.6",
     "secretlint": "13.0.4",
+    "supabase": "2.110.0",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }

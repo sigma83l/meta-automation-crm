@@ -1,14 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the workspace-safe foundation", async ({ page }) => {
+test("routes anonymous users to the secure entry surface", async ({ page }) => {
   await page.goto("/");
-
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Every conversation stays inside its workspace." })
-  ).toBeVisible();
-  await expect(page.getByText("Live sends are locked")).toBeVisible();
-  await expect(page.getByText("Synthetic only")).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
 test("health endpoint is non-secret and ready", async ({ request }) => {

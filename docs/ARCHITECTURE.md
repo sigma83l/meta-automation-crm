@@ -17,9 +17,11 @@ Browser
         → Meta/AI provider adapter
 ```
 
-Prompt 0 implements only the shell, contracts, deterministic adapters, and
-health surface. The storage, auth, job, and real provider implementations arrive
-in later gated prompts.
+Prompt 1 implements the Auth and workspace boundary. Next.js route handlers use
+Supabase SSR cookies; `proxy.ts` refreshes sessions and protects dashboard and
+onboarding routes. Signup metadata enters one database trigger transaction that
+creates the profile, workspace, owner membership, settings, onboarding state,
+and initial audit event.
 
 ## Module rules
 
@@ -40,8 +42,20 @@ business-owned table includes `workspace_id`. RLS denies by default. Service
 role code stays server-only and accepts an already trusted workspace context.
 Storage paths and signed URLs are workspace scoped.
 
-Prompt 0 documents this invariant but does not claim database enforcement.
-Prompt 1 must prove it against fresh migrations and Storage policies.
+The fresh migration enables and forces RLS on every exposed application table.
+`resolve_workspace` derives authority from `auth.uid()` and active membership;
+a supplied workspace hint can only narrow that result. Private Storage object
+paths begin with the trusted workspace UUID and use the same membership
+predicate. The service role remains server-only and is not used by browser
+routes.
+
+## Authentication seam
+
+`AuthService` owns input validation, CAPTCHA and rate-limit ordering and generic
+public behavior. `SupabaseAuthRepository` owns Auth SDK/session operations.
+Turnstile is the production adapter; the deterministic fake accepts only
+`local-pass` and is forbidden in production. Mutating auth routes require a
+short-lived, HttpOnly, SameSite double-submit CSRF token.
 
 ## Provider safety
 

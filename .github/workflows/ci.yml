@@ -23,8 +23,15 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test:unit
+      - run: pnpm db:start
+      - run: pnpm db:reset
+      - run: pnpm test:db
+      - run: pnpm test:integration:local
       - run: pnpm build
+      - run: pnpm bundle:scan
       - run: pnpm secret:scan
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - if: always()
+        run: pnpm db:stop

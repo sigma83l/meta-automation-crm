@@ -10,6 +10,8 @@ export default defineConfig([
     "node_modules/**",
     "playwright-report/**",
     "test-results/**",
-    "coverage/**"
+    "coverage/**",
+    "supabase/.temp/**",
+    "supabase/.branches/**"
   ])
 ]);

@@ -15,7 +15,13 @@ const serverEnvironmentSchema = z.object({
   INNGEST_SIGNING_KEY: optionalNonEmpty,
   LIVE_PROVIDER_SEND_ENABLED: z.enum(["true", "false"]).default("false"),
   LIVE_TEST_RECIPIENT_ALLOWLIST: z.string().default(""),
-  CREDENTIAL_ENCRYPTION_KEY: optionalNonEmpty
+  CREDENTIAL_ENCRYPTION_KEY: optionalNonEmpty,
+  ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalNonEmpty,
+  TURNSTILE_SECRET_KEY: optionalNonEmpty,
+  AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
+  AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(8),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3600).default(60)
 });
 
 export type ServerEnvironment = Readonly<{
@@ -29,6 +35,12 @@ export type ServerEnvironment = Readonly<{
   liveProviderSendEnabled: boolean;
   liveTestRecipientAllowlist: readonly string[];
   credentialEncryptionKey?: string;
+  enableEmailConfirmation: boolean;
+  turnstileSiteKey?: string;
+  turnstileSecretKey?: string;
+  authCaptchaMode: "fake" | "turnstile";
+  authRateLimitMaxAttempts: number;
+  authRateLimitWindowSeconds: number;
 }>;
 
 export function parseServerEnvironment(
@@ -55,7 +67,15 @@ export function parseServerEnvironment(
     ),
     ...(parsed.CREDENTIAL_ENCRYPTION_KEY
       ? { credentialEncryptionKey: parsed.CREDENTIAL_ENCRYPTION_KEY }
-      : {})
+      : {}),
+    enableEmailConfirmation: parsed.ENABLE_EMAIL_CONFIRMATION === "true",
+    ...(parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+      ? { turnstileSiteKey: parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY }
+      : {}),
+    ...(parsed.TURNSTILE_SECRET_KEY ? { turnstileSecretKey: parsed.TURNSTILE_SECRET_KEY } : {}),
+    authCaptchaMode: parsed.AUTH_CAPTCHA_MODE,
+    authRateLimitMaxAttempts: parsed.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+    authRateLimitWindowSeconds: parsed.AUTH_RATE_LIMIT_WINDOW_SECONDS
   });
 }
 

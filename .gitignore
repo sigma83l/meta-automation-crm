@@ -16,6 +16,8 @@
 !.env.example
 .vercel
 .supabase
+/supabase/.branches
+/supabase/.temp
 
 # operating system and editor files
 .DS_Store

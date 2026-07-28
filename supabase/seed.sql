@@ -1,0 +1,1 @@
+-- Prompt 1 intentionally seeds no users, credentials, or business data.

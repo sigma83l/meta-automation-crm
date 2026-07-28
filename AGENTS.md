@@ -21,6 +21,10 @@ Use the locked pnpm version. Safe local commands are `pnpm dev`,
 `pnpm test:e2e`, `pnpm build`, and `pnpm secret:scan`. Formatting writes
 require an implementation task. Never run donor commands.
 
+Local database commands are `pnpm db:start`, `pnpm db:reset`, `pnpm test:db`,
+`pnpm test:integration:local`, and `pnpm db:stop`. Never target a hosted project
+without explicit approval.
+
 ## Non-negotiable rules
 
 - Every business-owned record must be workspace scoped. Browser-supplied

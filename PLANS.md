@@ -5,8 +5,8 @@ Run one stage at a time. Continue only after the prior report is accepted as
 
 1. **Prompt 0 — Foundation:** independent repo, donor audit, contracts, sandbox,
    tests, CI, and local checkpoint.
-2. **Prompt 1 — Identity and isolation:** Supabase auth, workspace creation, RLS,
-   private Storage, and cross-tenant denial tests.
+2. **Prompt 1 — Identity and isolation (implemented):** Supabase auth, atomic
+   workspace creation, RLS, private Storage, and cross-tenant denial tests.
 3. **Prompt 2 — CRM and export:** customers, conversations, media, Excel, and ZIP.
 4. **Prompt 3 — Business knowledge and AI:** structured knowledge, paid default,
    encrypted BYOK, privacy gates.
