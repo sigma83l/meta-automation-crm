@@ -13,7 +13,8 @@ export function createInngestFoundationClient(): InngestFoundationClient {
       "app/health.checked",
       "sandbox/message.received",
       "crm/export.requested",
-      "meta/webhook.received"
+      "meta/webhook.received",
+      "automation/run.requested"
     ]),
     sdkAdapterRegistered: false
   });

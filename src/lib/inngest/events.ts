@@ -28,6 +28,13 @@ export type FoundationEventMap = {
       providerEventId: string;
     };
   };
+  "automation/run.requested": {
+    data: {
+      workspaceId: string;
+      runId: string;
+      provider: "instagram" | "whatsapp";
+    };
+  };
 };
 
 export const inngestFoundationContract = Object.freeze({

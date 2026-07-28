@@ -125,3 +125,15 @@ unhealthy states, deduplicates by provider event ID, persists the normalized
 record, and creates one `meta/webhook.received` outbox row. Provider media URLs
 are transient hints; background download uses the `ProviderMediaDownloader`
 interface and private Storage later.
+
+## Durable automation engine
+
+Immutable versions and a validated state machine separate configuration from
+run state. Trusted provider events alone update service windows. The send policy
+runs immediately before every fake or future live send; AI and browser input
+cannot override authority.
+
+Run steps carry bounded attempts and availability times. Idempotency is reserved
+before provider execution, including `sent_unknown` for crash recovery. Human
+takeover pauses a conversation until explicit resume; dead letters require
+controlled recovery.
