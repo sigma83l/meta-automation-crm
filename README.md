@@ -5,7 +5,7 @@ and WhatsApp automation with AI-assisted CRM workflows.
 
 The current checkpoint includes workspace-scoped CRM/inbox, private media,
 secure Excel/ZIP exports, structured business knowledge, strict AI contracts,
-synthetic Demo privacy gates, encrypted BYOK, three durable automation recipes,
+synthetic Demo privacy gates, encrypted BYOK, five durable automation recipes,
 and a responsive business-owner panel. Real provider connections, outbound
 adapters, and cloud deployment remain absent.
 
@@ -47,6 +47,7 @@ assets, review, and Advanced Access.
 The resumable setup is at `/onboarding`; the seven-step recipe builder and
 emergency controls are at `/automations`.
 Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
+CRM also supports an atomic audited CSV import capped at 500 rows / 1 MiB.
 
 Do not put real credentials into `.env.example`, fixtures, logs, issues, or
 chat. Local `.env*` files remain ignored.
@@ -59,6 +60,7 @@ pnpm lint
 pnpm typecheck
 pnpm test:unit
 pnpm test:integration
+pnpm load:check
 pnpm build
 pnpm secret:scan
 pnpm exec playwright install chromium
@@ -74,8 +76,12 @@ pnpm test:e2e
 - Fresh local Supabase migrations and isolation tests pass; no hosted migration
   has been applied.
 - No remote Git repository or cloud project is connected.
+- The 1,000-user k6 profiles are prepared but intentionally unexecuted until
+  commercially eligible staging is approved.
 
 See `docs/ARCHITECTURE.md`, `docs/SECURITY_THREAT_MODEL.md`, and
 `docs/INFRASTRUCTURE_SETUP.md` before extending the foundation. Owner workflows
 are documented in `docs/USER_GUIDE.md`; route and state coverage are in
 `docs/ROUTE_MAP.md` and `docs/UI_STATE_MATRIX.md`.
+Production operations and owner handoff are in `docs/OPERATIONS_MANUAL.md` and
+`docs/BUSINESS_OWNER_GUIDE.md`.

@@ -4,9 +4,17 @@ const optionalNonEmpty = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().min(1).optional()
 );
+const optionalMetaVersion = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z
+    .string()
+    .regex(/^v\d{1,2}\.\d{1,2}$/)
+    .optional()
+);
 
 const serverEnvironmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_DEPLOYMENT_MODE: z.enum(["local", "preview", "production"]).default("local"),
   NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
   NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmpty,
@@ -25,11 +33,16 @@ const serverEnvironmentSchema = z.object({
   META_APP_SECRET: optionalNonEmpty,
   META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
   META_OAUTH_REDIRECT_URL: z.url().optional(),
+  META_GRAPH_API_VERSION: optionalMetaVersion,
+  META_WHATSAPP_CONFIG_ID: optionalNonEmpty,
   META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalNonEmpty,
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
+  AUTH_SIGNUP_MODE: z.enum(["self_service", "invite_only"]).default("self_service"),
+  AUTH_RATE_LIMIT_MODE: z.enum(["memory", "database"]).default("memory"),
+  AUTH_RATE_LIMIT_HASH_KEY: optionalNonEmpty,
   AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(8),
   AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3600).default(60),
   CRM_MEDIA_MAX_BYTES: z.coerce.number().int().min(1024).max(10485760).default(10485760),
@@ -41,6 +54,7 @@ const serverEnvironmentSchema = z.object({
 
 export type ServerEnvironment = Readonly<{
   nodeEnv: "development" | "test" | "production";
+  deploymentMode: "local" | "preview" | "production";
   appUrl: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
@@ -59,11 +73,16 @@ export type ServerEnvironment = Readonly<{
   metaAppSecret?: string;
   metaWebhookVerifyToken?: string;
   metaOauthRedirectUrl?: string;
+  metaGraphApiVersion?: string;
+  metaWhatsappConfigId?: string;
   metaConnectionMode: "sandbox" | "live";
   enableEmailConfirmation: boolean;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
   authCaptchaMode: "fake" | "turnstile";
+  authSignupMode: "self_service" | "invite_only";
+  authRateLimitMode: "memory" | "database";
+  authRateLimitHashKey?: string;
   authRateLimitMaxAttempts: number;
   authRateLimitWindowSeconds: number;
   crmMediaMaxBytes: number;
@@ -77,8 +96,10 @@ export function parseServerEnvironment(
   input: Record<string, string | undefined>
 ): ServerEnvironment {
   const parsed = serverEnvironmentSchema.parse(input);
+  assertProductionConfiguration(parsed);
   return Object.freeze({
     nodeEnv: parsed.NODE_ENV,
+    deploymentMode: parsed.APP_DEPLOYMENT_MODE,
     appUrl: parsed.NEXT_PUBLIC_APP_URL,
     ...(parsed.NEXT_PUBLIC_SUPABASE_URL ? { supabaseUrl: parsed.NEXT_PUBLIC_SUPABASE_URL } : {}),
     ...(parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -117,6 +138,12 @@ export function parseServerEnvironment(
     ...(parsed.META_OAUTH_REDIRECT_URL
       ? { metaOauthRedirectUrl: parsed.META_OAUTH_REDIRECT_URL }
       : {}),
+    ...(parsed.META_GRAPH_API_VERSION
+      ? { metaGraphApiVersion: parsed.META_GRAPH_API_VERSION }
+      : {}),
+    ...(parsed.META_WHATSAPP_CONFIG_ID
+      ? { metaWhatsappConfigId: parsed.META_WHATSAPP_CONFIG_ID }
+      : {}),
     metaConnectionMode: parsed.META_CONNECTION_MODE,
     enableEmailConfirmation: parsed.ENABLE_EMAIL_CONFIRMATION === "true",
     ...(parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY
@@ -124,6 +151,11 @@ export function parseServerEnvironment(
       : {}),
     ...(parsed.TURNSTILE_SECRET_KEY ? { turnstileSecretKey: parsed.TURNSTILE_SECRET_KEY } : {}),
     authCaptchaMode: parsed.AUTH_CAPTCHA_MODE,
+    authSignupMode: parsed.AUTH_SIGNUP_MODE,
+    authRateLimitMode: parsed.AUTH_RATE_LIMIT_MODE,
+    ...(parsed.AUTH_RATE_LIMIT_HASH_KEY
+      ? { authRateLimitHashKey: parsed.AUTH_RATE_LIMIT_HASH_KEY }
+      : {}),
     authRateLimitMaxAttempts: parsed.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
     authRateLimitWindowSeconds: parsed.AUTH_RATE_LIMIT_WINDOW_SECONDS,
     crmMediaMaxBytes: parsed.CRM_MEDIA_MAX_BYTES,
@@ -132,6 +164,52 @@ export function parseServerEnvironment(
     crmExportMaxBytes: parsed.CRM_EXPORT_MAX_BYTES,
     crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS
   });
+}
+
+function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentSchema>) {
+  if (parsed.APP_DEPLOYMENT_MODE !== "production") return;
+  const required = [
+    ["NEXT_PUBLIC_SUPABASE_URL", parsed.NEXT_PUBLIC_SUPABASE_URL],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY],
+    ["SUPABASE_SERVICE_ROLE_KEY", parsed.SUPABASE_SERVICE_ROLE_KEY],
+    ["INNGEST_EVENT_KEY", parsed.INNGEST_EVENT_KEY],
+    ["INNGEST_SIGNING_KEY", parsed.INNGEST_SIGNING_KEY],
+    ["CREDENTIAL_ENCRYPTION_KEY", parsed.CREDENTIAL_ENCRYPTION_KEY],
+    ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY],
+    ["TURNSTILE_SECRET_KEY", parsed.TURNSTILE_SECRET_KEY],
+    ["AUTH_RATE_LIMIT_HASH_KEY", parsed.AUTH_RATE_LIMIT_HASH_KEY]
+  ] as const;
+  const missing = required.filter(([, value]) => !value).map(([name]) => name);
+  if (missing.length) {
+    throw new Error(`Production configuration missing required names: ${missing.join(", ")}`);
+  }
+  if (new URL(parsed.NEXT_PUBLIC_APP_URL).protocol !== "https:") {
+    throw new Error("NEXT_PUBLIC_APP_URL must use HTTPS in production.");
+  }
+  if (parsed.AUTH_CAPTCHA_MODE !== "turnstile" || parsed.AUTH_RATE_LIMIT_MODE !== "database") {
+    throw new Error("Production requires Turnstile and database rate limiting.");
+  }
+  if ((parsed.AUTH_RATE_LIMIT_HASH_KEY?.length ?? 0) < 32) {
+    throw new Error("AUTH_RATE_LIMIT_HASH_KEY must contain at least 32 characters.");
+  }
+  if (parsed.META_CONNECTION_MODE === "live") {
+    const callback = parsed.META_OAUTH_REDIRECT_URL
+      ? new URL(parsed.META_OAUTH_REDIRECT_URL)
+      : undefined;
+    const app = new URL(parsed.NEXT_PUBLIC_APP_URL);
+    if (
+      !parsed.META_APP_ID ||
+      !parsed.META_APP_SECRET ||
+      !parsed.META_WEBHOOK_VERIFY_TOKEN ||
+      !parsed.META_GRAPH_API_VERSION ||
+      !parsed.META_WHATSAPP_CONFIG_ID ||
+      !callback ||
+      callback.origin !== app.origin ||
+      callback.pathname !== "/api/connections/meta/callback"
+    ) {
+      throw new Error("Live Meta mode requires exact same-origin provider configuration.");
+    }
+  }
 }
 
 export function getServerEnvironment(): ServerEnvironment {

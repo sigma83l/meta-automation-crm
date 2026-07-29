@@ -19,7 +19,16 @@ export default async function CrmPage({
   return (
     <WorkspaceShell active="crm" workspaceName={workspace.name}>
       <div className="content crm-content">
-        <CrmControls />
+        {workspace.role === "viewer" ? (
+          <section className="panel" role="status">
+            <h2>Read-only access</h2>
+            <p>
+              Your Viewer role can review CRM records but cannot create, import, or export them.
+            </p>
+          </section>
+        ) : (
+          <CrmControls />
+        )}
         <CustomerTable customers={customers} />
       </div>
     </WorkspaceShell>

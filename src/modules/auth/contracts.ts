@@ -32,5 +32,5 @@ export interface CaptchaProvider {
 }
 
 export interface RateLimiter {
-  consume(key: string, now?: number): Result<void>;
+  consume(key: string, now?: number): Result<void> | Promise<Result<void>>;
 }

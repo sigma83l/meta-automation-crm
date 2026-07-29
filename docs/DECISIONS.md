@@ -104,3 +104,26 @@ creation atomically.
 The request path verifies, minimally normalizes, and writes one transactional
 outbox row. Provider-specific work and media downloads are background concerns.
 This preserves quick acknowledgements without losing accepted events.
+
+## D-019 — Production auth limits are shared and pseudonymous
+
+Production rejects memory mode. A server HMAC removes raw identity/IP values
+before one atomic private Postgres window consumes the attempt.
+
+## D-020 — Roles are enforced twice
+
+Viewer, Operator, Admin and Owner authorization is represented in RLS/Storage
+policies and repeated before service-role writes. Client UI state is helpful but
+never authoritative.
+
+## D-021 — CRM import is all-or-nothing
+
+The server validates the complete bounded CSV and passes a trusted workspace to
+one database function. A failed row rolls back customer/contact/timeline/audit
+inserts and records only a safe job failure.
+
+## D-022 — Load proof requires commercial staging
+
+Tracked 1,000-user profiles do not become evidence until they run against an
+isolated, monitored, commercially eligible hosted environment. Vercel Hobby or
+unverified plans are an explicit stop.

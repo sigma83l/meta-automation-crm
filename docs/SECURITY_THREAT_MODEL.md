@@ -80,9 +80,19 @@ escaping, AI prompt injection, credential/log boundaries, rate limiting, OAuth
 state, redirect allowlists and idempotency races. The exact findings and
 dispositions are in `docs/SECURITY_REVIEW_RC.md`.
 
-The in-process auth limiter is intentionally not represented as a distributed
-production control. Production remains blocked until an approved shared limiter
-and hosted Turnstile configuration are verified.
+Production auth throttling is an atomic database control keyed by a server HMAC;
+raw IP/email combinations are not persisted. The in-process adapter is limited
+to local/test mode, and explicit production parsing requires database mode plus
+hosted Turnstile.
+
+Prompt 8R added explicit role authority at both database and service-role
+boundaries. Viewer cannot mutate CRM, Storage or settings; Operator cannot
+change credentials/connections/settings; Owner/Admin are managers. This avoids
+turning the service role into an RLS bypass for lower-privilege members.
+
+CSV import is capped, validates all rows, uses safe source names, and runs in a
+database subtransaction. Imports cannot select a workspace from the payload and
+generate both activity and audit evidence.
 
 ## Incident-safe defaults
 

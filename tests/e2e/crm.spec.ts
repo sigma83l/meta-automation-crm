@@ -11,6 +11,17 @@ test("creates, reloads, edits, uploads and exports a workspace customer", async 
   await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
 
   await page.goto("/crm");
+  await page.locator('input[name="csv"]').setInputFiles({
+    name: "synthetic-import.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "display name,company,email,phone\nImported Synthetic,Import Labs,imported@example.test,+10000000001"
+    )
+  });
+  await page.getByRole("button", { name: "Import customers" }).click();
+  await expect(page.getByRole("status")).toContainText("1 customers imported");
+  await expect(page.getByRole("link", { name: "Imported Synthetic" })).toBeVisible();
+
   await page.getByPlaceholder("Display name").fill("Ada Synthetic");
   await page.getByPlaceholder("Company", { exact: true }).fill("Fixture Labs");
   await page.getByPlaceholder("Email").fill("ada@example.test");

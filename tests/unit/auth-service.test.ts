@@ -112,4 +112,29 @@ describe("AuthService", () => {
     await service.logout(true);
     expect(repo.logout).toHaveBeenCalledWith(true);
   });
+
+  it("fails closed when production signup is invite-only", async () => {
+    const repo = repository();
+    const service = new AuthService(
+      repo,
+      new FakeCaptchaProvider(),
+      new MemoryRateLimiter(3, 60_000),
+      false,
+      false
+    );
+    await expect(
+      service.signup(
+        {
+          email: "owner@example.test",
+          password: "Correct Horse 42",
+          businessName: "Acme Test"
+        },
+        context
+      )
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "AUTH_ACCOUNT_UNAVAILABLE" }
+    });
+    expect(repo.signup).not.toHaveBeenCalled();
+  });
 });

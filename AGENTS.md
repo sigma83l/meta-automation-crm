@@ -25,13 +25,21 @@ Local database commands are `pnpm db:start`, `pnpm db:reset`, `pnpm test:db`,
 `pnpm test:integration:local`, and `pnpm db:stop`. Never target a hosted project
 without explicit approval.
 
+Production preparation commands are `pnpm load:check` and
+`pnpm production:preflight`. A production command additionally requires an
+approved owner, commercial hosting plan, explicit change approval and the
+environment matrix. Never run the 1,000-user profiles on Hobby/unverified
+hosting or against customer data.
+
 ## Non-negotiable rules
 
 - Every business-owned record must be workspace scoped. Browser-supplied
   workspace IDs are hints, never authority. Server-resolved membership and RLS
   must agree.
 - Service-role credentials are server-only and must receive a trusted resolved
-  workspace.
+  workspace plus an explicit Owner/Admin/Operator role check for every write.
+- Viewer is read-only. Operator may change CRM/automations. Owner/Admin alone
+  may change business settings, credentials and provider connections.
 - Provider-specific SDK types stop at adapters; domain modules use
   application-owned interfaces.
 - OAuth state must be short lived, signed, workspace/channel bound, stored only
@@ -46,6 +54,9 @@ without explicit approval.
   reviewed compatibility patch plus lint/build regression proof.
 - External account, billing, legal, MFA, DNS, deployment, and provider actions
   require MANI approval.
+- Scheduled cleanup and outbox handlers must remain idempotent, bounded and
+  safe when retried. A provider send with uncertain persistence is
+  `sent_unknown`, never blindly retried.
 
 ## Definition of done
 

@@ -43,9 +43,10 @@ describe("foundation wiring", () => {
     ]);
   });
 
-  it("keeps infrastructure contracts unprovisioned", () => {
+  it("registers production-shaped durable handlers without claiming hosted provisioning", () => {
     expect(supabaseFoundationContract.migrationsApplied).toBe(false);
     expect(supabaseFoundationContract.privateBucket).toBe("crm-private");
-    expect(inngestFoundationContract.registeredFunctions).toBe(0);
+    expect(inngestFoundationContract.registeredFunctions).toBe(3);
+    expect(inngestFoundationContract.productionEnvironmentRequired).toBe(true);
   });
 });

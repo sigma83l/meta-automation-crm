@@ -1,7 +1,10 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnvironment } from "@/src/lib/env";
-import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
+import {
+  assertWorkspaceManager,
+  type TrustedWorkspace
+} from "@/src/modules/workspaces/server/resolve-workspace";
 import { decryptCredential, encryptCredential } from "./credential-vault";
 
 type Provider = "gemini" | "openai" | "anthropic";
@@ -23,6 +26,7 @@ export async function storeWorkspaceCredential(
   provider: Provider,
   plaintext: string
 ) {
+  assertWorkspaceManager(workspace);
   const admin = adminClient();
   const existing = await admin
     .from("workspace_ai_credentials")
@@ -56,6 +60,7 @@ export async function storeWorkspaceCredential(
   };
 }
 export async function testWorkspaceCredential(workspace: TrustedWorkspace, provider: Provider) {
+  assertWorkspaceManager(workspace);
   const admin = adminClient();
   const { data, error } = await admin
     .from("workspace_ai_credentials")
@@ -77,6 +82,7 @@ export async function testWorkspaceCredential(workspace: TrustedWorkspace, provi
   return { provider, status: "active" };
 }
 export async function deleteWorkspaceCredential(workspace: TrustedWorkspace, provider: Provider) {
+  assertWorkspaceManager(workspace);
   const admin = adminClient();
   await admin
     .from("workspace_ai_credentials")

@@ -28,8 +28,11 @@
     "db:status": "supabase status",
     "secret:scan": "secretlint \"**/*\"",
     "bundle:scan": "node scripts/check-client-bundle.mjs",
+    "load:check": "node --check load/k6/panel.js && node --check load/k6/conversations.js",
+    "production:preflight": "node scripts/production-preflight.mjs",
+    "backup:local": "bash scripts/local-backup.sh",
     "audit:prod": "pnpm audit --prod --audit-level high",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm secret:scan"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm load:check && pnpm build && pnpm secret:scan"
   },
   "dependencies": {
     "@e965/xlsx": "0.20.3",

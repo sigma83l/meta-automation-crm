@@ -7,7 +7,9 @@ import { useState, type FormEvent } from "react";
 const recipes = [
   ["INSTAGRAM_COMMENT_TO_DM", "Instagram Post/Reel Comment → DM Lead Collector"],
   ["INSTAGRAM_INBOUND_DM", "Instagram Inbound DM Lead Collector"],
-  ["WHATSAPP_INBOUND", "WhatsApp Inbound Lead Collector"]
+  ["WHATSAPP_INBOUND", "WhatsApp Inbound Lead Collector"],
+  ["WHATSAPP_CONSENTED_FOLLOWUP_REMINDER", "WhatsApp Consented Follow-up Reminder"],
+  ["CROSS_CHANNEL_AFTER_HOURS_ESCALATION", "After-hours / Low-confidence Escalation"]
 ] as const;
 const steps = [
   "Basics",
@@ -139,7 +141,11 @@ export function AutomationBuilder() {
                   <span>
                     {id === "WHATSAPP_INBOUND"
                       ? "24-hour service-window policy"
-                      : "User-initiated Instagram messaging"}
+                      : id === "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER"
+                        ? "One approved template, only with explicit opt-in"
+                        : id === "CROSS_CHANNEL_AFTER_HOURS_ESCALATION"
+                          ? "Human review without unsolicited cross-channel contact"
+                          : "User-initiated Instagram messaging"}
                   </span>
                 </button>
               ))}

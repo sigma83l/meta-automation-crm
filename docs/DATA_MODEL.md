@@ -35,3 +35,17 @@ export lifecycle.
 
 All use forced RLS. Credential envelope writes are additionally denied to the
 browser role.
+
+## Production hardening
+
+- `workspace_memberships.role`: Owner/Admin/Operator/Viewer authority. Reads
+  require active membership; writes additionally require manager/operator
+  policy according to the resource.
+- `crm_import_jobs`: source filename, lifecycle and aggregate accepted/rejected
+  counts only. Customer/contact/timeline/audit inserts happen atomically.
+- `private.auth_rate_limits`: HMAC key, count and expiry only. It stores no raw
+  email or IP address and is inaccessible to browser roles.
+
+The onboarding row is business-workspace state. Additional members inherit that
+state; the resolver no longer requires a second impossible onboarding primary
+row.

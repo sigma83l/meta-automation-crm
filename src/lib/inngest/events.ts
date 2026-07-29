@@ -39,6 +39,11 @@ export type FoundationEventMap = {
 
 export const inngestFoundationContract = Object.freeze({
   applicationId: "meta-automation-crm",
-  registeredFunctions: 0,
+  registeredFunctions: 3,
+  functionIds: Object.freeze([
+    "relay-meta-event-outbox",
+    "process-verified-meta-event",
+    "cleanup-expired-private-artifacts"
+  ]),
   productionEnvironmentRequired: true
 });

@@ -91,14 +91,31 @@ export function authorizeAutomationSend(p: SendPolicy): Result<"AUTHORIZED"> {
     );
   return ok("AUTHORIZED");
 }
-export type Recipe = "INSTAGRAM_COMMENT_TO_DM" | "INSTAGRAM_INBOUND_DM" | "WHATSAPP_INBOUND";
+export type Recipe =
+  | "INSTAGRAM_COMMENT_TO_DM"
+  | "INSTAGRAM_INBOUND_DM"
+  | "WHATSAPP_INBOUND"
+  | "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER"
+  | "CROSS_CHANNEL_AFTER_HOURS_ESCALATION";
 export type RecipeEvent = Readonly<{
   id: string;
   channel: "instagram" | "whatsapp";
-  kind: "comment" | "message" | "image" | "opt_out" | "human_takeover" | "resume";
+  kind:
+    | "comment"
+    | "message"
+    | "image"
+    | "opt_out"
+    | "human_takeover"
+    | "resume"
+    | "schedule_due"
+    | "after_hours"
+    | "low_confidence";
   trusted: boolean;
   text?: string;
   fieldValues?: Readonly<Record<string, string>>;
+  consentValid?: boolean;
+  whatsappOptIn?: boolean;
+  templateApproved?: boolean;
   now: string;
 }>;
 export type RecipeRun = Readonly<{
@@ -112,6 +129,8 @@ export type RecipeRun = Readonly<{
   requiredFields: readonly string[];
   mediaCount: number;
   humanPaused: boolean;
+  remindersSent: number;
+  escalationReason?: "after_hours" | "low_confidence";
   processedEventIds: readonly string[];
   timeline: readonly string[];
 }>;
@@ -126,6 +145,7 @@ export function newRecipeRun(recipe: Recipe, requiredFields: readonly string[]):
     requiredFields,
     mediaCount: 0,
     humanPaused: false,
+    remindersSent: 0,
     processedEventIds: [],
     timeline: []
   };
@@ -158,6 +178,43 @@ export function processRecipeEvent(run: RecipeRun, event: RecipeEvent): RecipeRu
       timeline: [...timeline, "automation:resumed"]
     };
   if (run.humanPaused) return { ...run, processedEventIds, timeline };
+  if (
+    run.recipe === "CROSS_CHANNEL_AFTER_HOURS_ESCALATION" &&
+    (event.kind === "after_hours" || event.kind === "low_confidence")
+  ) {
+    return {
+      ...run,
+      state: "HUMAN_REVIEW",
+      humanPaused: true,
+      escalationReason: event.kind,
+      processedEventIds,
+      timeline: [...timeline, `escalation:${event.kind}`, "send:none"]
+    };
+  }
+  if (run.recipe === "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER" && event.kind === "schedule_due") {
+    const permitted =
+      event.trusted &&
+      event.consentValid === true &&
+      event.whatsappOptIn === true &&
+      event.templateApproved === true &&
+      run.remindersSent === 0;
+    if (!permitted) {
+      return {
+        ...run,
+        state: "HUMAN_REVIEW",
+        humanPaused: true,
+        processedEventIds,
+        timeline: [...timeline, "reminder:blocked"]
+      };
+    }
+    return {
+      ...run,
+      state: "COMPLETED",
+      remindersSent: 1,
+      processedEventIds,
+      timeline: [...timeline, "send:approved_template_reminder"]
+    };
+  }
   if (run.recipe === "INSTAGRAM_COMMENT_TO_DM" && event.kind === "comment")
     return {
       ...run,

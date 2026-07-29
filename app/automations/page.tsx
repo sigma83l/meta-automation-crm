@@ -10,7 +10,14 @@ export default async function AutomationsPage() {
   return (
     <WorkspaceShell active="automations" workspaceName={workspace.name}>
       <div className="content">
-        <AutomationBuilder />
+        {workspace.role === "viewer" ? (
+          <section className="panel" role="status">
+            <h2>Read-only access</h2>
+            <p>Your Viewer role can inspect automations but cannot create or change them.</p>
+          </section>
+        ) : (
+          <AutomationBuilder />
+        )}
         <section className="panel">
           <div className="panel-heading">
             <div>

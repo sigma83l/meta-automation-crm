@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { buildSecurityHeaders } from "./src/lib/security-headers";
+
+const production = process.env.APP_DEPLOYMENT_MODE === "production";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -11,13 +14,14 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/(.*)",
+        headers: [...buildSecurityHeaders(production)]
+      },
+      {
+        source: "/api/:path*",
         headers: [
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
           {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()"
+            key: "Cache-Control",
+            value: "no-store, max-age=0"
           }
         ]
       }

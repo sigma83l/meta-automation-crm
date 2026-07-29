@@ -8,7 +8,10 @@ export default async function ConnectionsPage() {
   return (
     <WorkspaceShell active="connections" workspaceName={workspace.name}>
       <div className="content">
-        <ConnectionsPanel connections={await listMetaConnections(workspace)} />
+        <ConnectionsPanel
+          connections={await listMetaConnections(workspace)}
+          canManage={workspace.role === "owner" || workspace.role === "admin"}
+        />
       </div>
     </WorkspaceShell>
   );

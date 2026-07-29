@@ -12,7 +12,13 @@ async function mutate(method: string, body: unknown) {
   if (!response.ok) throw new Error("Connection action failed.");
   return response.json();
 }
-export function ConnectionsPanel({ connections }: { connections: Record<string, unknown>[] }) {
+export function ConnectionsPanel({
+  connections,
+  canManage
+}: {
+  connections: Record<string, unknown>[];
+  canManage: boolean;
+}) {
   const [status, setStatus] = useState("");
   async function run(method: string, body: unknown) {
     try {
@@ -33,6 +39,12 @@ export function ConnectionsPanel({ connections }: { connections: Record<string, 
           Advanced Access, Embedded Signup, and Instagram Professional assets. Sandbox is complete
           and sends nothing.
         </p>
+        {!canManage ? (
+          <p className="warning-box" role="status">
+            Your workspace role can inspect connection health but only an Owner or Admin can
+            connect, reauthorize, or disconnect provider assets.
+          </p>
+        ) : null}
         {status && <p role="status">{status}</p>}
         {(["whatsapp", "instagram"] as const).map((channel) => {
           const item = connections.find((c) => c.channel === channel);
@@ -48,7 +60,7 @@ export function ConnectionsPanel({ connections }: { connections: Record<string, 
                 </p>
               </div>
               <div className="connection-actions">
-                {!item || item.status === "disconnected" ? (
+                {!canManage ? null : !item || item.status === "disconnected" ? (
                   <button onClick={() => run("POST", { channel })}>Connect sandbox</button>
                 ) : (
                   <>

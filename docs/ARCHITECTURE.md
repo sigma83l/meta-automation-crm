@@ -145,8 +145,11 @@ through an allowlisted provider API and then use private Storage.
 
 OAuth state is HMAC-bound to workspace, channel, nonce and expiry. Only a
 SHA-256 hash is stored server-side, and an atomic service-role function consumes
-the hash exactly once before any future token exchange. Expired, future-dated,
-cross-workspace, tampered and replayed values fail closed.
+the hash exactly once before server-only code exchange. The adapter posts codes
+only to fixed Meta hosts, verifies the returned Instagram identity or
+WABA/phone relationship, and encrypts the token before returning safe metadata.
+Expired, future-dated, cross-workspace, tampered and replayed values fail
+closed.
 
 ## Durable automation engine
 
@@ -159,3 +162,29 @@ Run steps carry bounded attempts and availability times. Idempotency is reserved
 before provider execution, including `sent_unknown` for crash recovery. Human
 takeover pauses a conversation until explicit resume; dead letters require
 controlled recovery.
+
+## Prompt 8R production boundaries
+
+Trusted workspace resolution now includes membership role. Viewer is read-only,
+Operator may mutate CRM/automations, and Owner/Admin alone may change settings,
+credentials and provider connections. Role checks run both in RLS and before
+any service-role write.
+
+Authentication throttling uses a server HMAC of operation/IP/identity and an
+atomic private Postgres window in production. Raw identifiers are not stored.
+Memory limiting remains a deterministic local adapter only.
+
+CRM CSV import validates the complete file before one service-role database
+function creates customers, contacts, timeline, audit and job result. Its inner
+subtransaction rolls back all customer rows on any invalid row.
+
+The Inngest endpoint registers three bounded functions: transactional Meta
+outbox relay, trusted webhook processing and expired private export/auth-limit
+cleanup. SDK types are isolated behind a narrow runtime compatibility boundary
+because Inngest 4.13 declarations conflict with strict optional-property
+checking; application code remains fully strict.
+
+Two additional recipes share the same policy engine:
+`WHATSAPP_CONSENTED_FOLLOWUP_REMINDER` permits one approved template only with
+trusted schedule, consent and opt-in; `CROSS_CHANNEL_AFTER_HOURS_ESCALATION`
+creates human review and explicitly sends nothing across channels.

@@ -8,7 +8,17 @@ export default async function SettingsPage() {
   return (
     <WorkspaceShell active="settings" workspaceName={workspace.name}>
       <div className="content">
-        <SettingsPanel {...data} />
+        {workspace.role === "owner" || workspace.role === "admin" ? (
+          <SettingsPanel {...data} />
+        ) : (
+          <section className="settings-card" role="status">
+            <h2>Permission denied</h2>
+            <p>
+              Your {workspace.role} role cannot change workspace settings or encrypted credentials.
+              Ask an Owner or Admin.
+            </p>
+          </section>
+        )}
       </div>
     </WorkspaceShell>
   );

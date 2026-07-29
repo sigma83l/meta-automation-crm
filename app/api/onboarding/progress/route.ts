@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
+import { assertWorkspaceManager } from "@/src/modules/workspaces/server/resolve-workspace";
 const steps = [
   "account",
   "business-profile",
@@ -19,6 +20,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     if (!steps.includes(body.step)) throw new Error();
     const { workspace } = await createMetaRuntime();
+    assertWorkspaceManager(workspace);
     const admin = createSupabaseAdminClient();
     const existing = await admin
       .from("onboarding_states")

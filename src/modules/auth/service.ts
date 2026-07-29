@@ -26,10 +26,19 @@ export class AuthService {
     private readonly repository: AuthRepository,
     private readonly captcha: CaptchaProvider,
     private readonly rateLimiter: RateLimiter,
-    private readonly emailConfirmationEnabled: boolean
+    private readonly emailConfirmationEnabled: boolean,
+    private readonly signupEnabled = true
   ) {}
 
   async signup(input: SignupInput, context: AuthContext): Promise<Result<AuthOutcome>> {
+    if (!this.signupEnabled) {
+      return err(
+        appError(
+          "AUTH_ACCOUNT_UNAVAILABLE",
+          "Account creation is not available. Contact your workspace administrator."
+        )
+      );
+    }
     const parsed = signupSchema.safeParse(input);
     if (!parsed.success) return invalidInput();
     const guarded = await this.guard("signup", parsed.data.email, context);
@@ -66,7 +75,7 @@ export class AuthService {
   }
 
   private async guard(operation: string, identity: string, context: AuthContext) {
-    const limit = this.rateLimiter.consume(
+    const limit = await this.rateLimiter.consume(
       `${operation}:${context.ipAddress}:${identity.toLowerCase()}`
     );
     if (!limit.ok) return limit;

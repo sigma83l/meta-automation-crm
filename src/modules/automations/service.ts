@@ -1,12 +1,17 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
+import {
+  assertWorkspaceOperator,
+  type TrustedWorkspace
+} from "@/src/modules/workspaces/server/resolve-workspace";
 import type { Recipe } from "./engine";
 const recipes = new Set<Recipe>([
   "INSTAGRAM_COMMENT_TO_DM",
   "INSTAGRAM_INBOUND_DM",
-  "WHATSAPP_INBOUND"
+  "WHATSAPP_INBOUND",
+  "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER",
+  "CROSS_CHANNEL_AFTER_HOURS_ESCALATION"
 ]);
 export async function listAutomations(workspace: TrustedWorkspace) {
   const admin = createSupabaseAdminClient();
@@ -32,6 +37,7 @@ export async function createAutomation(
     };
   }
 ) {
+  assertWorkspaceOperator(workspace);
   if (!recipes.has(input.recipe) || input.name.trim().length < 2)
     throw new Error("Invalid automation.");
   if (!/^[0-9a-f-]{36}$/i.test(input.requestId)) throw new Error("Invalid request.");
@@ -137,11 +143,11 @@ export async function createAutomation(
     throw new Error("Automation version activation failed.");
   }
   const questions = await admin.from("automation_questions").insert(
-    ["name", "email"].map((field_key, position) => ({
+    configuredQuestions.map((prompt, position) => ({
       workspace_id: workspace.id,
       automation_version_id: version.data.id,
-      field_key,
-      prompt: field_key === "name" ? "What should we call you?" : "What email can we use?",
+      field_key: questionKey(prompt, position),
+      prompt,
       position,
       required: true
     }))
@@ -166,6 +172,7 @@ export async function updateAutomation(
   id: string,
   action: "activate" | "pause" | "archive" | "safe_test" | "stop_queued"
 ) {
+  assertWorkspaceOperator(workspace);
   const admin = createSupabaseAdminClient();
   const status =
     action === "activate"
@@ -212,4 +219,14 @@ export async function updateAutomation(
   });
   if (audit.error) throw new Error("Automation audit failed.");
   return { status };
+}
+
+function questionKey(prompt: string, position: number) {
+  const normalized = prompt
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48);
+  return normalized || `field_${position + 1}`;
 }

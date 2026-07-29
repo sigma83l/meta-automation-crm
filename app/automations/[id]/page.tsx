@@ -42,7 +42,11 @@ export default async function AutomationDetail({ params }: { params: Promise<{ i
             Version 1 is immutable. Every send rechecks workspace, connection, consent, window,
             confidence and takeover policy.
           </p>
-          <AutomationActions id={id} status={item.status} />
+          {workspace.role === "viewer" ? (
+            <p role="status">Viewer access is read-only.</p>
+          ) : (
+            <AutomationActions id={id} status={item.status} />
+          )}
           <div className="state-grid">
             <article>
               <strong>Connection</strong>

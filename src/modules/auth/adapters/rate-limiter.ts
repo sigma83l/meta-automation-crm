@@ -35,3 +35,31 @@ export class MemoryRateLimiter implements RateLimiter {
     return ok(undefined);
   }
 }
+
+export class DatabaseRateLimiter implements RateLimiter {
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly maximum: number,
+    private readonly windowSeconds: number,
+    private readonly hashKey: string
+  ) {}
+
+  async consume(key: string): Promise<Result<void>> {
+    const keyHash = createHmac("sha256", this.hashKey).update(key).digest("hex");
+    const { data, error } = await this.client.rpc("consume_auth_rate_limit", {
+      requested_key_hash: keyHash,
+      requested_maximum: this.maximum,
+      requested_window_seconds: this.windowSeconds
+    });
+    if (error || data !== true) {
+      return err(
+        appError("AUTH_RATE_LIMITED", "Too many attempts. Try again shortly.", {
+          retryable: true
+        })
+      );
+    }
+    return ok(undefined);
+  }
+}
+import { createHmac } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";

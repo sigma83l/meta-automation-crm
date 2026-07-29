@@ -28,6 +28,7 @@ jobs:
       - run: pnpm db:reset
       - run: pnpm test:db
       - run: pnpm test:integration:local
+      - run: pnpm load:check
       - run: pnpm build
       - run: pnpm bundle:scan
       - run: pnpm secret:scan

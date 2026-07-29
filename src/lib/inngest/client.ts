@@ -1,21 +1,5 @@
-import type { FoundationEventMap } from "@/src/lib/inngest/events";
+import { Inngest } from "@/src/vendor/inngest-runtime.mjs";
 
-export type InngestFoundationClient = Readonly<{
-  id: "meta-automation-crm";
-  eventNames: readonly (keyof FoundationEventMap)[];
-  sdkAdapterRegistered: false;
-}>;
-
-export function createInngestFoundationClient(): InngestFoundationClient {
-  return Object.freeze({
-    id: "meta-automation-crm",
-    eventNames: Object.freeze<(keyof FoundationEventMap)[]>([
-      "app/health.checked",
-      "sandbox/message.received",
-      "crm/export.requested",
-      "meta/webhook.received",
-      "automation/run.requested"
-    ]),
-    sdkAdapterRegistered: false
-  });
-}
+export const inngest = new Inngest({
+  id: "meta-automation-crm"
+});

@@ -18,14 +18,9 @@ describe("Meta OAuth state security", () => {
 
   it("rejects tampering, cross-workspace use, expiry and future timestamps", () => {
     const state = createSignedMetaOauthState(workspaceId, "whatsapp", secret, issuedAt);
+    const tampered = `${state.slice(0, -1)}${state.endsWith("0") ? "1" : "0"}`;
     expect(
-      verifySignedMetaOauthState(
-        `${state.slice(0, -1)}0`,
-        workspaceId,
-        "whatsapp",
-        secret,
-        issuedAt + 1
-      )
+      verifySignedMetaOauthState(tampered, workspaceId, "whatsapp", secret, issuedAt + 1)
     ).toBe(false);
     expect(
       verifySignedMetaOauthState(

@@ -2,10 +2,17 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { getServerEnvironment } from "@/src/lib/env";
-import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
+import {
+  assertWorkspaceManager,
+  type TrustedWorkspace
+} from "@/src/modules/workspaces/server/resolve-workspace";
 import type { MetaChannel } from "./contracts";
 import { encryptCredential } from "@/src/modules/ai/credential-vault";
 import { createSignedMetaOauthState, verifySignedMetaOauthState } from "./oauth-state";
+import {
+  exchangeAndVerifyMetaCredential,
+  type LiveMetaExchangeInput
+} from "./live-connection-adapter";
 
 const requiredPermissions = {
   whatsapp: ["whatsapp_business_management", "whatsapp_business_messaging"],
@@ -24,6 +31,7 @@ export async function listMetaConnections(workspace: TrustedWorkspace) {
   return data ?? [];
 }
 export async function connectSandbox(workspace: TrustedWorkspace, channel: MetaChannel) {
+  assertWorkspaceManager(workspace);
   const admin = createSupabaseAdminClient();
   const account =
     channel === "whatsapp" ? `wa-sandbox-${workspace.id}` : `ig-sandbox-${workspace.id}`;
@@ -63,6 +71,7 @@ export async function updateMetaConnection(
   channel: MetaChannel,
   action: "health" | "reauthorize" | "disconnect"
 ) {
+  assertWorkspaceManager(workspace);
   const admin = createSupabaseAdminClient();
   const update =
     action === "disconnect"
@@ -139,12 +148,39 @@ export async function consumeMetaOauthState(
 }
 export function liveMetaReadiness() {
   const env = getServerEnvironment();
+  const ready =
+    env.metaConnectionMode === "live" &&
+    Boolean(
+      env.metaAppId &&
+      env.metaAppSecret &&
+      env.metaOauthRedirectUrl &&
+      env.metaGraphApiVersion &&
+      env.metaWhatsappConfigId
+    );
   return {
-    ready:
-      env.metaConnectionMode === "live" &&
-      Boolean(env.metaAppId && env.metaAppSecret && env.metaOauthRedirectUrl),
-    status: "LIVE_MULTI_BUSINESS_BLOCKED_BY_META" as const
+    ready,
+    status: ready
+      ? ("READY_FOR_META_AUTHORIZATION" as const)
+      : ("LIVE_MULTI_BUSINESS_BLOCKED_BY_META" as const)
   };
+}
+
+export async function createLiveMetaConnection(
+  workspace: TrustedWorkspace,
+  input: LiveMetaExchangeInput
+) {
+  assertWorkspaceManager(workspace);
+  const credential = await exchangeAndVerifyMetaCredential(input, getServerEnvironment());
+  return storeLiveMetaConnection(workspace, {
+    channel: input.channel,
+    providerAccountId: credential.providerAccountId,
+    displayName: credential.displayName,
+    accessToken: credential.accessToken,
+    permissions: credential.permissions,
+    ...(credential.wabaId ? { wabaId: credential.wabaId } : {}),
+    ...(credential.phoneNumberId ? { phoneNumberId: credential.phoneNumberId } : {}),
+    ...(credential.instagramAccountId ? { instagramAccountId: credential.instagramAccountId } : {})
+  });
 }
 export async function storeLiveMetaConnection(
   workspace: TrustedWorkspace,
@@ -160,6 +196,7 @@ export async function storeLiveMetaConnection(
     expiresAt?: string;
   }
 ) {
+  assertWorkspaceManager(workspace);
   const env = getServerEnvironment();
   if (!env.credentialEncryptionKey) throw new Error("Token encryption is unavailable.");
   const required = requiredPermissions[input.channel];

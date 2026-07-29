@@ -7,6 +7,7 @@ export function CrmControls() {
   const router = useRouter();
   const search = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
 
   function filter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,6 +68,31 @@ export function CrmControls() {
     setLoading(false);
   }
 
+  async function importCsv(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get("csv");
+    if (!(file instanceof File) || file.size > 1_048_576 || !file.name.endsWith(".csv")) {
+      setImportMessage("Choose a CSV file no larger than 1 MB.");
+      return;
+    }
+    setLoading(true);
+    const token = await csrfToken();
+    const response = await fetch("/api/crm/imports", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": token },
+      body: JSON.stringify({ sourceName: file.name, csv: await file.text() })
+    });
+    const result = (await response.json()) as { acceptedRows?: number };
+    setLoading(false);
+    setImportMessage(
+      response.ok
+        ? `${result.acceptedRows ?? 0} customers imported.`
+        : "Import rejected. Check the CSV headers and values."
+    );
+    if (response.ok) router.refresh();
+  }
+
   return (
     <div className="crm-control-grid">
       <form className="crm-filter" onSubmit={filter}>
@@ -100,6 +126,21 @@ export function CrmControls() {
         <input name="email" type="email" placeholder="Email" />
         <button disabled={loading}>{loading ? "Working…" : "Create"}</button>
       </form>
+      <form className="crm-create" onSubmit={importCsv}>
+        <strong>Import CSV</strong>
+        <p>Headers: display name, company, email, phone. Maximum 500 rows / 1 MB.</p>
+        <label>
+          Customer CSV file
+          <input name="csv" type="file" accept=".csv,text/csv" required />
+        </label>
+        <button disabled={loading}>{loading ? "Working…" : "Import customers"}</button>
+        {importMessage ? <span role="status">{importMessage}</span> : null}
+      </form>
     </div>
   );
+}
+
+async function csrfToken() {
+  return ((await fetch("/api/auth/csrf").then((response) => response.json())) as { token: string })
+    .token;
 }

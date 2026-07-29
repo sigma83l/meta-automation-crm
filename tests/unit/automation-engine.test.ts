@@ -38,7 +38,16 @@ const basePolicy: SendPolicy = {
 };
 const event = (
   id: string,
-  kind: "comment" | "message" | "image" | "opt_out" | "human_takeover" | "resume",
+  kind:
+    | "comment"
+    | "message"
+    | "image"
+    | "opt_out"
+    | "human_takeover"
+    | "resume"
+    | "schedule_due"
+    | "after_hours"
+    | "low_confidence",
   channel: "instagram" | "whatsapp" = "instagram",
   extra = {}
 ) => ({ id, kind, channel, trusted: true, now: "2026-01-01T00:00:00.000Z", ...extra });
@@ -143,6 +152,43 @@ describe("durable automation recipes", () => {
     expect(run.humanPaused).toBe(false);
     run = processRecipeEvent(run, event("opt", "opt_out"));
     expect(run.state).toBe("OPTED_OUT");
+  });
+  it("sends one consented approved WhatsApp reminder and deduplicates it", () => {
+    const run = newRecipeRun("WHATSAPP_CONSENTED_FOLLOWUP_REMINDER", []);
+    const due = event("reminder-due-1", "schedule_due", "whatsapp", {
+      consentValid: true,
+      whatsappOptIn: true,
+      templateApproved: true
+    });
+    const completed = processRecipeEvent(run, due);
+    expect(completed.state).toBe("COMPLETED");
+    expect(completed.remindersSent).toBe(1);
+    expect(completed.timeline).toContain("send:approved_template_reminder");
+    expect(processRecipeEvent(completed, due)).toBe(completed);
+  });
+  it("fails closed when reminder consent or template authority is absent", () => {
+    const blocked = processRecipeEvent(
+      newRecipeRun("WHATSAPP_CONSENTED_FOLLOWUP_REMINDER", []),
+      event("reminder-due-2", "schedule_due", "whatsapp", {
+        consentValid: true,
+        whatsappOptIn: false,
+        templateApproved: true
+      })
+    );
+    expect(blocked.state).toBe("HUMAN_REVIEW");
+    expect(blocked.humanPaused).toBe(true);
+    expect(blocked.timeline).toContain("reminder:blocked");
+  });
+  it("escalates after hours and low confidence without cross-channel sending", () => {
+    for (const kind of ["after_hours", "low_confidence"] as const) {
+      const escalated = processRecipeEvent(
+        newRecipeRun("CROSS_CHANNEL_AFTER_HOURS_ESCALATION", []),
+        event(`escalation-${kind}`, kind)
+      );
+      expect(escalated.state).toBe("HUMAN_REVIEW");
+      expect(escalated.escalationReason).toBe(kind);
+      expect(escalated.timeline).toContain("send:none");
+    }
   });
   it("rejects invented transitions", () => {
     expect(transitionRun("NEW", "COMPLETED").ok).toBe(false);

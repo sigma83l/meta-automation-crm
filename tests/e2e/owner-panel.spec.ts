@@ -21,7 +21,9 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   const recipes = [
     "Instagram Post/Reel Comment → DM Lead Collector",
     "Instagram Inbound DM Lead Collector",
-    "WhatsApp Inbound Lead Collector"
+    "WhatsApp Inbound Lead Collector",
+    "WhatsApp Consented Follow-up Reminder",
+    "After-hours / Low-confidence Escalation"
   ];
   for (let index = 0; index < recipes.length; index++) {
     await page.getByLabel("Automation name").fill(`Synthetic recipe ${index + 1}`);

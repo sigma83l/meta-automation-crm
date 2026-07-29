@@ -21,5 +21,12 @@ Run one stage at a time. Continue only after the prior report is accepted as
 8. **Prompt 7 — Release candidate (implemented locally):** security, load,
    reliability, dependency hardening, and release evidence with zero unresolved
    Critical or High findings.
-9. **Prompt 8 — Approved infrastructure:** client-owned cloud resources,
-   Preview, explicit Production approval, deployment, smoke tests, and handoff.
+9. **Prompt 8R — Autonomous production completion (active):** recover the RC,
+   close every independent production gap, add two policy-safe recipes, shared
+   abuse controls, roles, CRM import, durable handlers, operations/load
+   artifacts, and a full local QA checkpoint. Then stop once with one owner
+   access packet if GitHub, commercial Vercel, Supabase, Inngest, Meta, DNS or
+   legal gates remain.
+10. **Hosted staging and production (owner-gated):** provision only the exact
+    approved resources, run hosted security/1,000-user/backup/live-pilot gates,
+    obtain explicit production approval, deploy, smoke test and hand off.
