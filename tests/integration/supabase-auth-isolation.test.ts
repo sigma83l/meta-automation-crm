@@ -66,15 +66,17 @@ describe.runIf(enabled)("local Supabase auth and tenant isolation", () => {
   });
 
   it("rolls back all setup if trigger initialization fails", async () => {
-    const before = await count(admin, "workspaces");
+    const failedEmail = `invalid-${suffix}@example.test`;
     const failed = await admin.auth.admin.createUser({
-      email: `invalid-${suffix}@example.test`,
+      email: failedEmail,
       password,
       email_confirm: true,
       user_metadata: { business_name: "" }
     });
     expect(failed.error).not.toBeNull();
-    expect(await count(admin, "workspaces")).toBe(before);
+    const usersAfterFailure = await admin.auth.admin.listUsers();
+    expect(usersAfterFailure.error).toBeNull();
+    expect(usersAfterFailure.data.users.some((user) => user.email === failedEmail)).toBe(false);
   });
 
   it("prevents Business A from reading, updating or deleting Business B", async () => {
@@ -171,9 +173,4 @@ async function resolvedId(client: SupabaseClient) {
   const { data, error } = result;
   expect(error).toBeNull();
   return (data as { workspace_id: string }[])[0]!.workspace_id;
-}
-
-async function count(client: SupabaseClient, table: string) {
-  const { count: value } = await client.from(table).select("*", { count: "exact", head: true });
-  return value;
 }

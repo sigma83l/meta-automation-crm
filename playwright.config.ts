@@ -22,7 +22,10 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: "pnpm dev --hostname 127.0.0.1",
+    // Turbopack HMR can panic while Playwright rapidly creates and tears down
+    // authenticated route trees. Webpack is the stable E2E dev server; the
+    // separate production gate still validates the optimized Turbopack build.
+    command: "pnpm dev --webpack --hostname 127.0.0.1",
     url: "http://127.0.0.1:3000/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

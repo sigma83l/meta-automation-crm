@@ -98,6 +98,33 @@ describe("Meta webhook security and sandbox contracts", () => {
     });
     expect(JSON.stringify(wa)).not.toContain("forged-workspace");
   });
+  it("never promotes an untrusted provider URL to a media download target", () => {
+    const payload = {
+      object: "instagram",
+      entry: [
+        {
+          id: "ig-account-sandbox",
+          messaging: [
+            {
+              sender: { id: "synthetic-sender" },
+              message: {
+                mid: "ig-mid-ssrf",
+                attachments: [
+                  {
+                    type: "image",
+                    payload: { url: "http://127.0.0.1:54321/internal-metadata" }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    };
+    const result = normalizeMetaWebhook(payload);
+    expect(result.ok && result.value.attachments[0]?.providerMediaId).toBe("unresolved");
+    expect(JSON.stringify(result)).not.toContain("127.0.0.1");
+  });
   it("ACKs valid events quickly and emits once across webhook retries", async () => {
     const seen = new Set<string>();
     const repository: MetaWebhookRepository = {

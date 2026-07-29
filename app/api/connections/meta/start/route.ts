@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const readiness = liveMetaReadiness();
     if (!readiness.ready) return NextResponse.json(readiness, { status: 409 });
     return NextResponse.json({
-      state: createMetaOauthState(workspace.id, body.channel),
+      state: await createMetaOauthState(workspace.id, body.channel),
       status: "AWAITING_META_AUTHORIZATION"
     });
   } catch {

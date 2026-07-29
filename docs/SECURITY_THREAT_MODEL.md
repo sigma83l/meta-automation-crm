@@ -19,12 +19,12 @@ mapping, RLS, and current policy state.
 | Service-role exposure      | Server-only module, no browser import, bundle and secret review                     | Repeat on every release                       |
 | Secret leakage             | Ignored local env files, placeholder example, secret scan, non-secret health output | Log/export/browser negative tests             |
 | Unauthorized provider send | Sandbox default, multi-factor live gate, no real adapter                            | Policy-before-send and allowlisted live smoke |
-| Webhook forgery/replay     | Raw-body HMAC, stored account routing, event idempotency design                     | Prompt 4 signature/replay/dedupe tests        |
+| Webhook forgery/replay     | Raw-body HMAC, stored account routing, event idempotency and one-time OAuth state   | Signature/replay/dedupe tests pass            |
 | Duplicate sends            | Idempotency key in provider command                                                 | Prompt 5 crash/retry tests                    |
 | Prompt injection           | App-owned structured output, approved knowledge only, human review fallback         | Prompt 3 adversarial fixtures                 |
-| Unsafe files/SSRF          | Magic-byte MIME allowlist, size cap, private objects, no remote fetch               | Prompt 7 SSRF tests                           |
+| Unsafe files/SSRF          | Magic-byte MIME allowlist, size cap, private objects, provider URLs discarded       | URL-rejection regression passes               |
 | Spreadsheet/ZIP injection  | Formula neutralization, generated relative paths, traversal rejection               | Reopen/manifest regression suite              |
-| Dependency compromise      | Exact versions, lockfile, CI, audit/review                                          | Prompt 7 dependency audit                     |
+| Dependency compromise      | Exact versions, lockfile, release-age policy, audit and compatibility patch         | Full and production audits pass               |
 
 | Credential stuffing | CAPTCHA seam, bounded local limiter, provider 429 mapping | Distributed limiter before production |
 | User enumeration | Generic login/recovery/account-disabled responses | SMTP delivery review |
@@ -64,10 +64,25 @@ authority. Unknown, disabled, disconnected, pending, and reauthorization
 connections cannot persist events.
 
 OAuth state is HMAC-bound to the authenticated workspace, channel, nonce, and
-short expiry. Tokens are encrypted server-side and excluded from browser column
-grants, logs, normalized events, exports, and outbox payloads. Logging uses only
-stable statuses; customer text and media references are not logged. Outbound
-live sending remains unavailable.
+short expiry. Its server-side SHA-256 hash is atomically consumed once; replay,
+future timestamps, expiry, tampering and cross-workspace reuse are denied.
+Tokens are encrypted server-side and excluded from browser column grants, logs,
+normalized events, exports, and outbox payloads. Logging uses only stable
+statuses; customer text and media references are not logged. Provider media
+URLs are discarded at normalization so an attacker cannot inject an SSRF
+target. Outbound live sending remains unavailable.
+
+## Release Candidate review
+
+The Prompt 7 review covered session authority, RLS/Storage, IDOR, CSRF, webhook
+HMAC and replay, media/SSRF, MIME checks, ZIP and spreadsheet injection, React
+escaping, AI prompt injection, credential/log boundaries, rate limiting, OAuth
+state, redirect allowlists and idempotency races. The exact findings and
+dispositions are in `docs/SECURITY_REVIEW_RC.md`.
+
+The in-process auth limiter is intentionally not represented as a distributed
+production control. Production remains blocked until an approved shared limiter
+and hosted Turnstile configuration are verified.
 
 ## Incident-safe defaults
 

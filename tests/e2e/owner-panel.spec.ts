@@ -56,11 +56,12 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   const profile = await admin.from("profiles").select("workspace_id").eq("id", user!.id).single();
   expect(profile.error).toBeNull();
   if (!profile.data) throw new Error("Synthetic workspace profile was not provisioned.");
+  const hostileDisplayName = "<img src=x onerror=window.__xss=1> Synthetic";
   const customer = await admin
     .from("customers")
     .insert({
       workspace_id: profile.data.workspace_id,
-      display_name: "Inbox Journey Synthetic",
+      display_name: hostileDisplayName,
       source: "e2e",
       created_by: user!.id
     })
@@ -84,6 +85,12 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   await expect(page.getByRole("button", { name: "Resume automation" })).toBeVisible();
   await page.getByRole("button", { name: "Resume automation" }).click();
   await expect(page.getByRole("button", { name: "Take over conversation" })).toBeVisible();
+  await page.goto("/crm");
+  await expect(page.getByText(hostileDisplayName)).toBeVisible();
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as typeof window & { __xss?: number }).__xss)).toBe(
+    undefined
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobile = page.getByRole("navigation", { name: "Mobile navigation" });

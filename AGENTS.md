@@ -34,11 +34,16 @@ without explicit approval.
   workspace.
 - Provider-specific SDK types stop at adapters; domain modules use
   application-owned interfaces.
+- OAuth state must be short lived, signed, workspace/channel bound, stored only
+  as a hash, and consumed exactly once. Provider media URLs are never trusted
+  download targets; resolve opaque provider IDs in a server-only adapter.
 - Real sends require the environment gate, explicit approval, recipient
   allowlist, current provider policy, and a real adapter. Default is deny.
 - Donor repositories are permanently read-only. Do not copy source, migrations,
   environment files, secrets, data, sessions, or branded assets.
 - Never print, log, commit, fixture, export, or expose secret values or real PII.
+- Security audit overrides require a patched upstream release or a narrow,
+  reviewed compatibility patch plus lint/build regression proof.
 - External account, billing, legal, MFA, DNS, deployment, and provider actions
   require MANI approval.
 

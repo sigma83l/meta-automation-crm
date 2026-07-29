@@ -138,9 +138,15 @@ The public webhook route verifies the untouched request body before JSON
 parsing. Normalization extracts a minimal application event. A service-role-only
 database function atomically resolves the active connection, rejects unknown or
 unhealthy states, deduplicates by provider event ID, persists the normalized
-record, and creates one `meta/webhook.received` outbox row. Provider media URLs
-are transient hints; background download uses the `ProviderMediaDownloader`
-interface and private Storage later.
+record, and creates one `meta/webhook.received` outbox row. Webhook
+normalization discards provider media URLs and retains only opaque provider
+media IDs. A future server-only `ProviderMediaDownloader` must resolve those IDs
+through an allowlisted provider API and then use private Storage.
+
+OAuth state is HMAC-bound to workspace, channel, nonce and expiry. Only a
+SHA-256 hash is stored server-side, and an atomic service-role function consumes
+the hash exactly once before any future token exchange. Expired, future-dated,
+cross-workspace, tampered and replayed values fail closed.
 
 ## Durable automation engine
 

@@ -2,16 +2,16 @@
 
 ## Local candidate
 
-- [ ] Clean install from lockfile.
-- [ ] Formatting, lint, strict typecheck, unit and integration tests pass.
-- [ ] Production build and E2E pass on supported viewports.
-- [ ] Secret scan and dependency review pass.
-- [ ] Fresh migrations validate from zero and rollback notes are current.
-- [ ] Cross-workspace database and Storage denial tests pass.
-- [ ] Provider signature, replay, idempotency, policy and retry tests pass.
-- [ ] Export/media corruption and injection tests pass.
-- [ ] Accessibility and responsive journeys pass.
-- [ ] Zero unresolved Critical or High security findings.
+- [x] Clean install from lockfile.
+- [x] Formatting, lint, strict typecheck, unit and integration tests pass.
+- [x] Production build and E2E pass on supported viewports.
+- [x] Secret scan and full/production dependency audits pass.
+- [x] Fresh migrations validate from zero and rollback notes are current.
+- [x] Cross-workspace database and Storage denial tests pass.
+- [x] Provider signature, replay, idempotency, policy and retry tests pass.
+- [x] Export/media corruption and injection tests pass.
+- [x] Accessibility and responsive journeys pass.
+- [x] Zero unresolved Critical or High security findings.
 
 ## External readiness
 
@@ -23,4 +23,5 @@
 - [ ] Exact SHA receives explicit Production approval.
 - [ ] Production source matches the approved SHA and rollback target is verified.
 
-Prompt 0 does not satisfy the unchecked production items.
+The local Release Candidate satisfies the local list only. Unchecked external
+items remain Prompt 8 gates and prevent a production-readiness claim.

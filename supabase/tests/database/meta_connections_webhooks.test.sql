@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(21);
 select has_table('public','meta_connections','connections exist');
 select has_table('public','meta_webhook_events','webhook events exist');
 select has_table('public','provider_event_outbox','outbox exists');
@@ -16,5 +16,10 @@ select ok(not has_column_privilege('authenticated','public.meta_connections','to
 select ok(has_column_privilege('authenticated','public.meta_connections','token_masked_suffix','SELECT'),'browser may read masked suffix');
 select ok(not has_function_privilege('authenticated','public.ingest_meta_event(text,text,text,text,text,text,text,jsonb,jsonb,timestamptz)','EXECUTE'),'browser cannot ingest trusted webhooks');
 select ok(has_function_privilege('service_role','public.ingest_meta_event(text,text,text,text,text,text,text,jsonb,jsonb,timestamptz)','EXECUTE'),'service role may ingest verified webhooks');
+select has_table('public','meta_oauth_nonces','OAuth nonces exist');
+select ok(relrowsecurity,'OAuth nonce RLS') from pg_class where oid='public.meta_oauth_nonces'::regclass;
+select ok(relforcerowsecurity,'OAuth nonce forced RLS') from pg_class where oid='public.meta_oauth_nonces'::regclass;
+select ok(not has_table_privilege('authenticated','public.meta_oauth_nonces','SELECT'),'browser cannot read OAuth nonces');
+select ok(not has_function_privilege('authenticated','public.consume_meta_oauth_nonce(uuid,text,text)','EXECUTE'),'browser cannot consume OAuth nonces');
 select * from finish();
 rollback;

@@ -120,6 +120,47 @@ describe.runIf(Boolean(url && anon && service))(
         { channel: "instagram", status: "reauth_required" }
       ]);
     });
+    it("consumes a server-only OAuth state hash exactly once", async () => {
+      const stateHash = "a".repeat(64);
+      const { error } = await admin.from("meta_oauth_nonces").insert({
+        workspace_id: wa,
+        channel: "whatsapp",
+        state_hash: stateHash,
+        expires_at: new Date(Date.now() + 60_000).toISOString()
+      });
+      expect(error).toBeNull();
+      const input = {
+        p_workspace_id: wa,
+        p_channel: "whatsapp",
+        p_state_hash: stateHash
+      };
+      const first = await admin.rpc("consume_meta_oauth_nonce", input);
+      const replay = await admin.rpc("consume_meta_oauth_nonce", input);
+      expect(first).toMatchObject({ data: true, error: null });
+      expect(replay).toMatchObject({ data: false, error: null });
+      const rotatedHash = "b".repeat(64);
+      const rotated = await admin.from("meta_oauth_nonces").upsert(
+        {
+          workspace_id: wa,
+          channel: "whatsapp",
+          state_hash: rotatedHash,
+          expires_at: new Date(Date.now() + 60_000).toISOString(),
+          consumed_at: null
+        },
+        { onConflict: "workspace_id,channel" }
+      );
+      expect(rotated.error).toBeNull();
+      expect((await admin.rpc("consume_meta_oauth_nonce", input)).data).toBe(false);
+      expect(
+        (
+          await admin.rpc("consume_meta_oauth_nonce", {
+            ...input,
+            p_state_hash: rotatedHash
+          })
+        ).data
+      ).toBe(true);
+      expect((await a.from("meta_oauth_nonces").select("*")).error).not.toBeNull();
+    });
   }
 );
 async function workspace(client: SupabaseClient) {

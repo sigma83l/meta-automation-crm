@@ -53,7 +53,7 @@ export function normalizeMetaWebhook(payload: unknown): Result<NormalizedMetaEve
     video = object(messageValue.video),
     audio = object(messageValue.audio),
     document = object(messageValue.document);
-  const attachment = first(object(messageValue.attachments).data);
+  const attachment = first(messageValue.attachments);
   const media = Object.keys(image).length
     ? image
     : Object.keys(video).length
@@ -65,7 +65,6 @@ export function normalizeMetaWebhook(payload: unknown): Result<NormalizedMetaEve
           : attachment;
   const attachments: AttachmentMetadata[] = [];
   if (Object.keys(media).length) {
-    const payloadData = object(media.payload);
     const kind: AttachmentMetadata["kind"] = Object.keys(image).length
       ? "image"
       : Object.keys(video).length
@@ -78,7 +77,9 @@ export function normalizeMetaWebhook(payload: unknown): Result<NormalizedMetaEve
               ? "image"
               : "document";
     attachments.push({
-      providerMediaId: text(media.id) || text(payloadData.url) || "unknown",
+      // Provider URLs are untrusted, short-lived inputs and must never become a
+      // download target. A server adapter must resolve this opaque provider ID.
+      providerMediaId: text(media.id) || "unresolved",
       kind,
       ...(text(media.mime_type) ? { mimeType: text(media.mime_type) } : {}),
       ...(text(media.filename) ? { filename: text(media.filename) } : {}),

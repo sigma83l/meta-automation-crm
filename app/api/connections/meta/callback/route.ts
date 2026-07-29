@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  liveMetaReadiness,
-  verifyMetaOauthState
+  consumeMetaOauthState,
+  liveMetaReadiness
 } from "@/src/modules/integrations/meta/connection-service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 export async function GET(request: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (channel !== "whatsapp" && channel !== "instagram") throw new Error();
     const { workspace } = await createMetaRuntime();
     const state = request.nextUrl.searchParams.get("state") ?? "";
-    if (!verifyMetaOauthState(state, workspace.id, channel))
+    if (!(await consumeMetaOauthState(state, workspace.id, channel)))
       return NextResponse.json({ error: "INVALID_OAUTH_STATE" }, { status: 400 });
     const readiness = liveMetaReadiness();
     if (!readiness.ready) return NextResponse.json(readiness, { status: 409 });

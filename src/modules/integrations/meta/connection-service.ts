@@ -1,10 +1,11 @@
 import "server-only";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { getServerEnvironment } from "@/src/lib/env";
 import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
 import type { MetaChannel } from "./contracts";
 import { encryptCredential } from "@/src/modules/ai/credential-vault";
+import { createSignedMetaOauthState, verifySignedMetaOauthState } from "./oauth-state";
 
 const requiredPermissions = {
   whatsapp: ["whatsapp_business_management", "whatsapp_business_messaging"],
@@ -86,12 +87,24 @@ export async function updateMetaConnection(
   });
   return { channel, action };
 }
-export function createMetaOauthState(workspaceId: string, channel: MetaChannel) {
+export async function createMetaOauthState(workspaceId: string, channel: MetaChannel) {
   const env = getServerEnvironment();
   if (!env.metaAppSecret) throw new Error("Meta connection is not configured.");
-  const value = `${workspaceId}.${channel}.${Date.now()}.${randomBytes(12).toString("hex")}`;
-  const signature = createHmac("sha256", env.metaAppSecret).update(value).digest("hex");
-  return `${value}.${signature}`;
+  const issuedAt = Date.now();
+  const state = createSignedMetaOauthState(workspaceId, channel, env.metaAppSecret, issuedAt);
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("meta_oauth_nonces").upsert(
+    {
+      workspace_id: workspaceId,
+      channel,
+      state_hash: createHash("sha256").update(state).digest("hex"),
+      expires_at: new Date(issuedAt + 600_000).toISOString(),
+      consumed_at: null
+    },
+    { onConflict: "workspace_id,channel" }
+  );
+  if (error) throw new Error("Meta connection state could not be stored.");
+  return state;
 }
 export function verifyMetaOauthState(
   state: string,
@@ -101,14 +114,28 @@ export function verifyMetaOauthState(
 ) {
   const env = getServerEnvironment();
   if (!env.metaAppSecret) return false;
-  const parts = state.split(".");
-  if (parts.length !== 5) return false;
-  const value = parts.slice(0, 4).join("."),
-    supplied = parts[4]!;
-  if (parts[0] !== workspaceId || parts[1] !== channel || Date.now() - Number(parts[2]) > maxAgeMs)
-    return false;
-  const expected = createHmac("sha256", env.metaAppSecret).update(value).digest();
-  return /^[a-f0-9]{64}$/.test(supplied) && timingSafeEqual(expected, Buffer.from(supplied, "hex"));
+  return verifySignedMetaOauthState(
+    state,
+    workspaceId,
+    channel,
+    env.metaAppSecret,
+    Date.now(),
+    maxAgeMs
+  );
+}
+export async function consumeMetaOauthState(
+  state: string,
+  workspaceId: string,
+  channel: MetaChannel
+) {
+  if (!verifyMetaOauthState(state, workspaceId, channel)) return false;
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.rpc("consume_meta_oauth_nonce", {
+    p_workspace_id: workspaceId,
+    p_channel: channel,
+    p_state_hash: createHash("sha256").update(state).digest("hex")
+  });
+  return !error && data === true;
 }
 export function liveMetaReadiness() {
   const env = getServerEnvironment();
