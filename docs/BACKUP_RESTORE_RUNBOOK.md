@@ -24,6 +24,24 @@ application logs.
 7. destroy the temporary restore only after evidence is accepted and with
    explicit approval.
 
+For a direct local `pg_dump` drill, include the Supabase Vault
+schema/extension but exclude managed `vault.secrets` table data. Restoring
+managed Vault rows as the application database owner is both unnecessary and
+permission-incompatible. Provider-managed hosted backup/PITR remains the
+production mechanism.
+
+## Local Prompt 8R drill
+
+An isolated temporary database restore passed on 2026-07-29:
+
+- full custom-format application dump with `vault.secrets` table data excluded;
+- seven migration records restored;
+- 49 public tables retained both RLS and forced RLS;
+- `automation_recipe` enum present;
+- temporary database and dump artifacts removed.
+
+This proves local application-schema recoverability, not hosted PITR.
+
 ## Recovery objectives
 
 Initial targets pending plan verification: RPO ≤24 hours, RTO ≤4 hours. A

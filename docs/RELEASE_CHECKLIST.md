@@ -12,6 +12,9 @@
 - [x] Export/media corruption and injection tests pass.
 - [x] Accessibility and responsive journeys pass.
 - [x] Zero unresolved Critical or High security findings.
+- [x] Shared auth limiter, role boundaries and atomic CRM import pass.
+- [x] Five recipe journeys and production configuration gates pass.
+- [x] Local application backup/restore drill passes.
 
 ## External readiness
 
@@ -20,6 +23,8 @@
 - [ ] Privacy policy, terms and deletion/retention process are published.
 - [ ] Meta Business Verification, App Review and Advanced Access status recorded.
 - [ ] Preview passes two-workspace synthetic smoke tests.
+- [ ] Commercial staging passes both 1,000-user k6 profiles.
+- [ ] Hosted backup/PITR restore drill passes.
 - [ ] Exact SHA receives explicit Production approval.
 - [ ] Production source matches the approved SHA and rollback target is verified.
 
