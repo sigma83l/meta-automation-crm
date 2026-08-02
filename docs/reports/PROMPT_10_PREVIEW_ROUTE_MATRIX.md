@@ -6,4 +6,8 @@ Hosted verification targets: `/signup`, `/login`, `/forgot-password`,
 customer detail, `/analytics`, `/connections`, `/settings`, and `/api/health`.
 
 Every owner route must be checked in English, Turkish and Persian; Persian also
-requires RTL and 390px overflow evidence. Status is pending hosted deployment.
+requires RTL and 390px overflow evidence.
+
+Status: **BLOCKED**. No Preview URL was produced because Vercel classified all
+three CLI deployment attempts as Production. No route is marked hosted-pass.
+The matrix must be rerun in full after a safe Preview-only deployment exists.
