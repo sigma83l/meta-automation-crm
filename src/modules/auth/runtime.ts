@@ -43,7 +43,8 @@ export async function createAuthService() {
     captcha,
     limiter,
     environment.enableEmailConfirmation,
-    environment.authSignupMode === "self_service"
+    environment.authSignupMode === "self_service",
+    environment.deploymentMode === "preview" ? environment.previewOwnerEmailAllowlist : []
   );
 }
 

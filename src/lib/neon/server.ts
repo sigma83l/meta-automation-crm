@@ -2,7 +2,7 @@ import "server-only";
 
 import { PostgrestClient } from "@supabase/postgrest-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { getServerEnvironment } from "@/src/lib/env";
 
@@ -17,11 +17,17 @@ async function authRequest<T>(
   const environment = getServerEnvironment();
   if (!environment.neonAuthBaseUrl) throw new Error("Neon Auth URL is missing.");
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const forwardedProtocol = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const requestOrigin = forwardedHost
+    ? `${forwardedProtocol}://${forwardedHost}`
+    : environment.appUrl;
   const response = await fetch(`${environment.neonAuthBaseUrl}/${path}`, {
     method,
     headers: {
       accept: "application/json",
-      origin: environment.appUrl,
+      origin: requestOrigin,
       ...(body ? { "content-type": "application/json" } : {}),
       cookie: cookieStore.toString()
     },

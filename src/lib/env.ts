@@ -46,6 +46,7 @@ const serverEnvironmentSchema = z.object({
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
   AUTH_SIGNUP_MODE: z.enum(["self_service", "invite_only"]).default("self_service"),
+  PREVIEW_OWNER_EMAIL_ALLOWLIST: z.string().default(""),
   AUTH_RATE_LIMIT_MODE: z.enum(["memory", "database"]).default("memory"),
   AUTH_RATE_LIMIT_HASH_KEY: optionalNonEmpty,
   AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(8),
@@ -91,6 +92,7 @@ export type ServerEnvironment = Readonly<{
   turnstileSecretKey?: string;
   authCaptchaMode: "fake" | "turnstile";
   authSignupMode: "self_service" | "invite_only";
+  previewOwnerEmailAllowlist: readonly string[];
   authRateLimitMode: "memory" | "database";
   authRateLimitHashKey?: string;
   authRateLimitMaxAttempts: number;
@@ -169,6 +171,11 @@ export function parseServerEnvironment(
     ...(parsed.TURNSTILE_SECRET_KEY ? { turnstileSecretKey: parsed.TURNSTILE_SECRET_KEY } : {}),
     authCaptchaMode: parsed.AUTH_CAPTCHA_MODE,
     authSignupMode: parsed.AUTH_SIGNUP_MODE,
+    previewOwnerEmailAllowlist: Object.freeze(
+      parsed.PREVIEW_OWNER_EMAIL_ALLOWLIST.split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+    ),
     authRateLimitMode: parsed.AUTH_RATE_LIMIT_MODE,
     ...(parsed.AUTH_RATE_LIMIT_HASH_KEY
       ? { authRateLimitHashKey: parsed.AUTH_RATE_LIMIT_HASH_KEY }

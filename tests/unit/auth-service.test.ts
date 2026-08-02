@@ -137,4 +137,27 @@ describe("AuthService", () => {
     });
     expect(repo.signup).not.toHaveBeenCalled();
   });
+
+  it("limits Preview signup to the configured owner identity", async () => {
+    const repo = repository();
+    const service = new AuthService(
+      repo,
+      new FakeCaptchaProvider(),
+      new MemoryRateLimiter(3, 60_000),
+      false,
+      true,
+      ["owner@example.test"]
+    );
+    await expect(
+      service.signup(
+        {
+          email: "other@example.test",
+          password: "Correct Horse 42",
+          businessName: "Acme Test"
+        },
+        context
+      )
+    ).resolves.toMatchObject({ ok: false, error: { code: "AUTH_ACCOUNT_UNAVAILABLE" } });
+    expect(repo.signup).not.toHaveBeenCalled();
+  });
 });

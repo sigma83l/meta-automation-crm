@@ -27,7 +27,8 @@ export class AuthService {
     private readonly captcha: CaptchaProvider,
     private readonly rateLimiter: RateLimiter,
     private readonly emailConfirmationEnabled: boolean,
-    private readonly signupEnabled = true
+    private readonly signupEnabled = true,
+    private readonly signupEmailAllowlist: readonly string[] = []
   ) {}
 
   async signup(input: SignupInput, context: AuthContext): Promise<Result<AuthOutcome>> {
@@ -41,6 +42,14 @@ export class AuthService {
     }
     const parsed = signupSchema.safeParse(input);
     if (!parsed.success) return invalidInput();
+    if (
+      this.signupEmailAllowlist.length > 0 &&
+      !this.signupEmailAllowlist.includes(parsed.data.email.toLowerCase())
+    ) {
+      return err(
+        appError("AUTH_ACCOUNT_UNAVAILABLE", "Account creation is not available for this email.")
+      );
+    }
     const guarded = await this.guard("signup", parsed.data.email, context);
     if (!guarded.ok) return guarded;
     return this.repository.signup(parsed.data, this.emailConfirmationEnabled);
