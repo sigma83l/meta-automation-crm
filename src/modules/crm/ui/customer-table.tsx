@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
 import type { CustomerSummary } from "../contracts";
 
 export function CustomerTable({ customers }: { customers: readonly CustomerSummary[] }) {
+  const { t, text } = useI18n();
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [exporting, setExporting] = useState(false);
 
@@ -31,31 +33,37 @@ export function CustomerTable({ customers }: { customers: readonly CustomerSumma
     <section className="crm-table-panel">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Customers</span>
-          <h2>{customers.length} records</h2>
+          <span className="eyebrow">{t("crm.customers")}</span>
+          <h2>
+            {customers.length} {text("records", "kayıt", "رکورد")}
+          </h2>
         </div>
         <div>
-          <span>{selected.length} selected</span>
+          <span>
+            {selected.length} {text("selected", "seçili", "انتخاب‌شده")}
+          </span>
           {selected.length ? (
             <button onClick={exportSelected} disabled={exporting}>
-              {exporting ? "Preparing…" : "Export selected"}
+              {exporting
+                ? text("Preparing…", "Hazırlanıyor…", "در حال آماده‌سازی…")
+                : text("Export selected", "Seçilenleri dışa aktar", "خروجی موارد انتخابی")}
             </button>
           ) : null}
         </div>
       </div>
       <div className="crm-table" role="table">
         <div className="crm-row crm-header" role="row">
-          <span>Select</span>
-          <span>Customer</span>
-          <span>Company</span>
-          <span>Status</span>
-          <span>Source</span>
+          <span>{text("Select", "Seç", "انتخاب")}</span>
+          <span>{text("Customer", "Müşteri", "مشتری")}</span>
+          <span>{text("Company", "Şirket", "شرکت")}</span>
+          <span>{text("Status", "Durum", "وضعیت")}</span>
+          <span>{text("Source", "Kaynak", "منبع")}</span>
         </div>
         {customers.map((customer) => (
           <div className="crm-row" role="row" key={customer.id}>
             <input
               type="checkbox"
-              aria-label={`Select ${customer.displayName}`}
+              aria-label={`${text("Select", "Seç", "انتخاب")} ${customer.displayName}`}
               checked={selected.includes(customer.id)}
               onChange={(event) =>
                 setSelected(
@@ -73,8 +81,8 @@ export function CustomerTable({ customers }: { customers: readonly CustomerSumma
         ))}
         {customers.length === 0 ? (
           <div className="empty-guidance">
-            <strong>No customers match this view.</strong>
-            <span>Create one or adjust the filters.</span>
+            <strong>{t("crm.none")}</strong>
+            <span>{t("crm.noneDetail")}</span>
           </div>
         ) : null}
       </div>

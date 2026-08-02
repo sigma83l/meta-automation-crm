@@ -127,3 +127,27 @@ inserts and records only a safe job failure.
 Tracked 1,000-user profiles do not become evidence until they run against an
 isolated, monitored, commercially eligible hosted environment. Vercel Hobby or
 unverified plans are an explicit stop.
+
+## D-023 — Preserve Supabase for V1
+
+Supabase Auth, Postgres, forced RLS and private Storage already pass isolation
+tests. Prompt 10's database decision therefore preserves the accepted stack;
+Neon is not a variable substitution for Auth/Storage and is not introduced.
+
+## D-024 — Locale and theme are owner preferences
+
+UI locale/theme live on the profile and an SSR-readable SameSite cookie.
+Customer-message languages remain business policy. Persian sets document-level
+RTL; System theme resolves before first paint.
+
+## D-025 — Invite-only hosted posture
+
+Prompt 10 hosted environments remain invite-only unless email verification
+delivery and abuse controls are both proven. Production parsing rejects
+self-service signup without that evidence.
+
+## D-026 — Prompt 10 is no-send
+
+Production preflight for this release requires Meta Sandbox and
+`LIVE_PROVIDER_SEND_ENABLED=false`. Real provider values and allowlisted pilots
+belong to Prompt 11.

@@ -1,16 +1,18 @@
 import { AuthForm } from "@/src/modules/auth/ui/auth-form";
 import { AuthShell } from "@/src/modules/auth/ui/auth-shell";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  const { t } = await getRequestPreferences();
   return (
     <AuthShell
-      eyebrow="New business"
-      title="Create your workspace"
-      description="Your profile, workspace, ownership and defaults are created as one transaction."
+      eyebrow={t("auth.newBusiness")}
+      title={t("auth.createWorkspace")}
+      description={t("auth.signupDescription")}
     >
       <AuthForm mode="signup" turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
       <p className="auth-link">
-        Already registered? <a href="/login">Sign in</a>
+        {t("auth.alreadyRegistered")} <a href="/login">{t("auth.signIn")}</a>
       </p>
     </AuthShell>
   );

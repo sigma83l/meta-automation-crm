@@ -13,17 +13,19 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
-  await expect(page.getByRole("heading", { name: "Start safely, then activate." })).toBeVisible();
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Set up safely. Go live only when ready." })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save and exit" }).click();
   await expect(page).toHaveURL(/dashboard/);
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.goto("/automations");
   const recipes = [
-    "Instagram Post/Reel Comment → DM Lead Collector",
-    "Instagram Inbound DM Lead Collector",
-    "WhatsApp Inbound Lead Collector",
-    "WhatsApp Consented Follow-up Reminder",
-    "After-hours / Low-confidence Escalation"
+    "Instagram Comment → DM lead collection",
+    "Instagram inbound DM qualification",
+    "WhatsApp inbound lead collection",
+    "WhatsApp consented reminder",
+    "After-hours human handoff"
   ];
   for (let index = 0; index < recipes.length; index++) {
     await page.getByLabel("Automation name").fill(`Synthetic recipe ${index + 1}`);

@@ -15,7 +15,7 @@ export async function importCrmCsv(workspace: TrustedWorkspace, sourceName: stri
     .slice(0, 160);
   if (!safeSourceName.toLowerCase().endsWith(".csv")) throw new Error("IMPORT_FILE_TYPE");
   const rows = parseCrmCsv(csv);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data, error } = await admin.rpc("import_crm_rows", {
     trusted_workspace_id: workspace.id,
     trusted_requested_by: workspace.userId,

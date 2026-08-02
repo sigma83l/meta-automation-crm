@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
 
 export function LogoutButton() {
   const router = useRouter();
+  const { text } = useI18n();
   const [loading, setLoading] = useState(false);
 
   async function logout() {
@@ -26,7 +28,9 @@ export function LogoutButton() {
 
   return (
     <button type="button" onClick={logout} disabled={loading}>
-      {loading ? "Signing out…" : "Sign out"}
+      {loading
+        ? text("Signing out…", "Çıkış yapılıyor…", "در حال خروج…")
+        : text("Sign out", "Çıkış yap", "خروج")}
     </button>
   );
 }

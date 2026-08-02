@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
+import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-controls";
 import type { BusinessProfile, CredentialStatus, FaqItem, PriceItem } from "../contracts";
 
 async function csrf() {
@@ -19,13 +21,21 @@ export function SettingsPanel({
   profile,
   faqs,
   prices,
-  credentials
+  credentials,
+  memberships
 }: {
   profile: BusinessProfile;
   faqs: FaqItem[];
   prices: PriceItem[];
   credentials: CredentialStatus[];
+  memberships: ReadonlyArray<{
+    id: string;
+    role: string;
+    status: string;
+    created_at: string;
+  }>;
 }) {
+  const { text } = useI18n();
   const [message, setMessage] = useState("");
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,7 +71,9 @@ export function SettingsPanel({
         aiMode: form.get("aiMode"),
         demoModeEnabled: form.get("demoModeEnabled") === "on"
       });
-      setMessage("Business profile saved.");
+      setMessage(
+        text("Business profile saved.", "İşletme profili kaydedildi.", "پروفایل کسب‌وکار ذخیره شد.")
+      );
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -89,32 +101,61 @@ export function SettingsPanel({
         provider: form.get("provider"),
         key: form.get("key")
       });
-      setMessage("Credential encrypted and stored. Test it before use.");
+      setMessage(
+        text(
+          "Credential encrypted and stored. Test it before use.",
+          "Kimlik bilgisi şifrelenip kaydedildi. Kullanmadan önce test edin.",
+          "کلید رمزگذاری و ذخیره شد؛ پیش از استفاده آن را بیازمایید."
+        )
+      );
       location.reload();
     } catch (error) {
       setMessage((error as Error).message);
     }
   }
+  async function logoutAll() {
+    const response = await fetch("/api/auth/logout-all", {
+      method: "POST",
+      headers: { "x-csrf-token": await csrf() }
+    });
+    if (response.ok) location.assign("/login");
+  }
   return (
     <div className="settings-stack">
+      <nav
+        className="section-nav"
+        aria-label={text("Settings groups", "Ayar grupları", "گروه‌های تنظیمات")}
+      >
+        <a href="#business">{text("Business", "İşletme", "کسب‌وکار")}</a>
+        <a href="#knowledge">{text("Knowledge", "Bilgi", "دانش")}</a>
+        <a href="#ai-provider">{text("AI provider", "Yapay zekâ", "هوش مصنوعی")}</a>
+        <a href="#team">{text("Team & roles", "Ekip ve roller", "تیم و نقش‌ها")}</a>
+        <a href="#workspace-controls">
+          {text("Security & data", "Güvenlik ve veri", "امنیت و داده")}
+        </a>
+      </nav>
       {message && (
         <p className="form-status" role="status">
           {message}
         </p>
       )}
-      <form className="settings-card" onSubmit={saveProfile}>
-        <h2>Business Profile</h2>
+      <form className="settings-card" id="business" onSubmit={saveProfile}>
+        <h2>{text("Business Profile", "İşletme Profili", "پروفایل کسب‌وکار")}</h2>
         <div className="form-grid">
           <label>
-            Brand name
+            {text("Brand name", "Marka adı", "نام برند")}
             <input name="brandName" defaultValue={profile.brandName} required />
           </label>
           <label>
-            Timezone
+            {text("Timezone", "Saat dilimi", "منطقه زمانی")}
             <input name="timezone" defaultValue={profile.timezone} required />
           </label>
           <label className="wide">
-            Business hours (one day:value per line)
+            {text(
+              "Business hours (one day:value per line)",
+              "Çalışma saatleri (satır başına gün:değer)",
+              "ساعات کاری (هر خط روز:مقدار)"
+            )}
             <textarea
               name="businessHours"
               defaultValue={Object.entries(profile.businessHours)
@@ -124,33 +165,33 @@ export function SettingsPanel({
             />
           </label>
           <label className="wide">
-            Description
+            {text("Description", "Açıklama", "توضیحات")}
             <textarea name="description" defaultValue={profile.description} />
           </label>
           <label>
-            Primary language
+            {text("Primary language", "Birincil dil", "زبان اصلی")}
             <input name="primaryLanguage" defaultValue={profile.primaryLanguage} />
           </label>
           <label>
-            Fallback language
+            {text("Fallback language", "Yedek dil", "زبان جایگزین")}
             <input name="fallbackLanguage" defaultValue={profile.fallbackLanguage} />
           </label>
           <label>
-            Tone
+            {text("Tone", "Üslup", "لحن")}
             <select name="tone" defaultValue={profile.tone}>
               <option>friendly</option>
               <option>formal</option>
             </select>
           </label>
           <label>
-            Answer length
+            {text("Answer length", "Yanıt uzunluğu", "طول پاسخ")}
             <select name="answerLength" defaultValue={profile.answerLength}>
               <option>short</option>
               <option>medium</option>
             </select>
           </label>
           <label>
-            Emoji policy
+            {text("Emoji policy", "Emoji politikası", "سیاست ایموجی")}
             <select name="emojiPolicy" defaultValue={profile.emojiPolicy}>
               <option>allowed</option>
               <option>limited</option>
@@ -158,7 +199,7 @@ export function SettingsPanel({
             </select>
           </label>
           <label>
-            Retention days
+            {text("Retention days", "Saklama günü", "روزهای نگهداری")}
             <input
               name="retentionDays"
               type="number"
@@ -168,7 +209,7 @@ export function SettingsPanel({
             />
           </label>
           <label>
-            Human-review threshold
+            {text("Human-review threshold", "İnsan inceleme eşiği", "آستانه بررسی انسانی")}
             <input
               name="lowConfidenceThreshold"
               type="number"
@@ -179,17 +220,23 @@ export function SettingsPanel({
             />
           </label>
           <label className="wide">
-            Forbidden claims
+            {text("Forbidden claims", "Yasak iddialar", "ادعاهای ممنوع")}
             <textarea name="forbiddenClaims" defaultValue={profile.forbiddenClaims.join("\n")} />
           </label>
           <label className="wide">
-            Escalation keywords
+            {text("Escalation keywords", "Yönlendirme anahtarları", "کلیدواژه‌های ارجاع")}
             <input name="escalationKeywords" defaultValue={profile.escalationKeywords.join(", ")} />
           </label>
         </div>
-        <h2>AI Style & Provider</h2>
+        <h2>
+          {text(
+            "AI Style & Provider",
+            "Yapay zekâ üslubu ve sağlayıcı",
+            "سبک و ارائه‌دهنده هوش مصنوعی"
+          )}
+        </h2>
         <label>
-          AI mode
+          {text("AI mode", "Yapay zekâ modu", "حالت هوش مصنوعی")}
           <select name="aiMode" defaultValue={profile.aiMode}>
             <option value="PLATFORM_PAID_DEFAULT">Platform paid default</option>
             <option value="WORKSPACE_BYOK_GEMINI">Workspace BYOK — Gemini</option>
@@ -202,17 +249,20 @@ export function SettingsPanel({
         </label>
         <label className="check">
           <input name="demoModeEnabled" type="checkbox" defaultChecked={profile.demoModeEnabled} />{" "}
-          Explicit Demo mode
+          {text("Explicit Demo mode", "Açık Demo modu", "حالت نمایشی صریح")}
         </label>
         <p className="warning-box">
-          Free Gemini is prohibited for webhooks, CRM records, customer messages, and media. It
-          never receives real data and is never an automatic fallback.
+          {text(
+            "Free Gemini is prohibited for webhooks, CRM records, customer messages, and media. It never receives real data and is never an automatic fallback.",
+            "Ücretsiz Gemini webhook, CRM kaydı, müşteri mesajı ve medya için yasaktır. Gerçek veri almaz ve otomatik yedek değildir.",
+            "Gemini رایگان برای وب‌هوک، CRM، پیام و رسانه مشتری ممنوع است؛ داده واقعی دریافت نمی‌کند و جایگزین خودکار نیست."
+          )}
         </p>
-        <button type="submit">Save profile</button>
+        <button type="submit">{text("Save profile", "Profili kaydet", "ذخیره پروفایل")}</button>
       </form>
-      <div className="settings-columns">
+      <div className="settings-columns" id="knowledge">
         <form className="settings-card" onSubmit={addFaq}>
-          <h2>FAQs</h2>
+          <h2>{text("FAQs", "Sık sorulanlar", "پرسش‌های متداول")}</h2>
           {faqs.map((item) => (
             <p key={item.id}>
               <strong>{item.question}</strong>
@@ -221,54 +271,64 @@ export function SettingsPanel({
             </p>
           ))}
           <label>
-            Question
+            {text("Question", "Soru", "پرسش")}
             <input name="question" required />
           </label>
           <label>
-            Answer
+            {text("Answer", "Yanıt", "پاسخ")}
             <textarea name="answer" required />
           </label>
           <input name="language" defaultValue={profile.primaryLanguage} hidden />
-          <button>Add FAQ</button>
+          <button>{text("Add FAQ", "SSS ekle", "افزودن پرسش")}</button>
         </form>
         <form className="settings-card" onSubmit={addPrice}>
-          <h2>Pricing</h2>
+          <h2>{text("Pricing", "Fiyatlandırma", "قیمت‌گذاری")}</h2>
           {prices.map((item) => (
             <p key={item.id}>
               <strong>{item.name}</strong> — {(item.amountMinor / 100).toFixed(2)} {item.currency}
             </p>
           ))}
           <label>
-            Name
+            {text("Name", "Ad", "نام")}
             <input name="name" required />
           </label>
           <label>
-            Description
+            {text("Description", "Açıklama", "توضیحات")}
             <input name="description" />
           </label>
           <label>
-            Amount
+            {text("Amount", "Tutar", "مبلغ")}
             <input name="amount" type="number" min="0" step=".01" required />
           </label>
           <label>
-            Currency
+            {text("Currency", "Para birimi", "واحد پول")}
             <input name="currency" defaultValue="USD" pattern="[A-Za-z]{3}" required />
           </label>
           <label>
-            Availability
+            {text("Availability", "Uygunluk", "دسترس‌پذیری")}
             <select name="availability">
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
               <option value="ask_human">Ask human</option>
             </select>
           </label>
-          <button>Add price</button>
+          <button>{text("Add price", "Fiyat ekle", "افزودن قیمت")}</button>
         </form>
       </div>
-      <form className="settings-card" onSubmit={credential}>
-        <h2>Encrypted BYOK credentials</h2>
+      <form className="settings-card" id="ai-provider" onSubmit={credential}>
+        <h2>
+          {text(
+            "Encrypted BYOK credentials",
+            "Şifreli BYOK kimlik bilgileri",
+            "کلیدهای رمزگذاری‌شده BYOK"
+          )}
+        </h2>
         <p>
-          Keys are accepted only by a server route, encrypted with AES-256-GCM, and never returned.
+          {text(
+            "Keys are accepted only by a server route, encrypted with AES-256-GCM, and never returned.",
+            "Anahtarlar yalnızca sunucuda alınır, AES-256-GCM ile şifrelenir ve geri döndürülmez.",
+            "کلیدها فقط در سرور دریافت، با AES-256-GCM رمزگذاری و هرگز بازگردانده نمی‌شوند."
+          )}
         </p>
         {credentials.map((item) => (
           <div className="credential-row" key={item.provider}>
@@ -283,7 +343,7 @@ export function SettingsPanel({
                 )
               }
             >
-              Test
+              {text("Test", "Test et", "آزمون")}
             </button>
             <button
               type="button"
@@ -294,12 +354,12 @@ export function SettingsPanel({
                 )
               }
             >
-              Delete
+              {text("Delete", "Sil", "حذف")}
             </button>
           </div>
         ))}
         <label>
-          Provider
+          {text("Provider", "Sağlayıcı", "ارائه‌دهنده")}
           <select name="provider">
             <option>gemini</option>
             <option>openai</option>
@@ -307,33 +367,95 @@ export function SettingsPanel({
           </select>
         </label>
         <label>
-          New or replacement key
+          {text("New or replacement key", "Yeni veya yedek anahtar", "کلید جدید یا جایگزین")}
           <input name="key" type="password" minLength={12} autoComplete="off" required />
         </label>
-        <button>Encrypt and store</button>
+        <button>{text("Encrypt and store", "Şifrele ve sakla", "رمزگذاری و ذخیره")}</button>
       </form>
+      <section className="settings-card" id="team">
+        <h2>{text("Team & roles", "Ekip ve roller", "تیم و نقش‌ها")}</h2>
+        <p>
+          {text(
+            "Roles are enforced in the database and service layer. Invitations require verified email delivery and are not enabled yet.",
+            "Roller veritabanında ve servis katmanında uygulanır. Davetler doğrulanmış e-posta teslimi gerektirir ve henüz açık değildir.",
+            "نقش‌ها در پایگاه‌داده و لایه سرویس اعمال می‌شوند. دعوت همکار به ایمیل تأییدشده نیاز دارد و هنوز فعال نیست."
+          )}
+        </p>
+        <div className="team-list">
+          {memberships.map((membership, index) => (
+            <article key={membership.id}>
+              <div>
+                <strong>
+                  {text("Team member", "Ekip üyesi", "عضو تیم")} {index + 1}
+                </strong>
+                <span>{membership.status}</span>
+              </div>
+              <span className="status-pill">{membership.role}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="settings-card">
+        <h2>{text("Locale & theme", "Dil ve tema", "زبان و پوسته")}</h2>
+        <PreferenceControls />
+      </section>
       <section className="settings-card" aria-labelledby="workspace-controls">
-        <h2 id="workspace-controls">Workspace controls</h2>
+        <h2 id="workspace-controls">
+          {text("Workspace controls", "Çalışma alanı kontrolleri", "کنترل‌های فضای کاری")}
+        </h2>
         <div className="settings-management-grid">
           <article>
-            <strong>Security</strong>
-            <span>Server sessions, CSRF protection, encrypted credentials</span>
-            <Link href="/connections">Review connections</Link>
+            <strong>{text("Security", "Güvenlik", "امنیت")}</strong>
+            <span>
+              {text(
+                "Server sessions, CSRF protection, encrypted credentials",
+                "Sunucu oturumları, CSRF koruması, şifreli kimlik bilgileri",
+                "نشست سرور، حفاظت CSRF و کلیدهای رمزگذاری‌شده"
+              )}
+            </span>
+            <Link href="/connections">
+              {text("Review connections", "Bağlantıları incele", "بررسی اتصال‌ها")}
+            </Link>
           </article>
           <article>
-            <strong>Data retention</strong>
-            <span>{profile.retentionDays} days · adjustable in Business Profile</span>
-            <a href="#workspace-controls">Review retention</a>
+            <strong>{text("Data retention", "Veri saklama", "نگهداری داده")}</strong>
+            <span>
+              {profile.retentionDays}{" "}
+              {text(
+                "days · adjustable in Business Profile",
+                "gün · İşletme Profilinden değiştirilebilir",
+                "روز · قابل تغییر در پروفایل کسب‌وکار"
+              )}
+            </span>
+            <a href="#workspace-controls">
+              {text("Review retention", "Saklamayı incele", "بررسی نگهداری")}
+            </a>
           </article>
           <article>
-            <strong>Exports</strong>
-            <span>Workspace-scoped Excel and complete ZIP packages</span>
-            <Link href="/crm">Open CRM exports</Link>
+            <strong>{text("Exports", "Dışa aktarımlar", "خروجی‌ها")}</strong>
+            <span>
+              {text(
+                "Workspace-scoped Excel and complete ZIP packages",
+                "Çalışma alanına özel Excel ve tam ZIP paketleri",
+                "فایل Excel و بسته ZIP محدود به فضای کاری"
+              )}
+            </span>
+            <Link href="/crm">
+              {text("Open CRM exports", "CRM dışa aktarımlarını aç", "بازکردن خروجی‌های CRM")}
+            </Link>
           </article>
           <article>
-            <strong>Account</strong>
-            <span>Private workspace membership and session controls</span>
-            <Link href="/dashboard">Return to overview</Link>
+            <strong>{text("Account", "Hesap", "حساب")}</strong>
+            <span>
+              {text(
+                "Private workspace membership and session controls",
+                "Özel çalışma alanı üyeliği ve oturum kontrolleri",
+                "عضویت فضای کاری خصوصی و کنترل نشست‌ها"
+              )}
+            </span>
+            <button type="button" className="button-muted" onClick={logoutAll}>
+              {text("Log out all sessions", "Tüm oturumları kapat", "خروج از همه نشست‌ها")}
+            </button>
           </article>
         </div>
       </section>

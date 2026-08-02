@@ -1,0 +1,14 @@
+# Prompt 10 Conflict Ledger
+
+Date: 2026-07-29
+
+| Conflict                                                                                                       | Decision                                                                                       | Reason                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Prompt 10 names Prompt 9 design evidence, but no accepted Prompt 9 checkpoint or named design files were found | Use Prompt 10's embedded complete design contract                                              | The prompt explicitly permits this and the repository remains authoritative for proven behavior                              |
+| Prompt 10 offers Neon while the accepted product uses Supabase                                                 | Preserve Supabase                                                                              | Auth, forced RLS, private Storage, migrations and isolation evidence already pass; migration would add risk without V1 value |
+| Prompt 8R owner packet treated the GitHub owner as ambiguous                                                   | Prompt 10 explicitly authorizes `Metric-One/meta-automation-crm`                               | The latest prompt resolves the owner and repository name; identity/admin access must still be checked before mutation        |
+| Existing confirmation default is false while Prompt 10 requires verified public signup                         | Keep local UI/contracts, force hosted production invite-only until SMTP verification is proven | Public signup may not bypass delivery and abuse gates                                                                        |
+| Current Vercel team exists but commercial plan is unverified                                                   | Do not deploy until plan eligibility is proven                                                 | No purchase, trial, terms acceptance or commercial Hobby deployment is authorized                                            |
+| Prompt 10 asks for complete provider adapters but prohibits real outbound activity                             | Complete safe inbound/configuration contracts; retain no-send outbound gate                    | Provider value validation and live pilot belong to Prompt 11                                                                 |
+
+No accepted security, tenant, migration or policy invariant is weakened.

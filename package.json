@@ -37,6 +37,7 @@
   "dependencies": {
     "@e965/xlsx": "0.20.3",
     "@marsidev/react-turnstile": "1.5.4",
+    "@supabase/postgrest-js": "2.110.8",
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.8",
     "fflate": "0.8.2",

@@ -1,12 +1,14 @@
 import { AuthForm } from "@/src/modules/auth/ui/auth-form";
 import { AuthShell } from "@/src/modules/auth/ui/auth-shell";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const { t } = await getRequestPreferences();
   return (
     <AuthShell
-      eyebrow="Recovery session"
-      title="Choose a new password"
-      description="This form requires the short-lived recovery session established by the email callback."
+      eyebrow={t("auth.recoverySession")}
+      title={t("auth.newPasswordTitle")}
+      description={t("auth.resetDescription")}
     >
       <AuthForm mode="reset-password" />
     </AuthShell>

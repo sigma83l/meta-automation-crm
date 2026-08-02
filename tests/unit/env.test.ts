@@ -56,10 +56,32 @@ describe("environment contract", () => {
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "synthetic-site-key",
       TURNSTILE_SECRET_KEY: "synthetic-turnstile-key",
       AUTH_CAPTCHA_MODE: "turnstile",
+      AUTH_SIGNUP_MODE: "invite_only",
       AUTH_RATE_LIMIT_MODE: "database",
       AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum"
     });
     expect(environment.deploymentMode).toBe("production");
     expect(environment.liveProviderSendEnabled).toBe(false);
+  });
+
+  it("blocks production public signup until verification delivery is proven", () => {
+    expect(() =>
+      parseServerEnvironment({
+        APP_DEPLOYMENT_MODE: "production",
+        NEXT_PUBLIC_APP_URL: "https://crm.example.test",
+        NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-public-key",
+        SUPABASE_SERVICE_ROLE_KEY: "synthetic-server-key",
+        INNGEST_EVENT_KEY: "synthetic-event-key",
+        INNGEST_SIGNING_KEY: "synthetic-signing-key",
+        CREDENTIAL_ENCRYPTION_KEY: "synthetic-encryption-key-placeholder",
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: "synthetic-site-key",
+        TURNSTILE_SECRET_KEY: "synthetic-turnstile-key",
+        AUTH_CAPTCHA_MODE: "turnstile",
+        AUTH_SIGNUP_MODE: "self_service",
+        AUTH_RATE_LIMIT_MODE: "database",
+        AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum"
+      })
+    ).toThrow("Production self-service signup requires verified email delivery");
   });
 });

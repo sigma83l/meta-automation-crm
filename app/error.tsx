@@ -1,13 +1,16 @@
 "use client";
 
+import { useI18n } from "@/src/lib/i18n/client";
+
 export default function ApplicationError({ reset }: { reset: () => void }) {
+  const { t } = useI18n();
   return (
     <main className="onboarding-page">
       <section className="panel" role="alert">
         <div className="empty-guidance">
-          <strong>The workspace view could not be loaded.</strong>
-          <span>No action was sent. Retry after checking the connection.</span>
-          <button onClick={reset}>Retry safely</button>
+          <strong>{t("system.error")}</strong>
+          <span>{t("system.errorDetail")}</span>
+          <button onClick={reset}>{t("common.retry")}</button>
         </div>
       </section>
     </main>

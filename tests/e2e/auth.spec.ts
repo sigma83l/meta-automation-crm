@@ -28,7 +28,7 @@ test("signup provisions one workspace and reaches the protected dashboard", asyn
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
   await expect(page).toHaveURL(/\/onboarding/);
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await page.getByRole("button", { name: "Save and exit" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Live sends are locked")).toBeVisible();

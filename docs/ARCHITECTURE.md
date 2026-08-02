@@ -188,3 +188,22 @@ Two additional recipes share the same policy engine:
 `WHATSAPP_CONSENTED_FOLLOWUP_REMINDER` permits one approved template only with
 trusted schedule, consent and opt-in; `CROSS_CHANNEL_AFTER_HOURS_ESCALATION`
 creates human review and explicitly sends nothing across channels.
+
+## Prompt 10 V1 experience
+
+Supabase remains the database/Auth/Storage target. Profile locale/theme and
+bounded onboarding drafts are additive columns in migration
+`20260729180000_v1_experience.sql`.
+
+The document boundary resolves `en`, `tr` or `fa`, applies true Persian RTL and
+sets Light/Dark/System before first paint. Signal Mirror semantic tokens replace
+route-specific colors while keeping dense operational surfaces opaque.
+
+Setup is an eight-stage resumable program. Drafts contain no credentials;
+trusted manager routes apply workspace defaults, profile fields, structured FAQ
+and price items, AI policy and readiness state idempotently.
+
+The V1 route set adds operational Analytics, a five-recipe Gallery and a
+distinct Test Center. Meta adapters now include bounded server-side media
+resolution and WhatsApp template inventory contracts, but no live outbound
+adapter.

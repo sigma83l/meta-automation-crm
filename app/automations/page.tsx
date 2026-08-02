@@ -3,26 +3,48 @@ import { listAutomations } from "@/src/modules/automations/service";
 import { AutomationBuilder } from "@/src/modules/automations/ui/automation-builder";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 export const dynamic = "force-dynamic";
-export default async function AutomationsPage() {
-  const { workspace } = await createMetaRuntime();
+export default async function AutomationsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ recipe?: string }>;
+}) {
+  const [{ workspace }, { locale, t }] = await Promise.all([
+    createMetaRuntime(),
+    getRequestPreferences()
+  ]);
   const items = await listAutomations(workspace);
+  const requestedRecipe = (await searchParams).recipe;
   return (
     <WorkspaceShell active="automations" workspaceName={workspace.name}>
       <div className="content">
+        <nav className="section-nav" aria-label="Automation views">
+          <Link href="/automations" aria-current="page">
+            {locale === "tr" ? "Merkez" : locale === "fa" ? "مرکز" : "Hub"}
+          </Link>
+          <Link href="/automations/recipes">{t("automations.recipes")}</Link>
+          <Link href="/automations/test-center">{t("automations.testCenter")}</Link>
+        </nav>
         {workspace.role === "viewer" ? (
           <section className="panel" role="status">
-            <h2>Read-only access</h2>
-            <p>Your Viewer role can inspect automations but cannot create or change them.</p>
+            <h2>{t("common.readOnly")}</h2>
+            <p>
+              {locale === "tr"
+                ? "Viewer rolü otomasyonları inceleyebilir ancak oluşturamaz veya değiştiremez."
+                : locale === "fa"
+                  ? "نقش Viewer می‌تواند اتوماسیون‌ها را ببیند اما نمی‌تواند آن‌ها را بسازد یا تغییر دهد."
+                  : "Your Viewer role can inspect automations but cannot create or change them."}
+            </p>
           </section>
         ) : (
-          <AutomationBuilder />
+          <AutomationBuilder initialRecipe={requestedRecipe} />
         )}
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Workspace</span>
-              <h2>Automations</h2>
+              <span className="eyebrow">{t("shell.workspace")}</span>
+              <h2>{t("nav.automations")}</h2>
             </div>
             <span>{items.length} total</span>
           </div>
@@ -40,8 +62,8 @@ export default async function AutomationsPage() {
             </div>
           ) : (
             <div className="empty-guidance">
-              <strong>No automations yet.</strong>
-              <span>Choose a recipe above to create the first safe draft.</span>
+              <strong>{t("automations.none")}</strong>
+              <span>{t("automations.noneDetail")}</span>
             </div>
           )}
         </section>

@@ -1,5 +1,17 @@
 # Known Limitations
 
+## Prompt 10 external limits
+
+- The exact GitHub target is authorized but is created only after the final
+  local review.
+- The only verified Vercel team is on Hobby; commercial hosting and deployment
+  are plan-blocked.
+- Hosted Supabase and Inngest access is not authenticated.
+- SMTP verification delivery, Turnstile domains, monitoring and paid AI
+  projects require owner values.
+- Meta App Review, Advanced Access and real assets remain external.
+- Live outbound messaging remains intentionally absent and disabled.
+
 ## External production gates
 
 - No client-owned hosted Supabase project/region/plan, backup policy or SMTP

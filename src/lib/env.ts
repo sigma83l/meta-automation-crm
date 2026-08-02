@@ -16,6 +16,10 @@ const serverEnvironmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_DEPLOYMENT_MODE: z.enum(["local", "preview", "production"]).default("local"),
   NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
+  DATABASE_PROVIDER: z.enum(["supabase", "neon"]).default("supabase"),
+  NEON_AUTH_BASE_URL: z.url().optional(),
+  NEON_DATA_API_URL: z.url().optional(),
+  NEON_AUTH_COOKIE_SECRET: optionalNonEmpty,
   NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmpty,
   SUPABASE_SERVICE_ROLE_KEY: optionalNonEmpty,
@@ -37,6 +41,7 @@ const serverEnvironmentSchema = z.object({
   META_WHATSAPP_CONFIG_ID: optionalNonEmpty,
   META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
+  EMAIL_DELIVERY_VERIFIED: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalNonEmpty,
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
@@ -56,6 +61,10 @@ export type ServerEnvironment = Readonly<{
   nodeEnv: "development" | "test" | "production";
   deploymentMode: "local" | "preview" | "production";
   appUrl: string;
+  databaseProvider: "supabase" | "neon";
+  neonAuthBaseUrl?: string;
+  neonDataApiUrl?: string;
+  neonAuthCookieSecret?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   supabaseServiceRoleKey?: string;
@@ -77,6 +86,7 @@ export type ServerEnvironment = Readonly<{
   metaWhatsappConfigId?: string;
   metaConnectionMode: "sandbox" | "live";
   enableEmailConfirmation: boolean;
+  emailDeliveryVerified: boolean;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
   authCaptchaMode: "fake" | "turnstile";
@@ -101,6 +111,12 @@ export function parseServerEnvironment(
     nodeEnv: parsed.NODE_ENV,
     deploymentMode: parsed.APP_DEPLOYMENT_MODE,
     appUrl: parsed.NEXT_PUBLIC_APP_URL,
+    databaseProvider: parsed.DATABASE_PROVIDER,
+    ...(parsed.NEON_AUTH_BASE_URL ? { neonAuthBaseUrl: parsed.NEON_AUTH_BASE_URL } : {}),
+    ...(parsed.NEON_DATA_API_URL ? { neonDataApiUrl: parsed.NEON_DATA_API_URL } : {}),
+    ...(parsed.NEON_AUTH_COOKIE_SECRET
+      ? { neonAuthCookieSecret: parsed.NEON_AUTH_COOKIE_SECRET }
+      : {}),
     ...(parsed.NEXT_PUBLIC_SUPABASE_URL ? { supabaseUrl: parsed.NEXT_PUBLIC_SUPABASE_URL } : {}),
     ...(parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY
       ? { supabaseAnonKey: parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY }
@@ -146,6 +162,7 @@ export function parseServerEnvironment(
       : {}),
     metaConnectionMode: parsed.META_CONNECTION_MODE,
     enableEmailConfirmation: parsed.ENABLE_EMAIL_CONFIRMATION === "true",
+    emailDeliveryVerified: parsed.EMAIL_DELIVERY_VERIFIED === "true",
     ...(parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY
       ? { turnstileSiteKey: parsed.NEXT_PUBLIC_TURNSTILE_SITE_KEY }
       : {}),
@@ -168,10 +185,20 @@ export function parseServerEnvironment(
 
 function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentSchema>) {
   if (parsed.APP_DEPLOYMENT_MODE !== "production") return;
+  const databaseRequired =
+    parsed.DATABASE_PROVIDER === "neon"
+      ? ([
+          ["NEON_AUTH_BASE_URL", parsed.NEON_AUTH_BASE_URL],
+          ["NEON_DATA_API_URL", parsed.NEON_DATA_API_URL],
+          ["NEON_AUTH_COOKIE_SECRET", parsed.NEON_AUTH_COOKIE_SECRET]
+        ] as const)
+      : ([
+          ["NEXT_PUBLIC_SUPABASE_URL", parsed.NEXT_PUBLIC_SUPABASE_URL],
+          ["NEXT_PUBLIC_SUPABASE_ANON_KEY", parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY],
+          ["SUPABASE_SERVICE_ROLE_KEY", parsed.SUPABASE_SERVICE_ROLE_KEY]
+        ] as const);
   const required = [
-    ["NEXT_PUBLIC_SUPABASE_URL", parsed.NEXT_PUBLIC_SUPABASE_URL],
-    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY],
-    ["SUPABASE_SERVICE_ROLE_KEY", parsed.SUPABASE_SERVICE_ROLE_KEY],
+    ...databaseRequired,
     ["INNGEST_EVENT_KEY", parsed.INNGEST_EVENT_KEY],
     ["INNGEST_SIGNING_KEY", parsed.INNGEST_SIGNING_KEY],
     ["CREDENTIAL_ENCRYPTION_KEY", parsed.CREDENTIAL_ENCRYPTION_KEY],
@@ -188,6 +215,14 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
   }
   if (parsed.AUTH_CAPTCHA_MODE !== "turnstile" || parsed.AUTH_RATE_LIMIT_MODE !== "database") {
     throw new Error("Production requires Turnstile and database rate limiting.");
+  }
+  if (
+    parsed.AUTH_SIGNUP_MODE === "self_service" &&
+    (parsed.ENABLE_EMAIL_CONFIRMATION !== "true" || parsed.EMAIL_DELIVERY_VERIFIED !== "true")
+  ) {
+    throw new Error(
+      "Production self-service signup requires verified email delivery and confirmation."
+    );
   }
   if ((parsed.AUTH_RATE_LIMIT_HASH_KEY?.length ?? 0) < 32) {
     throw new Error("AUTH_RATE_LIMIT_HASH_KEY must contain at least 32 characters.");

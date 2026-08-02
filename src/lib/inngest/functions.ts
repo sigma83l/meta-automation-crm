@@ -12,7 +12,7 @@ export const relayMetaOutbox = inngest.createFunction(
   },
   async ({ step }) => {
     const rows = await step.run("claim-pending-outbox", async () => {
-      const admin = createSupabaseAdminClient();
+      const admin = await createSupabaseAdminClient();
       const { data, error } = await admin
         .from("provider_event_outbox")
         .select("id,workspace_id,payload,attempts")
@@ -32,7 +32,7 @@ export const relayMetaOutbox = inngest.createFunction(
           name: "meta/webhook.received",
           data: payload
         });
-        const admin = createSupabaseAdminClient();
+        const admin = await createSupabaseAdminClient();
         const { error } = await admin
           .from("provider_event_outbox")
           .update({
@@ -61,7 +61,7 @@ export const processVerifiedMetaEvent = inngest.createFunction(
       const data = event.data as Record<string, unknown>;
       const webhookEventId = String(data.webhookEventId ?? "");
       const trustedWorkspaceId = String(data.trustedWorkspaceId ?? "");
-      const admin = createSupabaseAdminClient();
+      const admin = await createSupabaseAdminClient();
       const { data: row, error } = await admin
         .from("meta_webhook_events")
         .select("id,workspace_id,processing_status")
@@ -89,15 +89,15 @@ export const cleanupExpiredPrivateArtifacts = inngest.createFunction(
   },
   async ({ step }) => {
     const removedRateLimits = await step.run("purge-rate-limits", async () => {
-      const { data, error } = await createSupabaseAdminClient().rpc(
-        "purge_expired_auth_rate_limits",
-        { requested_limit: 10_000 }
-      );
+      const admin = await createSupabaseAdminClient();
+      const { data, error } = await admin.rpc("purge_expired_auth_rate_limits", {
+        requested_limit: 10_000
+      });
       if (error) throw new Error("RATE_LIMIT_CLEANUP_FAILED");
       return Number(data ?? 0);
     });
     const expiredExports = await step.run("expire-private-exports", async () => {
-      const admin = createSupabaseAdminClient();
+      const admin = await createSupabaseAdminClient();
       const { data, error } = await admin
         .from("export_jobs")
         .select("id,workspace_id,object_path")

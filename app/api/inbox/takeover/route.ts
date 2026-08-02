@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     if (!["takeover", "resume"].includes(body.action)) throw new Error();
     const { workspace } = await createMetaRuntime();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const takeover = body.action === "takeover";
     const result = await admin
       .from("conversations")

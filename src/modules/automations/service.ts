@@ -14,7 +14,7 @@ const recipes = new Set<Recipe>([
   "CROSS_CHANNEL_AFTER_HOURS_ESCALATION"
 ]);
 export async function listAutomations(workspace: TrustedWorkspace) {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data, error } = await admin
     .from("automations")
     .select("*")
@@ -41,7 +41,7 @@ export async function createAutomation(
   if (!recipes.has(input.recipe) || input.name.trim().length < 2)
     throw new Error("Invalid automation.");
   if (!/^[0-9a-f-]{36}$/i.test(input.requestId)) throw new Error("Invalid request.");
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const reservation = await admin.from("automation_idempotency_keys").insert({
     workspace_id: workspace.id,
     key: input.requestId,
@@ -173,7 +173,7 @@ export async function updateAutomation(
   action: "activate" | "pause" | "archive" | "safe_test" | "stop_queued"
 ) {
   assertWorkspaceOperator(workspace);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const status =
     action === "activate"
       ? "ACTIVE"

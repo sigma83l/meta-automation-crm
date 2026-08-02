@@ -79,7 +79,7 @@ export class AuthService {
       `${operation}:${context.ipAddress}:${identity.toLowerCase()}`
     );
     if (!limit.ok) return limit;
-    return this.captcha.verify(context.captchaToken, context.ipAddress);
+    return this.captcha.verify(context.captchaToken, context.ipAddress, operation);
   }
 }
 

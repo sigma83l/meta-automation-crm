@@ -34,7 +34,10 @@ describe("production deployment preflight", () => {
         TURNSTILE_SECRET_KEY: secretMarker,
         AUTH_RATE_LIMIT_HASH_KEY: `${secretMarker}-at-least-32-characters`,
         AUTH_CAPTCHA_MODE: "turnstile",
+        AUTH_SIGNUP_MODE: "invite_only",
         AUTH_RATE_LIMIT_MODE: "database",
+        LIVE_PROVIDER_SEND_ENABLED: "false",
+        META_CONNECTION_MODE: "sandbox",
         VERCEL_COMMERCIAL_PLAN_CONFIRMED: "true",
         PRODUCTION_DEPLOYMENT_APPROVED: "true"
       }

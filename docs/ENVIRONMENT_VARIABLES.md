@@ -3,6 +3,12 @@
 Names and purposes only. Values belong in ignored local files or secure hosting
 settings.
 
+Prompt 10 adds `EMAIL_DELIVERY_VERIFIED`, a non-secret owner evidence gate.
+Production self-service signup requires it and
+`ENABLE_EMAIL_CONFIRMATION=true`; otherwise `AUTH_SIGNUP_MODE` must be
+`invite_only`. UI locale/theme are profile/cookie preferences and require no
+environment secret.
+
 | Name                               | Exposure                       | Purpose                                                      |
 | ---------------------------------- | ------------------------------ | ------------------------------------------------------------ |
 | `NEXT_PUBLIC_APP_URL`              | Browser-safe                   | Canonical application origin                                 |

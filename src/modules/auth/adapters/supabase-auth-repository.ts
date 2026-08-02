@@ -31,6 +31,15 @@ export class SupabaseAuthRepository implements AuthRepository {
       return ok({ next: "/login", confirmationRequired: true });
     }
     if (!data.session) return unavailable();
+    // Managed Better Auth sets its secure session cookie on the response. The
+    // database trigger has already provisioned the workspace atomically, while
+    // authenticated resolution is intentionally deferred to the next request.
+    if (
+      (this.client as unknown as { __applicationProvider?: string }).__applicationProvider ===
+      "neon"
+    ) {
+      return ok({ next: "/onboarding" });
+    }
     const workspace = await this.resolveWorkspace();
     if (!workspace.ok) {
       await this.client.auth.signOut({ scope: "global" });

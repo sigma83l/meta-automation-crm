@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { CustomerActions } from "@/src/modules/crm/ui/customer-actions";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
@@ -25,19 +26,28 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const selected = (await searchParams).tab ?? "Overview";
-  const { repository, workspace } = await createCrmRuntime();
+  const [{ repository, workspace }, { locale }] = await Promise.all([
+    createCrmRuntime(),
+    getRequestPreferences()
+  ]);
+  const text = (english: string, turkish: string, persian: string) =>
+    locale === "tr" ? turkish : locale === "fa" ? persian : english;
   const detail = await repository.detail(id);
   const customer = detail.customer as { display_name: string; company_name?: string };
   return (
     <WorkspaceShell active="crm" workspaceName={workspace.name}>
       <div className="content crm-content">
         <Link href="/crm" className="back-link">
-          ← Customer list
+          ← {text("Customer list", "Müşteri listesi", "فهرست مشتریان")}
         </Link>
         <section className="customer-hero">
-          <span className="eyebrow">Customer profile</span>
+          <span className="eyebrow">
+            {text("Customer profile", "Müşteri profili", "پروفایل مشتری")}
+          </span>
           <h2>{customer.display_name}</h2>
-          <p>{customer.company_name ?? "Independent contact"}</p>
+          <p>
+            {customer.company_name ?? text("Independent contact", "Bağımsız kişi", "مخاطب مستقل")}
+          </p>
         </section>
         <CustomerActions
           customerId={id}
@@ -51,17 +61,67 @@ export default async function CustomerPage({
               href={`/crm/${id}?tab=${encodeURIComponent(tab)}`}
               aria-current={selected === tab ? "page" : undefined}
             >
-              {tab}
+              {tabLabel(tab, locale)}
             </Link>
           ))}
         </nav>
         <section className="detail-panel">
-          <h3>{selected}</h3>
-          <pre>{JSON.stringify(detail[tabKey(selected)] ?? detail.customer, null, 2)}</pre>
+          <h3>{tabLabel(selected, locale)}</h3>
+          <OwnerDataView
+            value={detail[tabKey(selected)] ?? detail.customer}
+            emptyLabel={text(
+              "No records in this section.",
+              "Bu bölümde kayıt yok.",
+              "در این بخش رکوردی نیست."
+            )}
+          />
         </section>
       </div>
     </WorkspaceShell>
   );
+}
+
+function OwnerDataView({ value, emptyLabel }: { value: unknown; emptyLabel: string }) {
+  const rows = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+  if (!rows.length) return <div className="empty-guidance">{emptyLabel}</div>;
+  return (
+    <div className="owner-data-list">
+      {rows.slice(0, 50).map((row, index) => (
+        <article key={index}>
+          {Object.entries(row as Record<string, unknown>)
+            .filter(([key]) => !/(workspace_id|cipher|secret|token|auth_tag|iv)/i.test(key))
+            .slice(0, 12)
+            .map(([key, item]) => (
+              <div key={key}>
+                <strong>{key.replaceAll("_", " ")}</strong>
+                <span dir="auto">
+                  {item === null || item === undefined
+                    ? "—"
+                    : typeof item === "object"
+                      ? Array.isArray(item)
+                        ? `${item.length} items`
+                        : "Available"
+                      : String(item)}
+                </span>
+              </div>
+            ))}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function tabLabel(tab: string, locale: "en" | "tr" | "fa") {
+  const labels: Record<string, readonly [string, string]> = {
+    Overview: ["Genel Bakış", "نمای کلی"],
+    Timeline: ["Zaman Çizelgesi", "خط زمانی"],
+    Conversations: ["Konuşmalar", "گفتگوها"],
+    Files: ["Dosyalar", "فایل‌ها"],
+    Automations: ["Otomasyonlar", "اتوماسیون‌ها"],
+    "Fields & Notes": ["Alanlar ve Notlar", "فیلدها و یادداشت‌ها"],
+    Audit: ["Denetim", "ممیزی"]
+  };
+  return locale === "en" ? tab : (labels[tab]?.[locale === "tr" ? 0 : 1] ?? tab);
 }
 
 function tabKey(tab: string) {

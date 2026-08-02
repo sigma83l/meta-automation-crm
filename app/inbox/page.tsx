@@ -9,7 +9,12 @@ export default async function InboxPage({
 }: {
   searchParams: Promise<{ conversation?: string }>;
 }) {
-  const { client, workspace } = await createCrmRuntime();
+  const [{ client, workspace }, { locale, t }] = await Promise.all([
+    createCrmRuntime(),
+    getRequestPreferences()
+  ]);
+  const text = (english: string, turkish: string, persian: string) =>
+    locale === "tr" ? turkish : locale === "fa" ? persian : english;
   const conversations = await client
     .from("conversations")
     .select("*,customers(display_name)")
@@ -39,8 +44,8 @@ export default async function InboxPage({
         <section className="conversation-list">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">Conversations</span>
-              <h2>Inbox</h2>
+              <span className="eyebrow">{t("inbox.conversations")}</span>
+              <h2>{t("nav.inbox")}</h2>
             </div>
           </div>
           {(conversations.data ?? []).map((conversation) => (
@@ -51,7 +56,8 @@ export default async function InboxPage({
             >
               <strong>
                 {String(
-                  (conversation.customers as { display_name?: string })?.display_name ?? "Customer"
+                  (conversation.customers as { display_name?: string })?.display_name ??
+                    text("Customer", "Müşteri", "مشتری")
                 )}
               </strong>
               <span>
@@ -62,28 +68,34 @@ export default async function InboxPage({
           ))}
           {!conversations.data?.length ? (
             <div className="empty-guidance">
-              <strong>No conversations yet.</strong>
-              <span>Provider sending remains disabled.</span>
+              <strong>{t("inbox.noConversations")}</strong>
+              <span>{t("inbox.noSend")}</span>
             </div>
           ) : null}
         </section>
         <section className="message-pane">
           <a className="inbox-back" href="/inbox">
-            ← Back to conversations
+            ← {text("Back to conversations", "Konuşmalara dön", "بازگشت به گفتگوها")}
           </a>
           <div className="panel-heading">
             <div>
               <span className="eyebrow">
-                {active?.data?.requires_human_review ? "Human review required" : "Conversation"}
+                {active?.data?.requires_human_review
+                  ? text(
+                      "Human review required",
+                      "İnsan incelemesi gerekli",
+                      "نیازمند بررسی انسانی"
+                    )
+                  : text("Conversation", "Konuşma", "گفتگو")}
               </span>
               <h2>
                 {String(
                   (active?.data?.customers as { display_name?: string })?.display_name ??
-                    "Select a conversation"
+                    text("Select a conversation", "Bir konuşma seçin", "یک گفتگو انتخاب کنید")
                 )}
               </h2>
             </div>
-            <span>{active?.data?.owner ?? "No owner"}</span>
+            <span>{active?.data?.owner ?? text("No owner", "Sorumlu yok", "بدون مسئول")}</span>
           </div>
           <div className="message-stream">
             {(messages?.data ?? []).map((message) => (
@@ -102,34 +114,64 @@ export default async function InboxPage({
           ) : null}
         </section>
         <aside className="customer-context">
-          <span className="eyebrow">Customer context</span>
+          <span className="eyebrow">{t("inbox.customerContext")}</span>
           <h3>
             {String(
-              (active?.data?.customers as { display_name?: string })?.display_name ?? "No customer"
+              (active?.data?.customers as { display_name?: string })?.display_name ??
+                text("No customer", "Müşteri yok", "بدون مشتری")
             )}
           </h3>
-          <p>Consent, tags and recent timeline remain workspace scoped.</p>
+          <p>
+            {text(
+              "Consent, tags and recent timeline remain workspace scoped.",
+              "Onay, etiketler ve zaman çizelgesi çalışma alanı kapsamındadır.",
+              "رضایت، برچسب‌ها و خط زمانی فقط در همین فضای کاری هستند."
+            )}
+          </p>
           <dl className="context-list">
             <div>
-              <dt>Service window</dt>
-              <dd>{active?.data ? "Policy check required" : "No active window"}</dd>
+              <dt>{t("inbox.serviceWindow")}</dt>
+              <dd>
+                {active?.data
+                  ? text(
+                      "Policy check required",
+                      "Politika kontrolü gerekli",
+                      "نیازمند بررسی سیاست"
+                    )
+                  : text("No active window", "Açık pencere yok", "پنجره فعالی نیست")}
+              </dd>
             </div>
             <div>
-              <dt>Owner</dt>
-              <dd>{active?.data?.owner ?? "Unassigned"}</dd>
+              <dt>{t("inbox.owner")}</dt>
+              <dd>{active?.data?.owner ?? text("Unassigned", "Atanmamış", "تخصیص‌نیافته")}</dd>
             </div>
             <div>
-              <dt>Missing fields</dt>
-              <dd>Validated per automation</dd>
+              <dt>{t("inbox.missingFields")}</dt>
+              <dd>
+                {text(
+                  "Validated per automation",
+                  "Otomasyona göre doğrulanır",
+                  "طبق اتوماسیون بررسی می‌شود"
+                )}
+              </dd>
             </div>
             <div>
-              <dt>Attachments</dt>
-              <dd>{messages?.data?.length ? "Private media supported" : "None"}</dd>
+              <dt>{t("inbox.attachments")}</dt>
+              <dd>
+                {messages?.data?.length
+                  ? text(
+                      "Private media supported",
+                      "Özel medya desteklenir",
+                      "رسانه خصوصی پشتیبانی می‌شود"
+                    )
+                  : text("None", "Yok", "هیچ")}
+              </dd>
             </div>
           </dl>
-          <span className="policy-state">No real send</span>
+          <span className="policy-state">{t("shell.noSend")}</span>
         </aside>
       </div>
     </WorkspaceShell>
   );
 }
+import { getRequestPreferences } from "@/src/lib/i18n/server";

@@ -57,6 +57,14 @@ hosting or against customer data.
 - Scheduled cleanup and outbox handlers must remain idempotent, bounded and
   safe when retried. A provider send with uncertain persistence is
   `sent_unknown`, never blindly retried.
+- V1 UI copy must keep en/tr/fa parity. Persian applies document-level RTL;
+  machine identifiers remain bidi-isolated. Light/Dark/System use semantic
+  tokens, never route-specific authorization colors.
+- Production public signup fails closed until confirmation delivery is proven.
+  Prompt 10 preflight requires invite-only otherwise, Meta Sandbox and
+  `LIVE_PROVIDER_SEND_ENABLED=false`.
+- Onboarding drafts may contain bounded non-secret owner inputs only. Never
+  place provider credentials, tokens or recovery values in setup state.
 
 ## Definition of done
 

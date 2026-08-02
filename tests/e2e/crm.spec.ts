@@ -8,7 +8,7 @@ test("creates, reloads, edits, uploads and exports a workspace customer", async 
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
   await expect(page).toHaveURL(/\/onboarding/);
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await page.getByRole("button", { name: "Save and exit" }).click();
 
   await page.goto("/crm");
   await page.locator('input[name="csv"]').setInputFiles({

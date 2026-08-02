@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
 async function csrf() {
   return ((await fetch("/api/auth/csrf").then((r) => r.json())) as { token: string }).token;
 }
@@ -19,6 +20,7 @@ export function ConnectionsPanel({
   connections: Record<string, unknown>[];
   canManage: boolean;
 }) {
+  const { text } = useI18n();
   const [status, setStatus] = useState("");
   async function run(method: string, body: unknown) {
     try {
@@ -31,18 +33,23 @@ export function ConnectionsPanel({
   return (
     <div className="settings-stack">
       <section className="settings-card">
-        <h2>Meta connections</h2>
+        <h2>{text("Meta connections", "Meta bağlantıları", "اتصال‌های متا")}</h2>
         <p className="warning-box">
           <strong>LIVE_MULTI_BUSINESS_BLOCKED_BY_META</strong>
           <br />
-          Live self-service requires a verified client-owned Meta portfolio/app, App Review,
-          Advanced Access, Embedded Signup, and Instagram Professional assets. Sandbox is complete
-          and sends nothing.
+          {text(
+            "Live self-service requires a verified client-owned Meta portfolio/app, App Review, Advanced Access, Embedded Signup, and Instagram Professional assets. Sandbox is complete and sends nothing.",
+            "Canlı kullanım; doğrulanmış müşteri Meta portföyü/uygulaması, App Review, Advanced Access, Embedded Signup ve Instagram Professional varlıkları gerektirir. Sandbox tamamdır ve gönderim yapmaz.",
+            "حالت زنده به پورتفولیو و اپ تأییدشده مشتری، App Review، Advanced Access، Embedded Signup و حساب حرفه‌ای اینستاگرام نیاز دارد. Sandbox کامل است و هیچ پیامی نمی‌فرستد."
+          )}
         </p>
         {!canManage ? (
           <p className="warning-box" role="status">
-            Your workspace role can inspect connection health but only an Owner or Admin can
-            connect, reauthorize, or disconnect provider assets.
+            {text(
+              "Your workspace role can inspect connection health but only an Owner or Admin can connect, reauthorize, or disconnect provider assets.",
+              "Rolünüz bağlantı sağlığını görebilir; yalnızca Owner veya Admin bağlantı kurabilir, yenileyebilir ya da kesebilir.",
+              "نقش شما می‌تواند سلامت اتصال را ببیند؛ فقط Owner یا Admin می‌تواند اتصال را برقرار، تمدید یا قطع کند."
+            )}
           </p>
         ) : null}
         {status && <p role="status">{status}</p>}
@@ -52,26 +59,36 @@ export function ConnectionsPanel({
             <article className="connection-card" key={channel}>
               <div>
                 <span className="eyebrow">{channel}</span>
-                <h3>{item ? String(item.display_name) : "Not connected"}</h3>
+                <h3>
+                  {item
+                    ? String(item.display_name)
+                    : text("Not connected", "Bağlı değil", "متصل نیست")}
+                </h3>
                 <p>
                   {item
                     ? `${String(item.mode)} · ${String(item.status)} · ${String(item.last_health_status)}`
-                    : "Workspace-owned connection not created."}
+                    : text(
+                        "Workspace-owned connection not created.",
+                        "Çalışma alanı bağlantısı oluşturulmadı.",
+                        "اتصال متعلق به فضای کاری ساخته نشده است."
+                      )}
                 </p>
               </div>
               <div className="connection-actions">
                 {!canManage ? null : !item || item.status === "disconnected" ? (
-                  <button onClick={() => run("POST", { channel })}>Connect sandbox</button>
+                  <button onClick={() => run("POST", { channel })}>
+                    {text("Connect sandbox", "Sandbox bağla", "اتصال Sandbox")}
+                  </button>
                 ) : (
                   <>
                     <button onClick={() => run("PATCH", { channel, action: "health" })}>
-                      Check health
+                      {text("Check health", "Sağlığı kontrol et", "بررسی سلامت")}
                     </button>
                     <button onClick={() => run("PATCH", { channel, action: "reauthorize" })}>
-                      Reauthorize
+                      {text("Reauthorize", "Yeniden yetkilendir", "مجوزدهی دوباره")}
                     </button>
                     <button className="button-muted" onClick={() => run("DELETE", { channel })}>
-                      Disconnect
+                      {text("Disconnect", "Bağlantıyı kes", "قطع اتصال")}
                     </button>
                   </>
                 )}

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     const result = await ingestVerifiedMetaPayload(
       payload,
-      new SupabaseMetaWebhookRepository(createSupabaseAdminClient())
+      new SupabaseMetaWebhookRepository(await createSupabaseAdminClient())
     );
     return NextResponse.json(
       { accepted: result.acknowledged, status: result.status },

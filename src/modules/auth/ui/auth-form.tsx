@@ -3,6 +3,7 @@
 import { Turnstile } from "@marsidev/react-turnstile";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/src/lib/i18n/client";
 
 type Mode = "signup" | "login" | "forgot-password" | "reset-password";
 type ApiResponse = {
@@ -19,6 +20,7 @@ export function AuthForm({
   turnstileSiteKey?: string | undefined;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [captchaToken, setCaptchaToken] = useState(turnstileSiteKey ? "" : "local-pass");
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -42,24 +44,24 @@ export function AuthForm({
       const result = (await response.json()) as ApiResponse;
       if (!result.ok) {
         setState("error");
-        setMessage(result.error?.message ?? "The request could not be completed.");
+        setMessage(result.error?.message ?? t("auth.genericFailure"));
         return;
       }
       if (mode === "forgot-password") {
         setState("success");
-        setMessage("If an account is eligible, password reset instructions have been sent.");
+        setMessage(t("auth.resetSent"));
         return;
       }
       if (result.value?.confirmationRequired) {
         setState("success");
-        setMessage("Check your email to confirm the account before signing in.");
+        setMessage(t("auth.confirmEmail"));
         return;
       }
       router.push(result.value?.next ?? (mode === "reset-password" ? "/login" : "/dashboard"));
       router.refresh();
     } catch {
       setState("error");
-      setMessage("The server is unavailable. Try again.");
+      setMessage(t("auth.serverUnavailable"));
     }
   }
 
@@ -67,7 +69,7 @@ export function AuthForm({
     <form className="auth-form" onSubmit={submit} aria-busy={state === "loading"}>
       {mode === "signup" ? (
         <label>
-          Business name
+          {t("auth.businessName")}
           <input
             name="businessName"
             minLength={2}
@@ -79,13 +81,13 @@ export function AuthForm({
       ) : null}
       {mode !== "reset-password" ? (
         <label>
-          Email
+          {t("auth.email")}
           <input name="email" type="email" required autoComplete="email" />
         </label>
       ) : null}
       {mode !== "forgot-password" ? (
         <label>
-          {mode === "reset-password" ? "New password" : "Password"}
+          {mode === "reset-password" ? t("auth.newPassword") : t("auth.password")}
           <input
             name="password"
             type="password"
@@ -94,11 +96,17 @@ export function AuthForm({
             required
             autoComplete={mode === "login" ? "current-password" : "new-password"}
           />
-          <small>At least 12 characters.</small>
+          <small>{t("auth.passwordHint")}</small>
         </label>
       ) : null}
       {turnstileSiteKey && mode !== "reset-password" ? (
-        <Turnstile siteKey={turnstileSiteKey} onSuccess={setCaptchaToken} />
+        <Turnstile
+          siteKey={turnstileSiteKey}
+          options={{
+            action: mode === "forgot-password" ? "recovery" : mode === "signup" ? "signup" : "login"
+          }}
+          onSuccess={setCaptchaToken}
+        />
       ) : null}
       {message ? (
         <div className={`auth-notice ${state}`} role="status">
@@ -106,17 +114,18 @@ export function AuthForm({
         </div>
       ) : null}
       <button type="submit" disabled={state === "loading" || !captchaToken}>
-        {state === "loading" ? "Working…" : buttonLabel(mode)}
+        {state === "loading"
+          ? t("auth.working")
+          : t(
+              mode === "signup"
+                ? "auth.createPrivateWorkspace"
+                : mode === "login"
+                  ? "auth.signIn"
+                  : mode === "forgot-password"
+                    ? "auth.requestReset"
+                    : "auth.setNewPassword"
+            )}
       </button>
     </form>
   );
-}
-
-function buttonLabel(mode: Mode) {
-  return {
-    signup: "Create private workspace",
-    login: "Sign in",
-    "forgot-password": "Request reset",
-    "reset-password": "Set new password"
-  }[mode];
 }

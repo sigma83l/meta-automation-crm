@@ -20,6 +20,16 @@ if (process.env.VERCEL_COMMERCIAL_PLAN_CONFIRMED !== "true")
   violations.push("VERCEL_COMMERCIAL_PLAN_CONFIRMED");
 if (process.env.PRODUCTION_DEPLOYMENT_APPROVED !== "true")
   violations.push("PRODUCTION_DEPLOYMENT_APPROVED");
+if (process.env.LIVE_PROVIDER_SEND_ENABLED !== "false")
+  violations.push("LIVE_PROVIDER_SEND_ENABLED");
+if (process.env.META_CONNECTION_MODE !== "sandbox") violations.push("META_CONNECTION_MODE");
+if (
+  process.env.AUTH_SIGNUP_MODE === "self_service" &&
+  (process.env.ENABLE_EMAIL_CONFIRMATION !== "true" ||
+    process.env.EMAIL_DELIVERY_VERIFIED !== "true")
+) {
+  violations.push("PUBLIC_SIGNUP_VERIFICATION");
+}
 try {
   if (new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").protocol !== "https:")
     violations.push("NEXT_PUBLIC_APP_URL");

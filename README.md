@@ -1,4 +1,4 @@
-# Relay CRM foundation
+# Relay CRM V1
 
 Independent production-candidate foundation for workspace-isolated Instagram
 and WhatsApp automation with AI-assisted CRM workflows.
@@ -6,8 +6,11 @@ and WhatsApp automation with AI-assisted CRM workflows.
 The current checkpoint includes workspace-scoped CRM/inbox, private media,
 secure Excel/ZIP exports, structured business knowledge, strict AI contracts,
 synthetic Demo privacy gates, encrypted BYOK, five durable automation recipes,
-and a responsive business-owner panel. Real provider connections, outbound
-adapters, and cloud deployment remain absent.
+and a responsive Signal Mirror business-owner panel. V1 includes en/tr/fa,
+Persian RTL, Light/Dark/System themes, an eight-stage resumable setup,
+operational Analytics, a five-recipe Gallery and a distinct Test Center. Real
+provider values, outbound adapters and commercially eligible cloud deployment
+remain gated.
 
 ## Requirements
 
@@ -44,8 +47,9 @@ at `/settings`.
 Workspace WhatsApp/Instagram sandbox connections and Meta readiness are at
 `/connections`. Live multi-business setup remains blocked by client-owned Meta
 assets, review, and Advanced Access.
-The resumable setup is at `/onboarding`; the seven-step recipe builder and
-emergency controls are at `/automations`.
+The resumable setup is at `/onboarding`; the seven-step recipe builder,
+five-recipe Gallery and Test Center are under `/automations`. Operational
+Analytics is at `/analytics`.
 Export and media limits are documented in `docs/ENVIRONMENT_VARIABLES.md`.
 CRM also supports an atomic audited CSV import capped at 500 rows / 1 MiB.
 

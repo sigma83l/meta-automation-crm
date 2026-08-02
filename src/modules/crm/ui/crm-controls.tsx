@@ -2,8 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
 
 export function CrmControls() {
+  const { text } = useI18n();
   const router = useRouter();
   const search = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -73,7 +75,13 @@ export function CrmControls() {
     const form = new FormData(event.currentTarget);
     const file = form.get("csv");
     if (!(file instanceof File) || file.size > 1_048_576 || !file.name.endsWith(".csv")) {
-      setImportMessage("Choose a CSV file no larger than 1 MB.");
+      setImportMessage(
+        text(
+          "Choose a CSV file no larger than 1 MB.",
+          "1 MB'den küçük bir CSV dosyası seçin.",
+          "یک فایل CSV کوچک‌تر از ۱ مگابایت انتخاب کنید."
+        )
+      );
       return;
     }
     setLoading(true);
@@ -87,8 +95,12 @@ export function CrmControls() {
     setLoading(false);
     setImportMessage(
       response.ok
-        ? `${result.acceptedRows ?? 0} customers imported.`
-        : "Import rejected. Check the CSV headers and values."
+        ? `${result.acceptedRows ?? 0} ${text("customers imported.", "müşteri içe aktarıldı.", "مشتری وارد شد.")}`
+        : text(
+            "Import rejected. Check the CSV headers and values.",
+            "İçe aktarma reddedildi. Başlıkları ve değerleri kontrol edin.",
+            "ورود داده رد شد. عنوان ستون‌ها و مقادیر را بررسی کنید."
+          )
     );
     if (response.ok) router.refresh();
   }
@@ -98,42 +110,60 @@ export function CrmControls() {
       <form className="crm-filter" onSubmit={filter}>
         <input
           name="q"
-          placeholder="Search name or company"
+          placeholder={text("Search name or company", "Ad veya şirket ara", "جستجوی نام یا شرکت")}
           defaultValue={search.get("q") ?? ""}
-          aria-label="Search customers"
+          aria-label={text("Search customers", "Müşteri ara", "جستجوی مشتری")}
         />
         <select
           name="status"
           defaultValue={search.get("status") ?? ""}
-          aria-label="Customer status"
+          aria-label={text("Customer status", "Müşteri durumu", "وضعیت مشتری")}
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
+          <option value="">{text("All statuses", "Tüm durumlar", "همه وضعیت‌ها")}</option>
+          <option value="active">{text("Active", "Etkin", "فعال")}</option>
+          <option value="archived">{text("Archived", "Arşivlenmiş", "بایگانی")}</option>
         </select>
-        <button>Apply filters</button>
+        <button>{text("Apply filters", "Filtreleri uygula", "اعمال فیلتر")}</button>
         <button type="button" onClick={() => exportView("filtered")} disabled={loading}>
-          Export view
+          {text("Export view", "Görünümü dışa aktar", "خروجی این نما")}
         </button>
         <button type="button" onClick={() => exportView("workspace")} disabled={loading}>
-          Export all
+          {text("Export all", "Tümünü dışa aktar", "خروجی همه")}
         </button>
       </form>
       <form className="crm-create" onSubmit={create}>
-        <strong>New customer</strong>
-        <input name="displayName" placeholder="Display name" required />
-        <input name="companyName" placeholder="Company" />
-        <input name="email" type="email" placeholder="Email" />
-        <button disabled={loading}>{loading ? "Working…" : "Create"}</button>
+        <strong>{text("New customer", "Yeni müşteri", "مشتری جدید")}</strong>
+        <input
+          name="displayName"
+          placeholder={text("Display name", "Görünen ad", "نام نمایشی")}
+          required
+        />
+        <input name="companyName" placeholder={text("Company", "Şirket", "شرکت")} />
+        <input name="email" type="email" placeholder={text("Email", "E-posta", "ایمیل")} />
+        <button disabled={loading}>
+          {loading
+            ? text("Working…", "İşleniyor…", "در حال انجام…")
+            : text("Create", "Oluştur", "ساخت")}
+        </button>
       </form>
       <form className="crm-create" onSubmit={importCsv}>
-        <strong>Import CSV</strong>
-        <p>Headers: display name, company, email, phone. Maximum 500 rows / 1 MB.</p>
+        <strong>{text("Import CSV", "CSV içe aktar", "ورود CSV")}</strong>
+        <p>
+          {text(
+            "Headers: display name, company, email, phone. Maximum 500 rows / 1 MB.",
+            "Başlıklar: görünen ad, şirket, e-posta, telefon. En çok 500 satır / 1 MB.",
+            "ستون‌ها: نام نمایشی، شرکت، ایمیل، تلفن. حداکثر ۵۰۰ ردیف / ۱ مگابایت."
+          )}
+        </p>
         <label>
-          Customer CSV file
+          {text("Customer CSV file", "Müşteri CSV dosyası", "فایل CSV مشتری")}
           <input name="csv" type="file" accept=".csv,text/csv" required />
         </label>
-        <button disabled={loading}>{loading ? "Working…" : "Import customers"}</button>
+        <button disabled={loading}>
+          {loading
+            ? text("Working…", "İşleniyor…", "در حال انجام…")
+            : text("Import customers", "Müşterileri içe aktar", "ورود مشتریان")}
+        </button>
         {importMessage ? <span role="status">{importMessage}</span> : null}
       </form>
     </div>

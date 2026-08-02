@@ -8,7 +8,7 @@ test("configures structured business knowledge and shows the Demo privacy bounda
   await page.getByLabel("Email").fill(`knowledge-${randomUUID()}@example.test`);
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await page.getByRole("button", { name: "Save and exit" }).click();
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Business Profile" })).toBeVisible();
   await page.locator('textarea[name="description"]').first().fill("Synthetic business description");

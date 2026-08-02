@@ -19,7 +19,7 @@ const requiredPermissions = {
   instagram: ["instagram_business_basic", "instagram_business_manage_messages"]
 } as const;
 export async function listMetaConnections(workspace: TrustedWorkspace) {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data, error } = await admin
     .from("meta_connections")
     .select(
@@ -32,7 +32,7 @@ export async function listMetaConnections(workspace: TrustedWorkspace) {
 }
 export async function connectSandbox(workspace: TrustedWorkspace, channel: MetaChannel) {
   assertWorkspaceManager(workspace);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const account =
     channel === "whatsapp" ? `wa-sandbox-${workspace.id}` : `ig-sandbox-${workspace.id}`;
   const row = {
@@ -72,7 +72,7 @@ export async function updateMetaConnection(
   action: "health" | "reauthorize" | "disconnect"
 ) {
   assertWorkspaceManager(workspace);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const update =
     action === "disconnect"
       ? { status: "disconnected", last_health_status: "unknown" }
@@ -101,7 +101,7 @@ export async function createMetaOauthState(workspaceId: string, channel: MetaCha
   if (!env.metaAppSecret) throw new Error("Meta connection is not configured.");
   const issuedAt = Date.now();
   const state = createSignedMetaOauthState(workspaceId, channel, env.metaAppSecret, issuedAt);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { error } = await admin.from("meta_oauth_nonces").upsert(
     {
       workspace_id: workspaceId,
@@ -138,7 +138,7 @@ export async function consumeMetaOauthState(
   channel: MetaChannel
 ) {
   if (!verifyMetaOauthState(state, workspaceId, channel)) return false;
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data, error } = await admin.rpc("consume_meta_oauth_nonce", {
     p_workspace_id: workspaceId,
     p_channel: channel,
@@ -203,7 +203,7 @@ export async function storeLiveMetaConnection(
   if (required.some((permission) => !input.permissions.includes(permission)))
     throw new Error("Required Meta permission is missing.");
   const token = encryptCredential(input.accessToken, env.credentialEncryptionKey);
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const row = {
     workspace_id: workspace.id,
     channel: input.channel,

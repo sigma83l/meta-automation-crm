@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useI18n } from "@/src/lib/i18n/client";
 import { WorkspaceShell } from "./workspace-shell";
 export function DashboardOverview({
   workspaceName,
@@ -15,25 +18,41 @@ export function DashboardOverview({
     instagram: string;
   };
 }) {
+  const { t, text } = useI18n();
   const checklist: ReadonlyArray<readonly [string, string]> = [
-    ["Business profile", "/settings"],
-    ["Brand, pricing and FAQs", "/settings"],
-    ["AI provider", "/settings"],
-    ["Connect channels", "/connections"],
-    ["Create first automation", "/automations"]
+    [text("Business profile", "İşletme profili", "پروفایل کسب‌وکار"), "/settings"],
+    [text("Brand, pricing and FAQs", "Marka, fiyat ve SSS", "برند، قیمت و پرسش‌ها"), "/settings"],
+    [text("AI provider", "Yapay zekâ sağlayıcısı", "ارائه‌دهنده هوش مصنوعی"), "/settings"],
+    [text("Connect channels", "Kanalları bağla", "اتصال کانال‌ها"), "/connections"],
+    [
+      text("Create first automation", "İlk otomasyonu oluştur", "ساخت اولین اتوماسیون"),
+      "/automations"
+    ]
   ];
   return (
     <WorkspaceShell active="overview" workspaceName={workspaceName}>
       <div className="content">
         <section className="control-brief">
           <div className="brief-copy">
-            <span className="eyebrow">Next safe action</span>
-            <h2>Turn one inbound conversation into a complete customer record.</h2>
+            <span className="eyebrow">
+              {text("Next safe action", "Sonraki güvenli adım", "اقدام امن بعدی")}
+            </span>
+            <h2>
+              {text(
+                "Turn one inbound conversation into a complete customer record.",
+                "Bir gelen konuşmayı eksiksiz müşteri kaydına dönüştürün.",
+                "یک گفتگوی ورودی را به پرونده کامل مشتری تبدیل کنید."
+              )}
+            </h2>
             <p>
-              Finish setup, run a Sandbox test, and activate only when every policy check is ready.
+              {text(
+                "Finish setup, run a Sandbox test, and activate only when every policy check is ready.",
+                "Kurulumu tamamlayın، Sandbox testi çalıştırın ve yalnızca tüm kontroller hazırken etkinleştirin.",
+                "راه‌اندازی را کامل کنید، آزمایش Sandbox را اجرا کنید و فقط پس از آمادگی همه سیاست‌ها فعال کنید."
+              )}
             </p>
             <Link className="primary-link" href="/automations">
-              Create automation
+              {t("automations.create")}
             </Link>
           </div>
           <div className="signal-lanes" aria-label="Connection health">
@@ -46,28 +65,31 @@ export function DashboardOverview({
               <strong>{metrics.instagram}</strong>
             </div>
             <div className="signal-lock">
-              <span aria-hidden>×</span>Live sends are locked
+              <span aria-hidden>×</span>
+              {text("Live sends are locked", "Canlı gönderimler kilitli", "ارسال زنده قفل است")}
             </div>
           </div>
         </section>
         <section className="metric-grid" aria-label="Workspace status">
           <article>
-            <span>Active automations</span>
+            <span>{text("Active automations", "Etkin otomasyonlar", "اتوماسیون‌های فعال")}</span>
             <strong>{metrics.automations}</strong>
             <small>Policy checked</small>
           </article>
           <article>
-            <span>Open service windows</span>
+            <span>
+              {text("Open service windows", "Açık hizmet pencereleri", "پنجره‌های باز گفتگو")}
+            </span>
             <strong>{metrics.windows}</strong>
             <small>Trusted provider events</small>
           </article>
           <article>
-            <span>New customers</span>
+            <span>{text("New customers", "Yeni müşteriler", "مشتریان جدید")}</span>
             <strong>{metrics.customers}</strong>
             <small>Workspace CRM</small>
           </article>
           <article>
-            <span>Human review</span>
+            <span>{text("Human review", "İnsan incelemesi", "بررسی انسانی")}</span>
             <strong>{metrics.reviews}</strong>
             <small>{metrics.errors} recent errors</small>
           </article>
@@ -76,8 +98,8 @@ export function DashboardOverview({
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <span className="eyebrow">Setup</span>
-                <h2>Launch checklist</h2>
+                <span className="eyebrow">{t("overview.readiness")}</span>
+                <h2>{text("Launch checklist", "Başlatma listesi", "فهرست آمادگی")}</h2>
               </div>
               <span>Resumable</span>
             </div>
@@ -89,7 +111,7 @@ export function DashboardOverview({
                     <strong>{label}</strong>
                     <span>{index < 2 ? "Review details" : "Action required"}</span>
                   </div>
-                  <Link href={href}>Open</Link>
+                  <Link href={href}>{t("common.open")}</Link>
                 </article>
               ))}
             </div>
@@ -97,8 +119,8 @@ export function DashboardOverview({
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <span className="eyebrow">Activity</span>
-                <h2>What needs attention</h2>
+                <span className="eyebrow">{t("overview.activity")}</span>
+                <h2>{t("overview.attention")}</h2>
               </div>
               <span>Sandbox</span>
             </div>

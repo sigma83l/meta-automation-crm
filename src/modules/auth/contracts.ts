@@ -28,7 +28,7 @@ export interface AuthRepository {
 }
 
 export interface CaptchaProvider {
-  verify(token: string, ipAddress: string): Promise<Result<void>>;
+  verify(token: string, ipAddress: string, action: string): Promise<Result<void>>;
 }
 
 export interface RateLimiter {

@@ -3,15 +3,7 @@ import { listAutomations } from "@/src/modules/automations/service";
 import { AutomationActions } from "@/src/modules/automations/ui/automation-builder";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
-const tabs = [
-  "Overview",
-  "Setup",
-  "Questions",
-  "Business Answers",
-  "Messages",
-  "Executions",
-  "Audit"
-];
+const tabs = ["Overview", "Runs", "Versions", "Analytics", "Settings"];
 export default async function AutomationDetail({ params }: { params: Promise<{ id: string }> }) {
   const { workspace } = await createMetaRuntime();
   const id = (await params).id;

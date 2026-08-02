@@ -3,22 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
 
 const recipes = [
-  ["INSTAGRAM_COMMENT_TO_DM", "Instagram Post/Reel Comment → DM Lead Collector"],
-  ["INSTAGRAM_INBOUND_DM", "Instagram Inbound DM Lead Collector"],
-  ["WHATSAPP_INBOUND", "WhatsApp Inbound Lead Collector"],
-  ["WHATSAPP_CONSENTED_FOLLOWUP_REMINDER", "WhatsApp Consented Follow-up Reminder"],
-  ["CROSS_CHANNEL_AFTER_HOURS_ESCALATION", "After-hours / Low-confidence Escalation"]
-] as const;
-const steps = [
-  "Basics",
-  "Channel & Trigger",
-  "Questions",
-  "Business Answers",
-  "AI Style",
-  "Rules",
-  "Test & Activate"
+  ["INSTAGRAM_COMMENT_TO_DM"],
+  ["INSTAGRAM_INBOUND_DM"],
+  ["WHATSAPP_INBOUND"],
+  ["WHATSAPP_CONSENTED_FOLLOWUP_REMINDER"],
+  ["CROSS_CHANNEL_AFTER_HOURS_ESCALATION"]
 ] as const;
 type RecipeId = (typeof recipes)[number][0];
 
@@ -27,10 +19,52 @@ async function csrf() {
     .token;
 }
 
-export function AutomationBuilder() {
+export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | undefined }) {
   const router = useRouter();
+  const { t, text } = useI18n();
+  const steps = [
+    text("Basics", "Temel bilgiler", "اطلاعات پایه"),
+    text("Channel & Trigger", "Kanal ve tetikleyici", "کانال و محرک"),
+    text("Questions", "Sorular", "پرسش‌ها"),
+    text("Business Answers", "İşletme yanıtları", "پاسخ‌های کسب‌وکار"),
+    text("AI Style", "Yapay zekâ stili", "سبک هوش مصنوعی"),
+    text("Rules", "Kurallar", "قوانین"),
+    text("Test & Activate", "Test ve etkinleştirme", "آزمایش و فعال‌سازی")
+  ] as const;
+  const recipeLabel = (id: RecipeId) =>
+    id === "INSTAGRAM_COMMENT_TO_DM"
+      ? text(
+          "Instagram Comment → DM lead collection",
+          "Instagram yorumundan DM aday toplama",
+          "جمع‌آوری سرنخ از نظر اینستاگرام به دایرکت"
+        )
+      : id === "INSTAGRAM_INBOUND_DM"
+        ? text(
+            "Instagram inbound DM qualification",
+            "Instagram gelen DM nitelendirme",
+            "ارزیابی دایرکت ورودی اینستاگرام"
+          )
+        : id === "WHATSAPP_INBOUND"
+          ? text(
+              "WhatsApp inbound lead collection",
+              "WhatsApp gelen aday toplama",
+              "جمع‌آوری سرنخ ورودی واتس‌اپ"
+            )
+          : id === "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER"
+            ? text(
+                "WhatsApp consented reminder",
+                "WhatsApp onaylı hatırlatma",
+                "یادآوری رضایت‌محور واتس‌اپ"
+              )
+            : text(
+                "After-hours human handoff",
+                "Mesai dışı insan yönlendirmesi",
+                "ارجاع انسانی خارج از ساعت کاری"
+              );
   const [currentStep, setCurrentStep] = useState(0);
-  const [recipe, setRecipe] = useState<RecipeId>(recipes[0][0]);
+  const [recipe, setRecipe] = useState<RecipeId>(
+    recipes.some(([id]) => id === initialRecipe) ? (initialRecipe as RecipeId) : recipes[0][0]
+  );
   const [name, setName] = useState("");
   const [questions, setQuestions] = useState("Name\nEmail");
   const [tone, setTone] = useState("workspace-default");
@@ -70,17 +104,35 @@ export function AutomationBuilder() {
       router.refresh();
     } else {
       setBusy(false);
-      setMessage("Check the automation details and try again.");
+      setMessage(
+        text(
+          "Check the automation details and try again.",
+          "Otomasyon ayrıntılarını kontrol edip yeniden deneyin.",
+          "جزئیات اتوماسیون را بررسی و دوباره تلاش کنید."
+        )
+      );
     }
   }
 
   function next() {
     if (currentStep === 0 && name.trim().length < 2) {
-      setMessage("Add an automation name to continue.");
+      setMessage(
+        text(
+          "Add an automation name to continue.",
+          "Devam etmek için otomasyon adı ekleyin.",
+          "برای ادامه نام اتوماسیون را وارد کنید."
+        )
+      );
       return;
     }
     if (currentStep === 2 && !questions.trim()) {
-      setMessage("Add at least one customer question.");
+      setMessage(
+        text(
+          "Add at least one customer question.",
+          "En az bir müşteri sorusu ekleyin.",
+          "حداقل یک پرسش مشتری اضافه کنید."
+        )
+      );
       return;
     }
     setMessage("");
@@ -91,12 +143,17 @@ export function AutomationBuilder() {
     <section className="panel automation-builder" id="new">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Seven-step wizard</span>
-          <h2>Create automation</h2>
+          <span className="eyebrow">
+            {text("Seven-step builder", "Yedi adımlı oluşturucu", "سازنده هفت‌مرحله‌ای")}
+          </span>
+          <h2>{t("automations.create")}</h2>
         </div>
-        <span>Sandbox safe</span>
+        <span>{text("Sandbox safe", "Sandbox güvenli", "امن در Sandbox")}</span>
       </div>
-      <ol className="wizard-rail" aria-label="Seven setup steps">
+      <ol
+        className="wizard-rail"
+        aria-label={text("Seven setup steps", "Yedi kurulum adımı", "هفت مرحله راه‌اندازی")}
+      >
         {steps.map((step, index) => (
           <li
             className={index === currentStep ? "current" : index < currentStep ? "complete" : ""}
@@ -114,12 +171,16 @@ export function AutomationBuilder() {
           <div className="wizard-panel">
             <span className="eyebrow">01 · Basics</span>
             <label>
-              Automation name
+              {text("Automation name", "Otomasyon adı", "نام اتوماسیون")}
               <input
                 name="name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="New lead collector"
+                placeholder={text(
+                  "New lead collector",
+                  "Yeni aday toplayıcı",
+                  "جمع‌آوری سرنخ جدید"
+                )}
                 required
                 minLength={2}
               />
@@ -130,22 +191,38 @@ export function AutomationBuilder() {
           <div className="wizard-panel">
             <span className="eyebrow">02 · Channel & trigger</span>
             <div className="recipe-grid">
-              {recipes.map(([id, label]) => (
+              {recipes.map(([id]) => (
                 <button
                   type="button"
                   aria-pressed={recipe === id}
                   onClick={() => setRecipe(id)}
                   key={id}
                 >
-                  <strong>{label}</strong>
+                  <strong>{recipeLabel(id)}</strong>
                   <span>
                     {id === "WHATSAPP_INBOUND"
-                      ? "24-hour service-window policy"
+                      ? text(
+                          "24-hour service-window policy",
+                          "24 saatlik hizmet penceresi politikası",
+                          "سیاست پنجره ۲۴ ساعته گفتگو"
+                        )
                       : id === "WHATSAPP_CONSENTED_FOLLOWUP_REMINDER"
-                        ? "One approved template, only with explicit opt-in"
+                        ? text(
+                            "One approved template, only with explicit opt-in",
+                            "Yalnızca açık onayla tek onaylı şablon",
+                            "فقط یک الگوی تأییدشده با رضایت صریح"
+                          )
                         : id === "CROSS_CHANNEL_AFTER_HOURS_ESCALATION"
-                          ? "Human review without unsolicited cross-channel contact"
-                          : "User-initiated Instagram messaging"}
+                          ? text(
+                              "Human review without unsolicited cross-channel contact",
+                              "İstenmeyen çapraz kanal teması olmadan insan incelemesi",
+                              "بررسی انسانی بدون تماس ناخواسته در کانال دیگر"
+                            )
+                          : text(
+                              "User-initiated Instagram messaging",
+                              "Kullanıcının başlattığı Instagram mesajlaşması",
+                              "پیام‌رسانی اینستاگرام به ابتکار کاربر"
+                            )}
                   </span>
                 </button>
               ))}
@@ -156,7 +233,11 @@ export function AutomationBuilder() {
           <div className="wizard-panel">
             <span className="eyebrow">03 · Questions</span>
             <label>
-              Customer questions (one per line)
+              {text(
+                "Customer questions (one per line)",
+                "Müşteri soruları (satır başına bir)",
+                "پرسش‌های مشتری (هر خط یک پرسش)"
+              )}
               <textarea
                 value={questions}
                 onChange={(event) => setQuestions(event.target.value)}
@@ -164,32 +245,65 @@ export function AutomationBuilder() {
                 required
               />
             </label>
-            <p>Required fields are asked one at a time and confirmed answers are not repeated.</p>
+            <p>
+              {text(
+                "Required fields are asked one at a time and confirmed answers are not repeated.",
+                "Zorunlu alanlar tek tek sorulur ve doğrulanan yanıtlar tekrarlanmaz.",
+                "فیلدهای ضروری یکی‌یکی پرسیده می‌شوند و پاسخ تأییدشده تکرار نمی‌شود."
+              )}
+            </p>
           </div>
         ) : null}
         {currentStep === 3 ? (
           <div className="wizard-panel">
             <span className="eyebrow">04 · Business answers</span>
-            <h3>Approved facts only</h3>
+            <h3>
+              {text("Approved facts only", "Yalnızca onaylı bilgiler", "فقط اطلاعات تأییدشده")}
+            </h3>
             <p>
-              Replies use workspace pricing and FAQs. Missing approved knowledge always routes to
-              human review.
+              {text(
+                "Replies use workspace pricing and FAQs. Missing approved knowledge always routes to human review.",
+                "Yanıtlar çalışma alanı fiyatlarını ve SSS'leri kullanır. Eksik onaylı bilgi her zaman insan incelemesine yönlenir.",
+                "پاسخ‌ها فقط از قیمت‌ها و پرسش‌های تأییدشده استفاده می‌کنند. نبود اطلاعات همیشه به بررسی انسانی می‌رسد."
+              )}
             </p>
-            <Link href="/settings">Review pricing and FAQs</Link>
+            <Link href="/settings">
+              {text(
+                "Review pricing and FAQs",
+                "Fiyat ve SSS'leri incele",
+                "بررسی قیمت و پرسش‌های متداول"
+              )}
+            </Link>
           </div>
         ) : null}
         {currentStep === 4 ? (
           <div className="wizard-panel">
             <span className="eyebrow">05 · AI style</span>
             <label>
-              Response style
+              {text("Response style", "Yanıt stili", "سبک پاسخ")}
               <select value={tone} onChange={(event) => setTone(event.target.value)}>
-                <option value="workspace-default">Use workspace default</option>
-                <option value="friendly-short">Friendly and short</option>
-                <option value="formal-medium">Formal and medium</option>
+                <option value="workspace-default">
+                  {text(
+                    "Use workspace default",
+                    "Çalışma alanı varsayılanını kullan",
+                    "استفاده از تنظیم پیش‌فرض"
+                  )}
+                </option>
+                <option value="friendly-short">
+                  {text("Friendly and short", "Samimi ve kısa", "دوستانه و کوتاه")}
+                </option>
+                <option value="formal-medium">
+                  {text("Formal and medium", "Resmî ve orta", "رسمی و متوسط")}
+                </option>
               </select>
             </label>
-            <p>Low confidence and invalid structured output stop for human review.</p>
+            <p>
+              {text(
+                "Low confidence and invalid structured output stop for human review.",
+                "Düşük güven ve geçersiz yapılandırılmış çıktı insan incelemesinde durur.",
+                "اطمینان پایین یا خروجی نامعتبر برای بررسی انسانی متوقف می‌شود."
+              )}
+            </p>
           </div>
         ) : null}
         {currentStep === 5 ? (
@@ -201,10 +315,18 @@ export function AutomationBuilder() {
                 checked={quietHours}
                 onChange={(event) => setQuietHours(event.target.checked)}
               />
-              Respect workspace quiet hours
+              {text(
+                "Respect workspace quiet hours",
+                "Çalışma alanı sessiz saatlerine uy",
+                "رعایت ساعت سکوت فضای کاری"
+              )}
             </label>
             <label>
-              Maximum automated sends per conversation
+              {text(
+                "Maximum automated sends per conversation",
+                "Konuşma başına en fazla otomatik gönderim",
+                "حداکثر ارسال خودکار در هر گفتگو"
+              )}
               <input
                 type="number"
                 min={1}
@@ -219,11 +341,26 @@ export function AutomationBuilder() {
           <div className="wizard-panel wizard-review">
             <span className="eyebrow">07 · Test & activate</span>
             <h3>{name}</h3>
-            <p>{recipes.find(([id]) => id === recipe)?.[1]}</p>
+            <p>{recipeLabel(recipe)}</p>
             <ul>
-              <li>{questions.split("\n").filter(Boolean).length} configured questions</li>
-              <li>Sandbox test required before activation</li>
-              <li>Every outbound attempt passes the policy gate</li>
+              <li>
+                {questions.split("\n").filter(Boolean).length}{" "}
+                {text("configured questions", "yapılandırılmış soru", "پرسش تنظیم‌شده")}
+              </li>
+              <li>
+                {text(
+                  "Sandbox test required before activation",
+                  "Etkinleştirmeden önce Sandbox testi gerekir",
+                  "پیش از فعال‌سازی، آزمایش Sandbox لازم است"
+                )}
+              </li>
+              <li>
+                {text(
+                  "Every outbound attempt passes the policy gate",
+                  "Her gönderim denemesi politika kapısından geçer",
+                  "هر تلاش ارسال از دروازه سیاست عبور می‌کند"
+                )}
+              </li>
             </ul>
           </div>
         ) : null}
@@ -234,15 +371,17 @@ export function AutomationBuilder() {
             onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))}
             disabled={currentStep === 0}
           >
-            Back
+            {t("common.back")}
           </button>
           {currentStep < steps.length - 1 ? (
             <button key="continue-action" type="button" onClick={next}>
-              Continue
+              {t("common.next")}
             </button>
           ) : (
             <button key="create-action" type="submit" disabled={busy}>
-              {busy ? "Creating…" : "Create draft"}
+              {busy
+                ? text("Creating…", "Oluşturuluyor…", "در حال ساخت…")
+                : text("Create draft", "Taslak oluştur", "ساخت پیش‌نویس")}
             </button>
           )}
         </div>
@@ -253,6 +392,7 @@ export function AutomationBuilder() {
 }
 
 export function AutomationActions({ id, status }: { id: string; status: string }) {
+  const { text } = useI18n();
   const [message, setMessage] = useState("");
   const [currentStatus, setCurrentStatus] = useState(status);
 
@@ -279,11 +419,15 @@ export function AutomationActions({ id, status }: { id: string; status: string }
   return (
     <div className="automation-actions">
       <button onClick={() => run(currentStatus === "ACTIVE" ? "pause" : "activate")}>
-        {currentStatus === "ACTIVE" ? "Pause now" : "Activate"}
+        {currentStatus === "ACTIVE"
+          ? text("Pause now", "Şimdi duraklat", "توقف فوری")
+          : text("Activate", "Etkinleştir", "فعال‌سازی")}
       </button>
-      <button onClick={() => run("safe_test")}>Run safe test</button>
+      <button onClick={() => run("safe_test")}>
+        {text("Run safe test", "Güvenli test çalıştır", "اجرای آزمایش امن")}
+      </button>
       <button onClick={() => run("stop_queued")} className="button-muted">
-        Stop queued messages
+        {text("Stop queued messages", "Kuyruktaki mesajları durdur", "توقف پیام‌های صف")}
       </button>
       <span className="status-pill">Current status: {currentStatus}</span>
       {message && <span role="status">{message}</span>}

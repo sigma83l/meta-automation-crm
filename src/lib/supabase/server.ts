@@ -4,9 +4,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getServerEnvironment } from "@/src/lib/env";
+import { createNeonServerClient } from "@/src/lib/neon/server";
 
 export async function createSupabaseServerClient() {
   const environment = getServerEnvironment();
+  if (environment.databaseProvider === "neon") return createNeonServerClient();
   if (!environment.supabaseUrl || !environment.supabaseAnonKey) {
     throw new Error("Supabase public configuration is missing.");
   }

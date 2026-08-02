@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await getRequestPreferences();
   return (
     <main className="onboarding-page">
       <section className="panel">
         <div className="empty-guidance">
-          <strong>This workspace item is unavailable.</strong>
-          <span>It may not exist, or your membership does not grant access.</span>
-          <Link href="/dashboard">Return to overview</Link>
+          <strong>{t("system.notFound")}</strong>
+          <span>{t("system.notFoundDetail")}</span>
+          <Link href="/dashboard">{t("nav.overview")}</Link>
         </div>
       </section>
     </main>

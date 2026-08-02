@@ -8,7 +8,7 @@ test("connects isolated WhatsApp and Instagram sandbox assets with live warning"
   await page.getByLabel("Email").fill(`meta-e2e-${randomUUID()}@example.test`);
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await page.getByRole("button", { name: "Save and exit" }).click();
   await page.goto("/connections");
   await expect(page.getByText("LIVE_MULTI_BUSINESS_BLOCKED_BY_META")).toBeVisible();
   await expect(page.getByText(/Sandbox is complete and sends nothing/)).toBeVisible();

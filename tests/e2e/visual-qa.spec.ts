@@ -14,7 +14,7 @@ test("owner routes fit desktop, tablet, mobile and RTL without horizontal overfl
   await page.getByLabel("Email").fill(`visual-${randomUUID()}@example.test`);
   await page.getByLabel("Password").fill("Correct-Horse-42!");
   await page.getByRole("button", { name: "Create private workspace" }).click();
-  await page.getByRole("button", { name: "Enter sandbox workspace" }).click();
+  await page.getByRole("button", { name: "Save and exit" }).click();
   await expect(page).toHaveURL(/dashboard/);
 
   for (const viewport of [
@@ -52,10 +52,18 @@ test("owner routes fit desktop, tablet, mobile and RTL without horizontal overfl
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
 
   await page.goto("/automations");
-  await page.addStyleTag({
-    content: ".app-shell { direction: rtl; }"
-  });
-  await expect(page.getByRole("heading", { name: "Automations", level: 1 })).toBeVisible();
+  await page.context().addCookies([
+    {
+      name: "relay_locale",
+      value: "fa",
+      domain: "127.0.0.1",
+      path: "/",
+      sameSite: "Lax"
+    }
+  ]);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
@@ -94,16 +102,14 @@ test("owner routes fit desktop, tablet, mobile and RTL without horizontal overfl
     };
   });
   expect(accessibilitySmoke).toEqual({
-    lang: "en",
+    lang: "fa",
     h1Count: 1,
     unlabeledCount: 0,
     imagesWithoutAlt: 0
   });
   const semanticFocusOrder = await page.evaluate(() => {
     const brand = document.querySelector<HTMLAnchorElement>(".brand-lockup");
-    const signOut = [...document.querySelectorAll("button")].find(
-      (button) => button.textContent?.trim() === "Sign out"
-    );
+    const signOut = document.querySelector<HTMLButtonElement>(".topbar button");
     return {
       brandTabIndex: brand?.tabIndex,
       signOutTabIndex: signOut?.tabIndex,

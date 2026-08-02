@@ -18,7 +18,10 @@ export async function createAuthService() {
   const client = await createSupabaseServerClient();
   const captcha =
     environment.authCaptchaMode === "turnstile"
-      ? new TurnstileCaptchaProvider(requiredTurnstileSecret())
+      ? new TurnstileCaptchaProvider(
+          requiredTurnstileSecret(),
+          new URL(environment.appUrl).hostname
+        )
       : new FakeCaptchaProvider();
   if (environment.deploymentMode === "production" && environment.authCaptchaMode === "fake") {
     throw new Error("Fake CAPTCHA is forbidden in production.");
