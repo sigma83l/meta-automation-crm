@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "@/app/globals.css";
 import { I18nProvider } from "@/src/lib/i18n/client";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { ThemeScript } from "@/app/theme-script";
 
 export const metadata: Metadata = {
   title: "Relay CRM",
@@ -20,12 +21,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(()=>{try{const p=localStorage.getItem('relay_theme')||document.cookie.match(/(?:^|; )relay_theme=([^;]+)/)?.[1]||'system';const d=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=d;document.documentElement.style.colorScheme=d}catch{}})()"
-          }}
-        />
+        <ThemeScript />
       </head>
       <body>
         <I18nProvider locale={locale} theme={theme}>

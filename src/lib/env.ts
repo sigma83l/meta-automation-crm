@@ -4,6 +4,10 @@ const optionalNonEmpty = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().min(1).optional()
 );
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().url().optional()
+);
 const optionalMetaVersion = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z
@@ -17,12 +21,14 @@ const serverEnvironmentSchema = z.object({
   APP_DEPLOYMENT_MODE: z.enum(["local", "preview", "production"]).default("local"),
   NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
   DATABASE_PROVIDER: z.enum(["supabase", "neon"]).default("supabase"),
-  NEON_AUTH_BASE_URL: z.url().optional(),
-  NEON_DATA_API_URL: z.url().optional(),
+  NEON_AUTH_BASE_URL: optionalUrl,
+  NEON_DATA_API_URL: optionalUrl,
+  NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
+  META_OAUTH_REDIRECT_URL: optionalUrl,
   NEON_AUTH_COOKIE_SECRET: optionalNonEmpty,
-  NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmpty,
   SUPABASE_SERVICE_ROLE_KEY: optionalNonEmpty,
+  META_GRAPH_API_VERSION: optionalMetaVersion,  // ← Make sure it's optionalMetaVersion, not z.string()...
   INNGEST_EVENT_KEY: optionalNonEmpty,
   INNGEST_SIGNING_KEY: optionalNonEmpty,
   LIVE_PROVIDER_SEND_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -36,8 +42,6 @@ const serverEnvironmentSchema = z.object({
   META_APP_ID: optionalNonEmpty,
   META_APP_SECRET: optionalNonEmpty,
   META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
-  META_OAUTH_REDIRECT_URL: z.url().optional(),
-  META_GRAPH_API_VERSION: optionalMetaVersion,
   META_WHATSAPP_CONFIG_ID: optionalNonEmpty,
   META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
