@@ -1,0 +1,19 @@
+RELLOOMA COLLABORATOR BACKEND BASELINE
+DATE=2026-08-07
+TARGET_REPOSITORY=sigma83l/meta-automation-crm
+TARGET_BASE_BRANCH=release/v1-preview
+TARGET_BASE_SHA=a8cb88687a57b62089b9cbbd631c177f89867809
+SYNC_BRANCH=feat/rellooma-uiux-final-sync
+
+PROTECTED_SCOPE=app/api/**;app/auth/callback/route.ts;proxy.ts;supabase/**;neon/**;src/lib/env.ts;src/lib/health.ts;src/lib/supabase/**;src/lib/neon/**;src/lib/inngest/**;non-UI business modules and backend/security tests
+PROTECTED_FILE_COUNT=146
+PROTECTED_INDEX_HASH=b5d6916d58405c0d5e8f5809186daf4eb516790d0c43737e55fc20f9c7606eb8
+TREE_APP_API=1050ead991a89ff45ff9ebe81f276a4e904be2ed
+TREE_SUPABASE=da56256c3734eae9d576bc1a2dd534b66720bd14
+TREE_NEON=1c257aede9d62432964d3d3ced40214fde109316
+BLOB_PROXY=39bf8b09dd63beb35f6883199086deaeae695833
+BLOB_ENV=7ded4867926c3b873be8bce5ab054d0bc549c649
+BLOB_HEALTH=4e119ec5ebcd952de51c4610292dd429e2cb507e
+
+GUARD_RULE=No protected backend semantic change is allowed; formatting-only changes must be identified explicitly.
+FINAL_RESULT=PENDING_FINAL_COMPARISON
