@@ -4,6 +4,14 @@ test("routes anonymous users to the secure entry surface", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  const brand = page.getByRole("link", { name: "Rellooma" });
+  await expect(brand).toBeVisible();
+  await expect(brand.locator(".brand-logo-horizontal")).toBeVisible();
+  await expect(brand.locator(".brand-logo-horizontal")).toHaveAttribute(
+    "src",
+    /rellooma-horizontal/
+  );
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
 });
 
 test("health endpoint is non-secret and ready", async ({ request }) => {

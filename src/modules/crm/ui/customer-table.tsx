@@ -53,30 +53,36 @@ export function CustomerTable({ customers }: { customers: readonly CustomerSumma
       </div>
       <div className="crm-table" role="table">
         <div className="crm-row crm-header" role="row">
-          <span>{text("Select", "Seç", "انتخاب")}</span>
-          <span>{text("Customer", "Müşteri", "مشتری")}</span>
-          <span>{text("Company", "Şirket", "شرکت")}</span>
-          <span>{text("Status", "Durum", "وضعیت")}</span>
-          <span>{text("Source", "Kaynak", "منبع")}</span>
+          <span role="columnheader">{text("Select", "Seç", "انتخاب")}</span>
+          <span role="columnheader">{text("Customer", "Müşteri", "مشتری")}</span>
+          <span role="columnheader">{text("Company", "Şirket", "شرکت")}</span>
+          <span role="columnheader">{text("Status", "Durum", "وضعیت")}</span>
+          <span role="columnheader">{text("Source", "Kaynak", "منبع")}</span>
         </div>
         {customers.map((customer) => (
           <div className="crm-row" role="row" key={customer.id}>
-            <input
-              type="checkbox"
-              aria-label={`${text("Select", "Seç", "انتخاب")} ${customer.displayName}`}
-              checked={selected.includes(customer.id)}
-              onChange={(event) =>
-                setSelected(
-                  event.target.checked
-                    ? [...selected, customer.id]
-                    : selected.filter((id) => id !== customer.id)
-                )
-              }
-            />
-            <Link href={`/crm/${customer.id}`}>{customer.displayName}</Link>
-            <span>{customer.companyName ?? "—"}</span>
-            <span className="status-pill">{customer.status}</span>
-            <span>{customer.source}</span>
+            <span role="cell">
+              <input
+                type="checkbox"
+                aria-label={`${text("Select", "Seç", "انتخاب")} ${customer.displayName}`}
+                checked={selected.includes(customer.id)}
+                onChange={(event) =>
+                  setSelected(
+                    event.target.checked
+                      ? [...selected, customer.id]
+                      : selected.filter((id) => id !== customer.id)
+                  )
+                }
+              />
+            </span>
+            <span role="cell">
+              <Link href={`/crm/${customer.id}`}>{customer.displayName}</Link>
+            </span>
+            <span role="cell">{customer.companyName ?? "—"}</span>
+            <span role="cell">
+              <span className="status-pill">{customer.status}</span>
+            </span>
+            <span role="cell">{customer.source}</span>
           </div>
         ))}
         {customers.length === 0 ? (

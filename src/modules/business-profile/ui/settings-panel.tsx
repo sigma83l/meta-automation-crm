@@ -74,8 +74,14 @@ export function SettingsPanel({
       setMessage(
         text("Business profile saved.", "İşletme profili kaydedildi.", "پروفایل کسب‌وکار ذخیره شد.")
       );
-    } catch (error) {
-      setMessage((error as Error).message);
+    } catch {
+      setMessage(
+        text(
+          "The business profile could not be saved. Check the fields and try again.",
+          "İşletme profili kaydedilemedi. Alanları kontrol edip yeniden deneyin.",
+          "پروفایل کسب‌وکار ذخیره نشد. فیلدها را بررسی و دوباره تلاش کنید."
+        )
+      );
     }
   }
   async function addFaq(event: FormEvent<HTMLFormElement>) {
@@ -109,8 +115,14 @@ export function SettingsPanel({
         )
       );
       location.reload();
-    } catch (error) {
-      setMessage((error as Error).message);
+    } catch {
+      setMessage(
+        text(
+          "The credential could not be stored. Verify the provider and try again.",
+          "Kimlik bilgisi saklanamadı. Sağlayıcıyı doğrulayıp yeniden deneyin.",
+          "کلید ذخیره نشد. ارائه‌دهنده را بررسی و دوباره تلاش کنید."
+        )
+      );
     }
   }
   async function logoutAll() {

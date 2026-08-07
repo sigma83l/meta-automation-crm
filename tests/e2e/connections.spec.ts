@@ -10,8 +10,8 @@ test("connects isolated WhatsApp and Instagram sandbox assets with live warning"
   await page.getByRole("button", { name: "Create private workspace" }).click();
   await page.getByRole("button", { name: "Save and exit" }).click();
   await page.goto("/connections");
-  await expect(page.getByText("LIVE_MULTI_BUSINESS_BLOCKED_BY_META")).toBeVisible();
-  await expect(page.getByText(/Sandbox is complete and sends nothing/)).toBeVisible();
+  await expect(page.getByText("Live setup requires Meta approval")).toBeVisible();
+  await expect(page.getByText(/Sandbox sends nothing/)).toBeVisible();
   await page.getByRole("button", { name: "Connect sandbox" }).first().click();
   await expect(page.getByText("WhatsApp Sandbox")).toBeVisible();
   await page.getByRole("button", { name: "Connect sandbox" }).click();

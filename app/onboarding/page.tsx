@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { OnboardingForm } from "@/src/modules/workspaces/ui/onboarding-form";
+import { BrandLockup } from "@/src/modules/workspaces/ui/brand-lockup";
 export const dynamic = "force-dynamic";
 export default async function OnboardingPage() {
   const client = await createSupabaseServerClient();
@@ -13,6 +14,9 @@ export default async function OnboardingPage() {
   ]);
   return (
     <main className="onboarding-page">
+      <header className="onboarding-header">
+        <BrandLockup />
+      </header>
       <section className="onboarding-intro">
         <span className="eyebrow">{t("onboarding.eyebrow")}</span>
         <h1>{t("onboarding.title")}</h1>

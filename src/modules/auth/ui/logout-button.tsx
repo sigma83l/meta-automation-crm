@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
 
 export function LogoutButton() {
-  const router = useRouter();
   const { text } = useI18n();
   const [loading, setLoading] = useState(false);
 
@@ -19,8 +17,7 @@ export function LogoutButton() {
       headers: { "x-csrf-token": token }
     });
     if (response.ok) {
-      router.replace("/login");
-      router.refresh();
+      window.location.replace("/login");
       return;
     }
     setLoading(false);

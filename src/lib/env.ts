@@ -28,7 +28,7 @@ const serverEnvironmentSchema = z.object({
   NEON_AUTH_COOKIE_SECRET: optionalNonEmpty,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmpty,
   SUPABASE_SERVICE_ROLE_KEY: optionalNonEmpty,
-  META_GRAPH_API_VERSION: optionalMetaVersion,  // ← Make sure it's optionalMetaVersion, not z.string()...
+  META_GRAPH_API_VERSION: optionalMetaVersion, // ← Make sure it's optionalMetaVersion, not z.string()...
   INNGEST_EVENT_KEY: optionalNonEmpty,
   INNGEST_SIGNING_KEY: optionalNonEmpty,
   LIVE_PROVIDER_SEND_ENABLED: z.enum(["true", "false"]).default("false"),

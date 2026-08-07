@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-08-07",
+  "repository": "Metric-One/meta-automation-crm",
+  "branch": "feat/rellooma-ui-production-sync",
+  "initialSha": "5a66bdef0307b8b195f130f65b24a13c61ea613f",
+  "v7InitialSha": "17fc9c65f8ef54395df46f56a8581e5fe2bcf2dd",
+  "v7ImplementationSha": "53b230e787bb596622cc1ce8497dc4f4949b316b",
+  "locales": ["en", "tr", "fa"],
+  "themes": ["light", "dark"],
+  "requiredViewports": [1440, 390],
+  "denseViewports": [1024, 768],
+  "denseSurfaces": ["inbox-active", "automations", "customer-detail", "settings"],
+  "screenshotCount": 324,
+  "evidenceDirectory": "test-results/visual-qa-every-real-route-f9952--and-mobile-visual-evidence-chromium",
+  "assertions": [
+    "response-below-500",
+    "locale",
+    "direction",
+    "theme",
+    "document-overflow",
+    "page-error",
+    "console-error",
+    "failed-request",
+    "animation-disabled-screenshot"
+  ],
+  "surfaces": [
+    { "name": "entry", "path": "/", "classification": "KEEP", "result": "PASS" },
+    { "name": "login", "path": "/login", "classification": "KEEP", "result": "PASS" },
+    { "name": "signup", "path": "/signup", "classification": "KEEP", "result": "PASS" },
+    {
+      "name": "forgot-password",
+      "path": "/forgot-password",
+      "classification": "KEEP",
+      "result": "PASS"
+    },
+    {
+      "name": "reset-password",
+      "path": "/reset-password",
+      "classification": "KEEP",
+      "result": "PASS"
+    },
+    { "name": "onboarding", "path": "/onboarding", "classification": "KEEP", "result": "PASS" },
+    { "name": "overview", "path": "/dashboard", "classification": "KEEP", "result": "PASS" },
+    { "name": "inbox-list", "path": "/inbox", "classification": "KEEP", "result": "PASS" },
+    {
+      "name": "inbox-active",
+      "path": "/inbox?conversation=:id",
+      "classification": "IMPROVE",
+      "result": "PASS"
+    },
+    { "name": "automations", "path": "/automations", "classification": "KEEP", "result": "PASS" },
+    {
+      "name": "recipes",
+      "path": "/automations/recipes",
+      "classification": "KEEP",
+      "result": "PASS"
+    },
+    {
+      "name": "test-center",
+      "path": "/automations/test-center",
+      "classification": "KEEP",
+      "result": "PASS"
+    },
+    {
+      "name": "automation-overview",
+      "path": "/automations/:id",
+      "classification": "FIX",
+      "result": "PASS"
+    },
+    {
+      "name": "automation-runs",
+      "path": "/automations/:id?tab=runs",
+      "classification": "REPLACE_PRESENTATION_ONLY",
+      "result": "PASS"
+    },
+    {
+      "name": "automation-versions",
+      "path": "/automations/:id?tab=versions",
+      "classification": "REPLACE_PRESENTATION_ONLY",
+      "result": "PASS"
+    },
+    {
+      "name": "automation-issues",
+      "path": "/automations/:id?tab=issues",
+      "classification": "REPLACE_PRESENTATION_ONLY",
+      "result": "PASS"
+    },
+    { "name": "customers", "path": "/crm", "classification": "KEEP", "result": "PASS" },
+    { "name": "customer-detail", "path": "/crm/:id", "classification": "FIX", "result": "PASS" },
+    {
+      "name": "customer-files",
+      "path": "/crm/:id?tab=Files",
+      "classification": "KEEP",
+      "result": "PASS"
+    },
+    { "name": "analytics", "path": "/analytics", "classification": "KEEP", "result": "PASS" },
+    { "name": "integrations", "path": "/connections", "classification": "FIX", "result": "PASS" },
+    { "name": "settings", "path": "/settings", "classification": "KEEP", "result": "PASS" },
+    { "name": "not-found", "path": "/:missing", "classification": "IMPROVE", "result": "PASS" }
+  ],
+  "defects": {
+    "p0": { "before": 0, "after": 0 },
+    "p1": { "before": 2, "after": 0 },
+    "p2": { "before": 4, "after": 0 },
+    "p3": { "before": 1, "after": 0 }
+  },
+  "v7Defects": {
+    "p0": { "before": 0, "after": 0 },
+    "p1": { "before": 2, "after": 0 },
+    "p2": { "before": 2, "after": 0 }
+  },
+  "v7Scorecard": {
+    "averageCoreScore": 96,
+    "lowestCoreScore": 95,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "unresolvedMaterialCoreP2": 0
+  },
+  "figma": {
+    "fileKey": "D48AbyZ4VvSTUuATKm5gp0",
+    "referenceNode": "2005:1351",
+    "access": "Starter/View",
+    "writePerformed": false,
+    "pagesObserved": [
+      "00 Rellooma Design System + QA",
+      "01 Rellooma Product — 6 Variants",
+      "02 Rellooma Mobile + RTL + States"
+    ]
+  },
+  "backendGuard": {
+    "recordedSha256": "7062de789bbbfa739eefeb8283a5c21b0ac7efe837885c933a5fbc6349a7d525",
+    "v7Sha256": "059ca630627824c46cf696d4efa2aa5074d017b977e3527075217f1125a10826",
+    "status": "PASS"
+  },
+  "remote": {
+    "pullRequest": "https://github.com/Metric-One/meta-automation-crm/pull/1",
+    "githubCi": "PENDING_FINAL_SHA",
+    "vercelPreview": "PENDING_FINAL_SHA"
+  }
+}

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { useI18n } from "@/src/lib/i18n/client";
 import { LogoutButton } from "@/src/modules/auth/ui/logout-button";
+import { BrandLockup } from "@/src/modules/workspaces/ui/brand-lockup";
 import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-controls";
 
 export function WorkspaceShell({
@@ -47,13 +48,7 @@ export function WorkspaceShell({
   return (
     <div className="app-shell">
       <aside className="control-rail">
-        <Link className="brand-lockup" href="/dashboard">
-          <span className="brand-mark">R</span>
-          <div>
-            <strong>Relay CRM</strong>
-            <span>{t("app.control")}</span>
-          </div>
-        </Link>
+        <BrandLockup context={t("app.control")} />
         <div className="workspace-card">
           <span>{t("shell.workspace")}</span>
           <strong>{workspaceName}</strong>
@@ -64,6 +59,10 @@ export function WorkspaceShell({
             <span className="nav-glyph">OV</span>
             {t("nav.overview")}
           </Link>
+          <Link href="/inbox" aria-current={active === "inbox" ? "page" : undefined}>
+            <span className="nav-glyph">IN</span>
+            {t("nav.inbox")}
+          </Link>
           <Link href="/automations" aria-current={active === "automations" ? "page" : undefined}>
             <span className="nav-glyph">AU</span>
             {t("nav.automations")}
@@ -71,10 +70,6 @@ export function WorkspaceShell({
           <Link href="/crm" aria-current={active === "crm" ? "page" : undefined}>
             <span className="nav-glyph">CR</span>
             {t("nav.crm")}
-          </Link>
-          <Link href="/inbox" aria-current={active === "inbox" ? "page" : undefined}>
-            <span className="nav-glyph">IN</span>
-            {t("nav.inbox")}
           </Link>
           <Link href="/analytics" aria-current={active === "analytics" ? "page" : undefined}>
             <span className="nav-glyph">AN</span>

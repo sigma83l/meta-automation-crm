@@ -1,7 +1,7 @@
 import type { Locale } from "@/src/lib/i18n/config";
 
 const en = {
-  "app.name": "Relay CRM",
+  "app.name": "Rellooma",
   "app.control": "Business control",
   "common.open": "Open",
   "common.save": "Save changes",
