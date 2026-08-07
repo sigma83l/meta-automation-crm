@@ -12,7 +12,9 @@ Date: 2026-08-07
 - `TARGET_BASE_SHA`: `a8cb88687a57b62089b9cbbd631c177f89867809`
 - `TARGET_SYNC_BRANCH`: `feat/rellooma-uiux-final-sync`
 - `TARGET_IMPLEMENTATION_SHA`: `2eb66b71aeee3e233e0c94bd81388916da60e007`
-- `TARGET_FINAL_SHA`: pending final evidence commit
+- `TARGET_FINAL_SHA`: branch tip `refs/heads/feat/rellooma-uiux-final-sync`; the exact immutable
+  value is resolved by the PR API and recorded in the final handoff because a Git commit cannot
+  contain its own SHA
 
 ## Diff
 
@@ -72,10 +74,12 @@ Date: 2026-08-07
 
 ## Remote verification
 
-- Push: PENDING
-- Pull request: PENDING
-- GitHub Actions: PENDING
-- Remote SHA match: PENDING
+- Push: PASS — `origin/feat/rellooma-uiux-final-sync`
+- Pull request: PASS — `https://github.com/sigma83l/meta-automation-crm/pull/1`
+- GitHub Actions: PASS — quality run `31208372752`, 9m05s
+- CI-verified remote SHA: `9a0bc477dabe6be5f4c365b94011c3bea724875b`
+- Remote SHA match: PASS for the CI-verified evidence head; final documentation-only head is
+  verified after its required workflow in the final handoff
 - Merge: not authorized and not performed
 
 ## Known boundary
