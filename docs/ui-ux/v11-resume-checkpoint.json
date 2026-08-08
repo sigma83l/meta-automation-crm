@@ -2,7 +2,7 @@
   "package_sha": "9d5ed93408a7fdb4a6e41dd0842a42ebef8bd34a6c9565b028125e86448b0f97",
   "package_read": "PASS_REUSED_AFTER_SHA256SUMS_VALIDATION",
   "sigma_initial_sha": "6beb3e71953b939efeaa230b73a6f6dec3ea5a27",
-  "sigma_current_sha": "ada053c711bc95ae2cd469d4373d4d9979c410a7",
+  "sigma_current_sha": "8f75f0552b883d905c0e4764ba52f83ebf8031af",
   "sigma_backend_manifest": "docs/ui-ux/v11-sigma-backend-baseline.json#e1174af19b22ad7de6a05d940d0067b8661288cbcfd69a02f3055502442999ca",
   "sigma_frontend_status": "LOCAL_PRODUCTION_GATES_PASS_APPLICATION_FROZEN",
   "sigma_ci_status": "PREVIOUS_SHA_PASS_NEW_SHA_PENDING",

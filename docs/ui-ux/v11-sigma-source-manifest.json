@@ -1,7 +1,7 @@
 {
   "schema": "rellooma-v11-frozen-source-manifest/v1",
   "repository": "sigma83l/meta-automation-crm",
-  "frozen_application_sha": "ada053c711bc95ae2cd469d4373d4d9979c410a7",
+  "frozen_application_sha": "a6a87a5ade684b2177e0c143cd1cd54bf1670296",
   "serialization": "sorted `<blob_sha1><two spaces><path>\\n`, UTF-8/LF",
   "manifest_sha256": "40bad251ab81b654ee24fed758683017c227dc392f07b14f4214d348a7cd8758",
   "file_count": 382,
