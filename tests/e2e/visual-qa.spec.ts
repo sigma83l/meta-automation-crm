@@ -28,8 +28,8 @@ test("owner routes fit desktop, tablet, mobile and RTL without horizontal overfl
   await expect(page).toHaveURL(/dashboard/);
 
   for (const viewport of [
-    { name: "desktop", width: 1440, height: 1000 },
-    { name: "compact", width: 1024, height: 900 },
+    { name: "desktop", width: 1440, height: 900 },
+    { name: "compact", width: 1024, height: 768 },
     { name: "tablet", width: 768, height: 1024 },
     { name: "mobile", width: 390, height: 844 }
   ]) {
@@ -180,7 +180,7 @@ test("owner routes fit desktop, tablet, mobile and RTL without horizontal overfl
         sameSite: "Lax"
       }
     ]);
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/dashboard");
     await expect(page.locator("html")).toHaveAttribute("lang", variant.locale);
     await expect(page.locator("html")).toHaveAttribute("dir", variant.dir);
@@ -340,11 +340,12 @@ test("every real route has stable six-variant desktop and mobile visual evidence
     ]);
     for (const [name, route] of routes) {
       const viewports = [
-        { label: "1440", width: 1440, height: 1000 },
+        { label: "1440", width: 1440, height: 900 },
         { label: "390", width: 390, height: 844 },
         ...(denseRoutes.has(name)
           ? [
-              { label: "1024", width: 1024, height: 900 },
+              { label: "1280", width: 1280, height: 1024 },
+              { label: "1024", width: 1024, height: 768 },
               { label: "768", width: 768, height: 1024 }
             ]
           : [])

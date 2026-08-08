@@ -1,10 +1,13 @@
-export default function SettingsLoading() {
+import { getRequestPreferences } from "@/src/lib/i18n/server";
+
+export default async function SettingsLoading() {
+  const { t } = await getRequestPreferences();
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
         <div className="empty-guidance">
-          <strong>Loading workspace settings…</strong>
-          <span>Reading business policy and masked credential status.</span>
+          <strong>{t("common.loading")}</strong>
+          <span>{t("nav.settings")}</span>
         </div>
       </section>
     </main>

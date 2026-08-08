@@ -40,7 +40,7 @@ const en = {
   "prefs.dark": "Dark",
   "prefs.system": "System",
   "auth.isolated": "Isolated by design",
-  "auth.hero": "One business. One private workspace.",
+  "auth.hero": "Build smarter automations. Turn more conversations into qualified leads.",
   "auth.proofTenant": "Workspace authority is checked on every request.",
   "auth.proofSend": "No real message can bypass the policy lock.",
   "auth.proofSecrets": "Credentials stay server-side and encrypted.",
@@ -199,7 +199,8 @@ const tr: Dictionary = {
   "prefs.dark": "Koyu",
   "prefs.system": "Sistem",
   "auth.isolated": "Tasarım gereği izole",
-  "auth.hero": "Bir işletme. Bir özel çalışma alanı.",
+  "auth.hero":
+    "Daha akıllı otomasyonlar kurun. Daha fazla konuşmayı nitelikli müşterilere dönüştürün.",
   "auth.proofTenant": "Her istekte çalışma alanı yetkisi denetlenir.",
   "auth.proofSend": "Hiçbir gerçek mesaj politika kilidini aşamaz.",
   "auth.proofSecrets": "Kimlik bilgileri sunucuda ve şifreli kalır.",
@@ -356,7 +357,8 @@ const fa: Dictionary = {
   "prefs.dark": "تیره",
   "prefs.system": "سیستم",
   "auth.isolated": "ایزوله از پایه",
-  "auth.hero": "یک کسب‌وکار. یک فضای کاری خصوصی.",
+  "auth.hero":
+    "اتوماسیون‌های هوشمندتر بسازید. گفتگوهای بیشتری را به سرنخ‌های واجد شرایط تبدیل کنید.",
   "auth.proofTenant": "مجوز فضای کاری در هر درخواست بررسی می‌شود.",
   "auth.proofSend": "هیچ پیام واقعی نمی‌تواند قفل سیاست را دور بزند.",
   "auth.proofSecrets": "اطلاعات محرمانه رمزگذاری‌شده و روی سرور می‌ماند.",

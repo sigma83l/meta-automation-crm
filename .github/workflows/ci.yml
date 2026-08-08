@@ -32,7 +32,7 @@ jobs:
       - run: pnpm bundle:scan
       - run: pnpm secret:scan
       - run: pnpm audit:prod
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:e2e
       - if: always()
         run: pnpm db:stop

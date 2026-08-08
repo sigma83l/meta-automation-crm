@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { navigateToSafeDownload } from "@/src/lib/safe-download";
 import type { CustomerSummary } from "../contracts";
 
 export function CustomerTable({ customers }: { customers: readonly CustomerSummary[] }) {
@@ -25,7 +26,7 @@ export function CustomerTable({ customers }: { customers: readonly CustomerSumma
       const result = (await fetch(`/api/crm/exports/${jobId}`).then((response) =>
         response.json()
       )) as { url?: string };
-      if (result.url) window.location.assign(result.url);
+      if (result.url) navigateToSafeDownload(result.url);
     }
     setExporting(false);
   }

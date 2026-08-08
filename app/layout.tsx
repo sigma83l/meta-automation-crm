@@ -1,9 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Geist, Vazirmatn } from "next/font/google";
 import type { ReactNode } from "react";
 import { ThemeScript } from "@/app/theme-script";
 import "@/app/globals.css";
 import { I18nProvider } from "@/src/lib/i18n/client";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap"
+});
+
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic"],
+  variable: "--font-vazirmatn",
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: {
@@ -21,6 +34,12 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
+};
+
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const { locale, theme, direction } = await getRequestPreferences();
   return (
@@ -34,7 +53,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <head>
         <ThemeScript />
       </head>
-      <body>
+      <body className={`${geist.variable} ${vazirmatn.variable}`}>
         <I18nProvider locale={locale} theme={theme}>
           {children}
         </I18nProvider>

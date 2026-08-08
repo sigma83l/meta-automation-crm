@@ -86,3 +86,17 @@ test("keyboard focus stays visible and unobscured at 200% equivalent reflow", as
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
 });
+
+test("critical controls remain perceivable in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto("/login");
+
+  const email = page.getByLabel("Email");
+  await email.focus();
+  await expect(email).toBeFocused();
+  await expect(email).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+
+  const outline = await email.evaluate((input) => getComputedStyle(input).outlineStyle);
+  expect(outline).not.toBe("none");
+});
