@@ -40,4 +40,15 @@ test("locale, RTL, theme and resumable onboarding persist without mobile overflo
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await page.getByLabel("Dil").first().selectOption("en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const reducedMotion = await page.evaluate(() => ({
+    scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
+    animationDuration: getComputedStyle(document.querySelector(".setup-fields")!).animationDuration
+  }));
+  expect(reducedMotion.scrollBehavior).toBe("auto");
+  const animationDurationMs = reducedMotion.animationDuration.endsWith("ms")
+    ? Number.parseFloat(reducedMotion.animationDuration)
+    : Number.parseFloat(reducedMotion.animationDuration) * 1_000;
+  expect(animationDurationMs).toBeLessThanOrEqual(0.001);
 });

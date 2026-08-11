@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { navigateToSafeDownload } from "@/src/lib/safe-download";
 
 export function CrmControls() {
   const { text } = useI18n();
@@ -65,7 +66,7 @@ export function CrmControls() {
       const download = (await fetch(`/api/crm/exports/${jobId}`).then((result) =>
         result.json()
       )) as { url?: string };
-      if (download.url) window.location.assign(download.url);
+      if (download.url) navigateToSafeDownload(download.url);
     }
     setLoading(false);
   }

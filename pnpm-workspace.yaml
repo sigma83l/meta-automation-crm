@@ -15,9 +15,10 @@ minimumReleaseAgeExclude:
   - "@supabase/cli-windows-x64@2.110.0"
   - supabase@2.110.0
 overrides:
-  brace-expansion@1.1.16: 5.0.8
-  brace-expansion@2.1.2: 5.0.8
-  "brace-expansion@>=5.0.0 <5.0.8": 5.0.8
+  brace-expansion@1.1.16: 5.0.9
+  brace-expansion@2.1.2: 5.0.9
+  "brace-expansion@>=5.0.0 <5.0.9": 5.0.9
+  "nanoid@<3.3.17": 3.3.17
   postcss: 8.5.23
   sharp: 0.35.3
 patchedDependencies:

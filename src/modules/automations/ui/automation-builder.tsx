@@ -402,7 +402,21 @@ export function AutomationActions({ id, status }: { id: string; status: string }
       headers: { "content-type": "application/json", "x-csrf-token": await csrf() },
       body: JSON.stringify({ action })
     });
-    setMessage(response.ok ? `${action.replace("_", " ")} completed.` : "Action failed.");
+    setMessage(
+      response.ok
+        ? action === "safe_test"
+          ? text("Safe test completed.", "Güvenli test tamamlandı.", "آزمایش امن تکمیل شد.")
+          : action === "activate"
+            ? text("Automation activated.", "Otomasyon etkinleştirildi.", "اتوماسیون فعال شد.")
+            : action === "pause"
+              ? text("Automation paused.", "Otomasyon duraklatıldı.", "اتوماسیون متوقف شد.")
+              : text(
+                  "Queued messages stopped.",
+                  "Kuyruktaki mesajlar durduruldu.",
+                  "پیام‌های صف متوقف شدند."
+                )
+        : text("The action could not be completed.", "İşlem tamamlanamadı.", "عملیات انجام نشد.")
+    );
     if (response.ok) {
       setCurrentStatus(
         action === "activate"
@@ -418,18 +432,26 @@ export function AutomationActions({ id, status }: { id: string; status: string }
 
   return (
     <div className="automation-actions">
-      <button onClick={() => run(currentStatus === "ACTIVE" ? "pause" : "activate")}>
+      <button
+        className={currentStatus === "READY" ? undefined : "button-muted"}
+        onClick={() => run(currentStatus === "ACTIVE" ? "pause" : "activate")}
+      >
         {currentStatus === "ACTIVE"
           ? text("Pause now", "Şimdi duraklat", "توقف فوری")
           : text("Activate", "Etkinleştir", "فعال‌سازی")}
       </button>
-      <button onClick={() => run("safe_test")}>
+      <button
+        className={currentStatus === "READY_TO_TEST" ? undefined : "button-muted"}
+        onClick={() => run("safe_test")}
+      >
         {text("Run safe test", "Güvenli test çalıştır", "اجرای آزمایش امن")}
       </button>
       <button onClick={() => run("stop_queued")} className="button-muted">
         {text("Stop queued messages", "Kuyruktaki mesajları durdur", "توقف پیام‌های صف")}
       </button>
-      <span className="status-pill">Current status: {currentStatus}</span>
+      <span className="status-pill">
+        {text("Current status", "Geçerli durum", "وضعیت فعلی")}: <bdi>{currentStatus}</bdi>
+      </span>
       {message && <span role="status">{message}</span>}
     </div>
   );

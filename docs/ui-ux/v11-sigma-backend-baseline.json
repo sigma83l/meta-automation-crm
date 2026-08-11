@@ -1,0 +1,599 @@
+{
+  "schema": "rellooma-v11-protected-backend-manifest/v1",
+  "repository": "sigma83l/meta-automation-crm",
+  "baseline_sha": "6beb3e71953b939efeaa230b73a6f6dec3ea5a27",
+  "serialization": "sorted `<blob><two spaces><path>\\n`, UTF-8/LF",
+  "file_count": 146,
+  "manifest_sha256": "e1174af19b22ad7de6a05d940d0067b8661288cbcfd69a02f3055502442999ca",
+  "semantic_comparison": {
+    "base_sha": "a8cb88687a57b62089b9cbbd631c177f89867809",
+    "whitespace_insensitive_diff": "PASS",
+    "exact_difference": ["src/lib/env.ts (comment whitespace only)"]
+  },
+  "entries": [
+    {
+      "path": "app/api/auth/csrf/route.ts",
+      "blob": "a76e41c06b977c1be315765baf935c883a9fcdcd"
+    },
+    {
+      "path": "app/api/auth/forgot-password/route.ts",
+      "blob": "4becd14aa86ecf36c35cd25e7c114a95a011387c"
+    },
+    {
+      "path": "app/api/auth/login/route.ts",
+      "blob": "2a262800406a7914fd8c087b5f1ede00f285ed18"
+    },
+    {
+      "path": "app/api/auth/logout-all/route.ts",
+      "blob": "4e2890d47275848745d43b8e4ecc9337105aaeea"
+    },
+    {
+      "path": "app/api/auth/logout/route.ts",
+      "blob": "54a725a99c0b236426c1006da6333c1f62773442"
+    },
+    {
+      "path": "app/api/auth/reset-password/route.ts",
+      "blob": "02e049e33e7713019c556f291c18578c7497ba2a"
+    },
+    {
+      "path": "app/api/auth/signup/route.ts",
+      "blob": "64974c9db4e418059f898b385840fdf91254b87b"
+    },
+    {
+      "path": "app/api/automations/[id]/route.ts",
+      "blob": "4cd17e74ba929ccfbace4b0c42c35da74fbb1146"
+    },
+    {
+      "path": "app/api/automations/route.ts",
+      "blob": "23f3e32c05b14ba63c8250f2b43d0296cfe2ae84"
+    },
+    {
+      "path": "app/api/connections/meta/callback/route.ts",
+      "blob": "0433b87f409e1e0c79ed1d60ccfe88d1f72643a5"
+    },
+    {
+      "path": "app/api/connections/meta/route.ts",
+      "blob": "d1fdfc5013add830fce0422a4e98d4e7aa9e5ecf"
+    },
+    {
+      "path": "app/api/connections/meta/start/route.ts",
+      "blob": "7badb6917b2e48893e98013622fa28e07c9eb905"
+    },
+    {
+      "path": "app/api/crm/customers/[id]/route.ts",
+      "blob": "aeb132e399b4b80d675337232cf6b6e840bb0f11"
+    },
+    {
+      "path": "app/api/crm/customers/route.ts",
+      "blob": "db50af0d25d4531042707146a0802c615f6df287"
+    },
+    {
+      "path": "app/api/crm/exports/[id]/route.ts",
+      "blob": "6017f48a370cac0c5f56fb5c5541f93c6c655e84"
+    },
+    {
+      "path": "app/api/crm/exports/route.ts",
+      "blob": "97134e94c1c250aea8889995a5b32aaa81ed59d5"
+    },
+    {
+      "path": "app/api/crm/imports/route.ts",
+      "blob": "567a380109cb330394024658a9fc3016b36c464c"
+    },
+    {
+      "path": "app/api/crm/media/route.ts",
+      "blob": "e4a50aaadf10f375e6ca6c715f7a633d581cb907"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "blob": "2dc1b2480048f08348047b05ca411e8097549590"
+    },
+    {
+      "path": "app/api/inbox/takeover/route.ts",
+      "blob": "8682b516aefc4d5cf17210b4e529a38bc1123442"
+    },
+    {
+      "path": "app/api/inngest/route.ts",
+      "blob": "cbdaf2a22734eb7852b949ff2f7b8d1fb7f987cf"
+    },
+    {
+      "path": "app/api/onboarding/complete/route.ts",
+      "blob": "728b449f5bf26f7b458cb7ca529cce160efe7910"
+    },
+    {
+      "path": "app/api/onboarding/progress/route.ts",
+      "blob": "55351259ae48bc7482ca10bdfa09248f0e1bd62d"
+    },
+    {
+      "path": "app/api/preferences/route.ts",
+      "blob": "174150e3978cbe55365427b7c54f3c656fe577cd"
+    },
+    {
+      "path": "app/api/settings/ai-credentials/route.ts",
+      "blob": "8a4174babea69207cfcfc710480a95a4b3a649ce"
+    },
+    {
+      "path": "app/api/settings/business-profile/route.ts",
+      "blob": "e3189c7ed419fe516360c5101680e1fb19a8b364"
+    },
+    {
+      "path": "app/api/settings/faqs/route.ts",
+      "blob": "b38dec4701db07e5136876f46da9766881844c73"
+    },
+    {
+      "path": "app/api/settings/prices/route.ts",
+      "blob": "2380617a0d0a48c9caef078b7eb7783caee9eaff"
+    },
+    {
+      "path": "app/api/webhooks/meta/route.ts",
+      "blob": "2a6338849baa09c9bca9baa48ca990cd91e7b6a7"
+    },
+    {
+      "path": "app/auth/callback/route.ts",
+      "blob": "b8037c0e1c6409f56e79b5000299859f8db9667b"
+    },
+    {
+      "path": "neon/README.md",
+      "blob": "b626f995676caad312a8e7b27cdde1205298ada7"
+    },
+    {
+      "path": "neon/migrations/0000_supabase_compatibility.sql",
+      "blob": "a5f69eed6c5ce77c6a9593c1a03617605bc64b4d"
+    },
+    {
+      "path": "neon/migrations/0001_authenticated_mutations.sql",
+      "blob": "9868ac0e6366002623348329a451a08e8fdcd334"
+    },
+    {
+      "path": "proxy.ts",
+      "blob": "39bf8b09dd63beb35f6883199086deaeae695833"
+    },
+    {
+      "path": "src/lib/env.ts",
+      "blob": "0d1ffa20ede215562fa25e8db0b2bc23aa86ae67"
+    },
+    {
+      "path": "src/lib/health.ts",
+      "blob": "4e119ec5ebcd952de51c4610292dd429e2cb507e"
+    },
+    {
+      "path": "src/lib/inngest/client.ts",
+      "blob": "0307b788b31ad598e765d36ed508b4b46807d87a"
+    },
+    {
+      "path": "src/lib/inngest/events.ts",
+      "blob": "e6f2b09c9cf2cb0098aedbc7d94f8b8adf0e302a"
+    },
+    {
+      "path": "src/lib/inngest/functions.ts",
+      "blob": "92b87137cb04e3534d1f3bed3f1d850f5afb8a12"
+    },
+    {
+      "path": "src/lib/neon/server.ts",
+      "blob": "8b1dd0dbbac3b59f9ed43dab2a50c6a06af338b6"
+    },
+    {
+      "path": "src/lib/supabase/admin.ts",
+      "blob": "f4aeebc49411eac544c08677e07789a1270864a4"
+    },
+    {
+      "path": "src/lib/supabase/contracts.ts",
+      "blob": "0574112d5995fda2c1287134b7095f0bf2343b26"
+    },
+    {
+      "path": "src/lib/supabase/server.ts",
+      "blob": "cff40572179d74c24437ce3f2f8709d337c67893"
+    },
+    {
+      "path": "src/modules/ai/contracts.ts",
+      "blob": "6f7548a27901ce3c2d60922a42f19404f3e62900"
+    },
+    {
+      "path": "src/modules/ai/credential-service.ts",
+      "blob": "1695eb4b5a428b05621e0e87211df121dc2a88c7"
+    },
+    {
+      "path": "src/modules/ai/credential-vault.ts",
+      "blob": "56fb4b4d24ba8f9a029fb1562508dd420eee6157"
+    },
+    {
+      "path": "src/modules/ai/index.ts",
+      "blob": "7c4e018552fc2dce55d5d4ae7e93f0af9e4baee4"
+    },
+    {
+      "path": "src/modules/ai/provider-policy.ts",
+      "blob": "bbc1496ce77fdb411e41a8a2d46db7602bce689e"
+    },
+    {
+      "path": "src/modules/ai/provider-selector.ts",
+      "blob": "cc1bc3acef2ad1891636228aa057120820accf8b"
+    },
+    {
+      "path": "src/modules/ai/providers/deterministic-provider.ts",
+      "blob": "4eac3e05fee8a503ef040ec33182d5491abca664"
+    },
+    {
+      "path": "src/modules/audit/index.ts",
+      "blob": "e324ea951e17b80f0388961ae91e9a2499d5572b"
+    },
+    {
+      "path": "src/modules/auth/adapters/captcha.ts",
+      "blob": "5ada2df6a8a1cbdbe5cf653ff869d5248e92ee58"
+    },
+    {
+      "path": "src/modules/auth/adapters/rate-limiter.ts",
+      "blob": "c33fab0cbdb16b6ce1adee5cdc9fa30b6ad9fbd5"
+    },
+    {
+      "path": "src/modules/auth/adapters/supabase-auth-repository.ts",
+      "blob": "ed032f8ce2ee34404737038b761adccc3ceb0637"
+    },
+    {
+      "path": "src/modules/auth/contracts.ts",
+      "blob": "2724131bda6515ded24d885da12f8177ea81b336"
+    },
+    {
+      "path": "src/modules/auth/http.ts",
+      "blob": "701163013c3ef4cb755fb4be1f0b2f879a999ea1"
+    },
+    {
+      "path": "src/modules/auth/index.ts",
+      "blob": "6b3b1450ad9408c4e6f237b1b47ed0b459ab7c74"
+    },
+    {
+      "path": "src/modules/auth/runtime.ts",
+      "blob": "58e6942824d4c86847ed086c4941ee7a96f51c6e"
+    },
+    {
+      "path": "src/modules/auth/security/csrf.ts",
+      "blob": "112f1d9c700e18d1bb7f9186e3dfbde7e1e7880e"
+    },
+    {
+      "path": "src/modules/auth/security/route.ts",
+      "blob": "3d54fc8b690274393fd04cd2df5ff2e40c5dd586"
+    },
+    {
+      "path": "src/modules/auth/service.ts",
+      "blob": "c9b427637614887a2b2660b7c8a1a479bfc1b1fb"
+    },
+    {
+      "path": "src/modules/automations/durable.ts",
+      "blob": "47d6919c5ec25dcfdece09144ef67002662d5f88"
+    },
+    {
+      "path": "src/modules/automations/engine.ts",
+      "blob": "bf684eb4dc130f38431dbaf576229eaa44a0b592"
+    },
+    {
+      "path": "src/modules/automations/index.ts",
+      "blob": "ab9d1cc496a62cfd38aa7ca1236d9ef0164d367e"
+    },
+    {
+      "path": "src/modules/automations/service.ts",
+      "blob": "232fdc225908999ef173bad4efa7ada02ec41276"
+    },
+    {
+      "path": "src/modules/business-profile/contracts.ts",
+      "blob": "9bec6d3ae990afac1cccb3b458379c4a67e46eec"
+    },
+    {
+      "path": "src/modules/business-profile/index.ts",
+      "blob": "a3a7de1e217cbf35c31fa5e5b6b830091ecb555d"
+    },
+    {
+      "path": "src/modules/business-profile/repository.ts",
+      "blob": "fcd075bf54b9d3377ee321d4defffc2020ad0123"
+    },
+    {
+      "path": "src/modules/business-profile/runtime.ts",
+      "blob": "42bc70216348d6c6152733ea99f35e0a994ce7f6"
+    },
+    {
+      "path": "src/modules/conversations/index.ts",
+      "blob": "ef93099a4347c8e7a910dc1421c6fd002ac0ffe4"
+    },
+    {
+      "path": "src/modules/crm/adapters/supabase-crm-repository.ts",
+      "blob": "eab676cc32c4308e8e498a50d3380160bfbf7e68"
+    },
+    {
+      "path": "src/modules/crm/contracts.ts",
+      "blob": "0e113c30438339714c14c18a65bca35158a0ff30"
+    },
+    {
+      "path": "src/modules/crm/import/csv-import.ts",
+      "blob": "6a4a8267bc67644d3923d4dc667516b54151424f"
+    },
+    {
+      "path": "src/modules/crm/import/import-service.ts",
+      "blob": "42e7fed14486c3b8676eaf38c2494938f0a5c669"
+    },
+    {
+      "path": "src/modules/crm/index.ts",
+      "blob": "552d1a52a578c64bba85d94c43b53de3e41da1a5"
+    },
+    {
+      "path": "src/modules/crm/media/media-policy.ts",
+      "blob": "c36d9cea587793ba815094083e50c3572e704f04"
+    },
+    {
+      "path": "src/modules/crm/media/media-repository.ts",
+      "blob": "60fa6824b74281321ada40aae6a1247c255a6032"
+    },
+    {
+      "path": "src/modules/crm/runtime.ts",
+      "blob": "1b8ca5b9ac0bcfdb5cc87bd92d62e684695ce9fc"
+    },
+    {
+      "path": "src/modules/exports/contracts.ts",
+      "blob": "b8126b79f8cb2f9ee5b7faa858b94f8232740fdf"
+    },
+    {
+      "path": "src/modules/exports/export-builder.ts",
+      "blob": "84f0cc27db1f44425ff38511422eebfaac162183"
+    },
+    {
+      "path": "src/modules/exports/export-policy.ts",
+      "blob": "f7e068186dd414f9a4c7a0d3d641737ffccc4683"
+    },
+    {
+      "path": "src/modules/exports/export-repository.ts",
+      "blob": "6d3e8745ff58527b49eb6fa856d1ac70657589c6"
+    },
+    {
+      "path": "src/modules/exports/index.ts",
+      "blob": "e07914cc9413cb0c2648f8c96635c1d45b1aced4"
+    },
+    {
+      "path": "src/modules/index.ts",
+      "blob": "af0ad270d19e4243b748c05c2a66726beae37e5f"
+    },
+    {
+      "path": "src/modules/integrations/index.ts",
+      "blob": "ff33f8983458db258895106e2e853e71a813a857"
+    },
+    {
+      "path": "src/modules/integrations/live-send-gate.ts",
+      "blob": "e6848524956d8dfa28cd37275500f8ec72b56283"
+    },
+    {
+      "path": "src/modules/integrations/meta/connection-service.ts",
+      "blob": "f85ea87aaeb86e61c9e18e19245458054bd7d409"
+    },
+    {
+      "path": "src/modules/integrations/meta/contracts.ts",
+      "blob": "70aacd4bc7de778915862a918d6bb6bf93440862"
+    },
+    {
+      "path": "src/modules/integrations/meta/live-connection-adapter.ts",
+      "blob": "fffb4a16046ed6a48734851896df45ec044c1058"
+    },
+    {
+      "path": "src/modules/integrations/meta/live-media-adapter.ts",
+      "blob": "f07796a2b9b3adcee5c81972ad709ca39822a2c2"
+    },
+    {
+      "path": "src/modules/integrations/meta/normalizer.ts",
+      "blob": "46cf45d9c88a0fb3d9685fd8c763cd2103be1873"
+    },
+    {
+      "path": "src/modules/integrations/meta/oauth-state.ts",
+      "blob": "cb76c9cad93f88bcee19eb81588a80b92f387b5d"
+    },
+    {
+      "path": "src/modules/integrations/meta/runtime.ts",
+      "blob": "801622c4fda28f43d2ddc8046e25b6c62e35cd59"
+    },
+    {
+      "path": "src/modules/integrations/meta/sandbox-adapter.ts",
+      "blob": "fe58d3de6fbcea4607c6de669eecb47049ca4d9c"
+    },
+    {
+      "path": "src/modules/integrations/meta/template-inventory-adapter.ts",
+      "blob": "d1655286613bb1688a48c241a053b5f743b769d6"
+    },
+    {
+      "path": "src/modules/integrations/meta/webhook-ingestion.ts",
+      "blob": "7f420c48b2f46fea7b7fb9c1db4d0c9928297a98"
+    },
+    {
+      "path": "src/modules/integrations/meta/webhook-security.ts",
+      "blob": "8bfc5030d88259d8c2d366109d24c16104529546"
+    },
+    {
+      "path": "src/modules/integrations/providers/fake-messaging-provider.ts",
+      "blob": "42e4b9f39a5bddd49d716a5c855223e6510697dc"
+    },
+    {
+      "path": "src/modules/integrations/providers/messaging-provider.ts",
+      "blob": "70f59adc396110f21c111c41de7ac9bb00666c65"
+    },
+    {
+      "path": "src/modules/workspaces/index.ts",
+      "blob": "0f789b5e880917523fa2c3fa989aab350b1619a8"
+    },
+    {
+      "path": "src/modules/workspaces/server/resolve-workspace.ts",
+      "blob": "a8ebf207307ab6d37eecfe825cd4afedb7dcb369"
+    },
+    {
+      "path": "supabase/config.toml",
+      "blob": "5d29c9777b3f84e98138284c18c1ec35b9a3919a"
+    },
+    {
+      "path": "supabase/migrations/20260728090000_auth_workspace_isolation.sql",
+      "blob": "e4160b075a7d5f6e0d1e34c44e8ab39f3f9d6d90"
+    },
+    {
+      "path": "supabase/migrations/20260728180000_crm_inbox_exports.sql",
+      "blob": "01e6b47773977400ec7241933b796a9c869a7572"
+    },
+    {
+      "path": "supabase/migrations/20260728210000_business_profile_ai.sql",
+      "blob": "48e51d89a58432f2934f68e5dd5a385aa3be45d4"
+    },
+    {
+      "path": "supabase/migrations/20260728230000_meta_connections_webhooks.sql",
+      "blob": "a758aa1fa79002ac3995236268d7f37937c31798"
+    },
+    {
+      "path": "supabase/migrations/20260729010000_automation_engine.sql",
+      "blob": "90bc5e949e97815f03f7f1c2c936233304a56654"
+    },
+    {
+      "path": "supabase/migrations/20260729120000_rc_oauth_state_replay.sql",
+      "blob": "f50365d26b58d65bb760756a568fbe1393dd739d"
+    },
+    {
+      "path": "supabase/migrations/20260729150000_production_hardening.sql",
+      "blob": "9548c6f56ca31e5791bf323a499b38550541f712"
+    },
+    {
+      "path": "supabase/migrations/20260729180000_v1_experience.sql",
+      "blob": "14da3211c4b7d91ebcae68ece262c655eb27c6e5"
+    },
+    {
+      "path": "supabase/migrations/README.md",
+      "blob": "bfc45ebb0796d9215ae43f6c97bd7eec6c2ca10e"
+    },
+    {
+      "path": "supabase/seed.sql",
+      "blob": "ee0d9985269944a3124c92608a270292b87bb14c"
+    },
+    {
+      "path": "supabase/tests/database/auth_workspace_rls.test.sql",
+      "blob": "35ad7418e26e74c3d7f693fc6d7ab6302ff429ad"
+    },
+    {
+      "path": "supabase/tests/database/automation_engine.test.sql",
+      "blob": "659c598ec8c46e7a983e38b0ed432b2f62dcd744"
+    },
+    {
+      "path": "supabase/tests/database/business_ai_rls.test.sql",
+      "blob": "f97749c00a21d63e8e3bfd49cc9d764c4c65c6f3"
+    },
+    {
+      "path": "supabase/tests/database/crm_rls_storage.test.sql",
+      "blob": "8110c81766748ff32de062b4a3e30f46b163e40f"
+    },
+    {
+      "path": "supabase/tests/database/meta_connections_webhooks.test.sql",
+      "blob": "5e1f9fad6b497b66d621bf329de8f8365dc112a6"
+    },
+    {
+      "path": "supabase/tests/database/production_hardening.test.sql",
+      "blob": "eb214597b2bbc351c8e659fec1966dbad8529f2d"
+    },
+    {
+      "path": "supabase/tests/database/v1_experience.test.sql",
+      "blob": "92588b5393b0cba155a468058e1014d737a9c81b"
+    },
+    {
+      "path": "tests/e2e/auth.spec.ts",
+      "blob": "b63f8450e12d920af6a4ddd1852d24c1784be17c"
+    },
+    {
+      "path": "tests/e2e/crm.spec.ts",
+      "blob": "56412f534e70f3c1fc2ef7ed13e8af9693020913"
+    },
+    {
+      "path": "tests/e2e/settings.spec.ts",
+      "blob": "37310702bf2c6a07d886888178a052fb3507fb43"
+    },
+    {
+      "path": "tests/fixtures/synthetic.ts",
+      "blob": "a0d7f8f633ebfd82a4599535563d5dba32e4ffc9"
+    },
+    {
+      "path": "tests/integration/business-ai-isolation.test.ts",
+      "blob": "bebd83fd6c62d8c3decc01177068171c14ca625f"
+    },
+    {
+      "path": "tests/integration/crm-isolation.test.ts",
+      "blob": "99f731af342f730a7961bfae9fe7042ed6c061a6"
+    },
+    {
+      "path": "tests/integration/foundation.test.ts",
+      "blob": "fe9cf975d9e9e2310cef52517b8149b237e6b0c3"
+    },
+    {
+      "path": "tests/integration/meta-webhook-isolation.test.ts",
+      "blob": "ab2102d9cd1eacef0a0084e1e7b73b8b6c48136e"
+    },
+    {
+      "path": "tests/integration/production-hardening.test.ts",
+      "blob": "ca2fd4d95e094f18882ff5a9a3b86d290cc445b8"
+    },
+    {
+      "path": "tests/integration/rc-load-profile.test.ts",
+      "blob": "5982be7dc347fddc96694b60eb8ba8c87d9bda32"
+    },
+    {
+      "path": "tests/integration/supabase-auth-isolation.test.ts",
+      "blob": "db28cdd56797aba9b18fade7122bed21fe2a35cd"
+    },
+    {
+      "path": "tests/unit/ai-policy-encryption.test.ts",
+      "blob": "20af305bb4184d9b16a99495c596897d14b8a8c2"
+    },
+    {
+      "path": "tests/unit/auth-service.test.ts",
+      "blob": "ab5ca1351f837c2f2cdddb82ce9571ac6ef0aa80"
+    },
+    {
+      "path": "tests/unit/automation-engine.test.ts",
+      "blob": "a6638c5b3686f6ce86240e404cce92d287371a33"
+    },
+    {
+      "path": "tests/unit/crm-import.test.ts",
+      "blob": "fa13c541c10548bce24ddd2ba91f02a138ff3192"
+    },
+    {
+      "path": "tests/unit/env.test.ts",
+      "blob": "6f95c95c5fca44cc1f40331d9a769d609c4b5f65"
+    },
+    {
+      "path": "tests/unit/i18n-theme.test.ts",
+      "blob": "b1e68a91656093e8d0cfccb0fddcff6f5bc09227"
+    },
+    {
+      "path": "tests/unit/media-export.test.ts",
+      "blob": "e9e09adbbf2eb172e2147cf65ed2aa6688095bd6"
+    },
+    {
+      "path": "tests/unit/meta-live-connection.test.ts",
+      "blob": "030b52254ddf92020204b90447b9189937996115"
+    },
+    {
+      "path": "tests/unit/meta-oauth-state.test.ts",
+      "blob": "7f87e43e15d5865ea1166d0884a9f8198e6f1440"
+    },
+    {
+      "path": "tests/unit/meta-provider-adapters.test.ts",
+      "blob": "2e958ece42e13e5448c1ea4e8798bfa748cdb15e"
+    },
+    {
+      "path": "tests/unit/meta-webhooks.test.ts",
+      "blob": "e1bcbf9ffd03479583e637c5a45dfdd0569ecde7"
+    },
+    {
+      "path": "tests/unit/production-preflight.test.ts",
+      "blob": "e38f43ff87e64fccff9ba65762179eeee5396d2a"
+    },
+    {
+      "path": "tests/unit/providers.test.ts",
+      "blob": "efb8a856bc8f801ee012304169aa4721b4225621"
+    },
+    {
+      "path": "tests/unit/result.test.ts",
+      "blob": "99d2245db7d4f64de1ff4f2cd155f3e42183fca8"
+    },
+    {
+      "path": "tests/unit/security-headers.test.ts",
+      "blob": "7aebc6f1e3ec6ca6f2bb5782c40ee40ea004a09d"
+    },
+    {
+      "path": "tests/unit/turnstile.test.ts",
+      "blob": "18b966f1dd216c68a5296a20b9d9e018b0ce81a8"
+    }
+  ]
+}

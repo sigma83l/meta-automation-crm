@@ -14,18 +14,32 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /cross-browser\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] }
     },
     {
       name: "mobile-chromium",
+      testIgnore: /cross-browser\.spec\.ts/,
       use: { ...devices["Pixel 7"] }
+    },
+    {
+      name: "firefox-smoke",
+      testMatch: /cross-browser\.spec\.ts/,
+      use: { ...devices["Desktop Firefox"] }
+    },
+    {
+      name: "webkit-smoke",
+      testMatch: /cross-browser\.spec\.ts/,
+      use: { ...devices["Desktop Safari"] }
     }
   ],
   webServer: {
-    // Turbopack HMR can panic while Playwright rapidly creates and tears down
-    // authenticated route trees. Webpack is the stable E2E dev server; the
-    // separate production gate still validates the optimized Turbopack build.
-    command: "pnpm dev --webpack --hostname 127.0.0.1",
+    // CI has already completed the production build, so exercise that stable
+    // server instead of compiling every authenticated route on demand. Local
+    // runs keep the Webpack dev server for fast iteration and reliable HMR.
+    command: process.env.CI
+      ? "pnpm start --hostname 127.0.0.1"
+      : "pnpm dev --webpack --hostname 127.0.0.1",
     url: "http://127.0.0.1:3000/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

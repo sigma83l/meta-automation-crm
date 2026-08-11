@@ -1,0 +1,32 @@
+{
+  "package_sha": "9d5ed93408a7fdb4a6e41dd0842a42ebef8bd34a6c9565b028125e86448b0f97",
+  "package_read": "PASS_REUSED_AFTER_SHA256SUMS_VALIDATION",
+  "sigma_initial_sha": "6beb3e71953b939efeaa230b73a6f6dec3ea5a27",
+  "sigma_current_sha": "8f75f0552b883d905c0e4764ba52f83ebf8031af",
+  "sigma_backend_manifest": "docs/ui-ux/v11-sigma-backend-baseline.json#e1174af19b22ad7de6a05d940d0067b8661288cbcfd69a02f3055502442999ca",
+  "sigma_frontend_status": "LOCAL_PRODUCTION_GATES_PASS_APPLICATION_FROZEN",
+  "sigma_ci_status": "PREVIOUS_SHA_PASS_NEW_SHA_PENDING",
+  "sigma_preview_status": "PREVIOUS_SHA_DEPLOYED_SSO_BLOCKS_UNAUTHENTICATED_REVIEW_NEW_SHA_PENDING",
+  "metric_repo_access_paths": {
+    "local_git": "PASS",
+    "gh_api": "PASS",
+    "github_web": "PASS",
+    "connector": "PRIVATE_REPO_404"
+  },
+  "metric_policy_sha": "5ba0e9dcc78ebbbd2e6b6db579eabe57d90bade71e7378d248e1934f667d73f1",
+  "metric_policy_classification": "ABSOLUTE_DONOR_COPY_PROHIBITION_OWN_HISTORY_ALLOWED",
+  "metric_allowed_sync_method": "METRIC_OWN_HISTORY_PLUS_INDEPENDENT_V11_IMPLEMENTATION",
+  "metric_current_base_sha": "1933ca570734b4ec2fa988f5aa9cbf130dc1ca7f",
+  "metric_sync_status": "CHECKPOINTED_PENDING_SIGMA_FREEZE",
+  "last_completed_phase": "SIGMA_LOCAL_FULL_GATES_AND_SOURCE_FREEZE",
+  "next_phase": "SIGMA_PUSH_NEW_CI_AND_EXACT_SHA_PREVIEW",
+  "blockers": [
+    "DIRECT_SIGMA_TO_METRIC_SOURCE_COPY_PROHIBITED",
+    "VERCEL_PREVIEW_REQUIRES_AUTHENTICATED_HUMAN_ACCESS",
+    "FIGMA_STARTER_MCP_LIMIT_AND_TRANSIENT_MAC_LOCK"
+  ],
+  "recoverable_errors_fixed": [
+    "DEPENDENCIES_RESTORED_FROM_LOCKFILE",
+    "GITHUB_PRIVATE_REPO_VERIFIED_VIA_GH_AND_AUTHENTICATED_WEB_DESPITE_CONNECTOR_404"
+  ]
+}

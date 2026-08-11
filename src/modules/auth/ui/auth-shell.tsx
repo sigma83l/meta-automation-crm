@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useI18n } from "@/src/lib/i18n/client";
+import { BrandLockup } from "@/src/modules/workspaces/ui/brand-lockup";
 import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-controls";
 
 export function AuthShell({
@@ -20,10 +20,9 @@ export function AuthShell({
   return (
     <main className="auth-shell">
       <section className="auth-context">
-        <Link className="auth-brand" href="/">
-          <span className="brand-mark">R</span>
-          <span>Relay CRM</span>
-        </Link>
+        <div className="auth-brand">
+          <BrandLockup />
+        </div>
         <div>
           <span className="eyebrow">{t("auth.isolated")}</span>
           <h1>{t("auth.hero")}</h1>

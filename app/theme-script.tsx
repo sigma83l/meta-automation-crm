@@ -5,6 +5,7 @@ import Script from "next/script";
 export function ThemeScript() {
   return (
     <Script
+      id="rellooma-theme-bootstrap"
       strategy="beforeInteractive"
       dangerouslySetInnerHTML={{
         __html:

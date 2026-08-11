@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useI18n } from "@/src/lib/i18n/client";
+import { navigateToSafeDownload } from "@/src/lib/safe-download";
 
 export function CustomerActions({
   customerId,
@@ -12,6 +14,7 @@ export function CustomerActions({
   displayName: string;
   companyName: string;
 }) {
+  const { text } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState("");
   async function csrf() {
@@ -30,7 +33,11 @@ export function CustomerActions({
       },
       body: JSON.stringify(Object.fromEntries(form))
     });
-    setStatus(response.ok ? "Customer saved." : "Customer could not be saved.");
+    setStatus(
+      response.ok
+        ? text("Customer saved.", "Müşteri kaydedildi.", "مشتری ذخیره شد.")
+        : text("Customer could not be saved.", "Müşteri kaydedilemedi.", "مشتری ذخیره نشد.")
+    );
     if (response.ok) router.refresh();
   }
   async function upload(event: FormEvent<HTMLFormElement>) {
@@ -42,7 +49,15 @@ export function CustomerActions({
       headers: { "x-csrf-token": (await csrf()).token },
       body: form
     });
-    setStatus(response.ok ? "Private file uploaded." : "File rejected by media policy.");
+    setStatus(
+      response.ok
+        ? text("Private file uploaded.", "Özel dosya yüklendi.", "فایل خصوصی بارگذاری شد.")
+        : text(
+            "File rejected by media policy.",
+            "Dosya medya politikası tarafından reddedildi.",
+            "فایل با سیاست رسانه رد شد."
+          )
+    );
     if (response.ok) router.refresh();
   }
   async function exportOne() {
@@ -59,7 +74,15 @@ export function CustomerActions({
       const result = (await fetch(`/api/crm/exports/${jobId}`).then((item) => item.json())) as {
         url?: string;
       };
-      if (result.url) window.location.assign(result.url);
+      if (result.url && !navigateToSafeDownload(result.url)) {
+        setStatus(
+          text(
+            "Unsafe download blocked.",
+            "Güvensiz indirme engellendi.",
+            "بارگیری ناامن مسدود شد."
+          )
+        );
+      }
     }
   }
   return (
@@ -69,10 +92,14 @@ export function CustomerActions({
           name="displayName"
           defaultValue={displayName}
           required
-          aria-label="Edit display name"
+          aria-label={text("Edit display name", "Görünen adı düzenle", "ویرایش نام نمایشی")}
         />
-        <input name="companyName" defaultValue={companyName} aria-label="Edit company name" />
-        <button>Save customer</button>
+        <input
+          name="companyName"
+          defaultValue={companyName}
+          aria-label={text("Edit company name", "Şirket adını düzenle", "ویرایش نام شرکت")}
+        />
+        <button>{text("Save customer", "Müşteriyi kaydet", "ذخیره مشتری")}</button>
       </form>
       <form onSubmit={upload}>
         <input
@@ -80,11 +107,13 @@ export function CustomerActions({
           type="file"
           accept=".png,.jpg,.jpeg,.webp,.pdf"
           required
-          aria-label="Customer file"
+          aria-label={text("Customer file", "Müşteri dosyası", "فایل مشتری")}
         />
-        <button>Upload private file</button>
+        <button>{text("Upload private file", "Özel dosya yükle", "بارگذاری فایل خصوصی")}</button>
       </form>
-      <button onClick={exportOne}>Export customer</button>
+      <button onClick={exportOne}>
+        {text("Export customer", "Müşteriyi dışa aktar", "خروجی مشتری")}
+      </button>
       {status ? <span role="status">{status}</span> : null}
     </div>
   );

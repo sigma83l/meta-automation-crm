@@ -89,7 +89,12 @@ function OwnerDataView({ value, emptyLabel }: { value: unknown; emptyLabel: stri
       {rows.slice(0, 50).map((row, index) => (
         <article key={index}>
           {Object.entries(row as Record<string, unknown>)
-            .filter(([key]) => !/(workspace_id|cipher|secret|token|auth_tag|iv)/i.test(key))
+            .filter(
+              ([key]) =>
+                !/(^id$|_id$|created_by|created_at|updated_at|workspace_id|cipher|secret|token|auth_tag|iv)/i.test(
+                  key
+                )
+            )
             .slice(0, 12)
             .map(([key, item]) => (
               <div key={key}>

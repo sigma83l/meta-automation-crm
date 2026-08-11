@@ -35,12 +35,18 @@ export function ConnectionsPanel({
       <section className="settings-card">
         <h2>{text("Meta connections", "Meta bağlantıları", "اتصال‌های متا")}</h2>
         <p className="warning-box">
-          <strong>LIVE_MULTI_BUSINESS_BLOCKED_BY_META</strong>
+          <strong>
+            {text(
+              "Live setup requires Meta approval",
+              "Canlı kurulum Meta onayı gerektirir",
+              "راه‌اندازی زنده به تأیید متا نیاز دارد"
+            )}
+          </strong>
           <br />
           {text(
-            "Live self-service requires a verified client-owned Meta portfolio/app, App Review, Advanced Access, Embedded Signup, and Instagram Professional assets. Sandbox is complete and sends nothing.",
-            "Canlı kullanım; doğrulanmış müşteri Meta portföyü/uygulaması, App Review, Advanced Access, Embedded Signup ve Instagram Professional varlıkları gerektirir. Sandbox tamamdır ve gönderim yapmaz.",
-            "حالت زنده به پورتفولیو و اپ تأییدشده مشتری، App Review، Advanced Access، Embedded Signup و حساب حرفه‌ای اینستاگرام نیاز دارد. Sandbox کامل است و هیچ پیامی نمی‌فرستد."
+            "Live self-service stays blocked until the client-owned Meta portfolio and app have verification, App Review, Advanced Access, Embedded Signup, and eligible Instagram assets. Sandbox sends nothing.",
+            "Müşteriye ait Meta portföyü ve uygulaması doğrulama, App Review, Advanced Access, Embedded Signup ve uygun Instagram varlıklarını tamamlayana kadar canlı kullanım kapalıdır. Sandbox gönderim yapmaz.",
+            "تا زمانی که پورتفولیو و اپ متعلق به مشتری، تأیید، App Review، Advanced Access، Embedded Signup و دارایی واجد شرایط اینستاگرام را کامل نکنند، حالت زنده بسته می‌ماند. Sandbox هیچ پیامی نمی‌فرستد."
           )}
         </p>
         {!canManage ? (

@@ -1,3 +1,4 @@
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { TakeoverControls } from "@/src/modules/conversations/takeover-controls";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
@@ -105,6 +106,18 @@ export default async function InboxPage({
                 <small>{message.status}</small>
               </article>
             ))}
+            {activeId && !messages?.data?.length ? (
+              <div className="empty-guidance">
+                <strong>{text("No messages yet", "Henüz mesaj yok", "هنوز پیامی نیست")}</strong>
+                <span>
+                  {text(
+                    "This conversation is ready for the next inbound message or a human decision.",
+                    "Bu görüşme bir sonraki gelen mesajı veya insan kararını bekliyor.",
+                    "این گفتگو منتظر پیام ورودی بعدی یا تصمیم اپراتور است."
+                  )}
+                </span>
+              </div>
+            ) : null}
           </div>
           {activeId ? (
             <TakeoverControls
@@ -174,4 +187,3 @@ export default async function InboxPage({
     </WorkspaceShell>
   );
 }
-import { getRequestPreferences } from "@/src/lib/i18n/server";

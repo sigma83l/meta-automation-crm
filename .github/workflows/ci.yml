@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, release/v1-preview]
 
 permissions:
   contents: read
@@ -17,7 +17,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
@@ -29,11 +28,11 @@ jobs:
       - run: pnpm test:db
       - run: pnpm test:integration:local
       - run: pnpm load:check
-      - run: pnpm build
+      - run: node scripts/with-supabase-env.mjs pnpm build
       - run: pnpm bundle:scan
       - run: pnpm secret:scan
       - run: pnpm audit:prod
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:e2e
       - if: always()
         run: pnpm db:stop

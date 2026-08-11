@@ -1,0 +1,1934 @@
+{
+  "schema": "rellooma-v11-frozen-source-manifest/v1",
+  "repository": "sigma83l/meta-automation-crm",
+  "frozen_application_sha": "a6a87a5ade684b2177e0c143cd1cd54bf1670296",
+  "serialization": "sorted `<blob_sha1><two spaces><path>\\n`, UTF-8/LF",
+  "manifest_sha256": "40bad251ab81b654ee24fed758683017c227dc392f07b14f4214d348a7cd8758",
+  "file_count": 382,
+  "scope_counts": {
+    "application": 24,
+    "tests-config": 21,
+    "frontend": 45,
+    "backend-protected": 146,
+    "documentation": 143,
+    "approved-brand-asset": 3
+  },
+  "backend_manifest": "docs/ui-ux/v11-sigma-backend-baseline.json",
+  "approved_assets": [
+    "public/brand/rellooma-app-icon.png",
+    "public/brand/rellooma-horizontal.png",
+    "public/brand/rellooma-stacked.png"
+  ],
+  "entries": [
+    {
+      "path": ".env.example",
+      "blob_sha1": "3ce0933315f71285a244fbb63372bfaa39e011d4",
+      "scope": "application"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "blob_sha1": "3b1fefeb0ba774bfb7239afd5e012bce33e19b95",
+      "scope": "tests-config"
+    },
+    {
+      "path": ".gitignore",
+      "blob_sha1": "2b6951b7a8a57d241f0a0e7c6a725ab49b01007e",
+      "scope": "application"
+    },
+    {
+      "path": ".npmrc",
+      "blob_sha1": "ee990bafb5e2fcf40344ef9eeacae7eab26b77eb",
+      "scope": "application"
+    },
+    {
+      "path": ".nvmrc",
+      "blob_sha1": "2bd5a0a98a36cc08ada88b804d3be047e6aa5b8a",
+      "scope": "application"
+    },
+    {
+      "path": ".prettierignore",
+      "blob_sha1": "941b85c0ebb25e56a8e6300e51c70e452bc76a36",
+      "scope": "application"
+    },
+    {
+      "path": ".prettierrc.json",
+      "blob_sha1": "8a0f27ea337c282512ffca57fcb7c8066f2b155a",
+      "scope": "application"
+    },
+    {
+      "path": ".secretlintignore",
+      "blob_sha1": "2298225deb5acf4459c5df4e880ab22a0f4a1fcf",
+      "scope": "application"
+    },
+    {
+      "path": ".secretlintrc.json",
+      "blob_sha1": "7a1a5df3c28e6739fd639bc2a2eac39f62f9a122",
+      "scope": "application"
+    },
+    {
+      "path": "AGENTS.md",
+      "blob_sha1": "f0bdc90acd1b3e080634ad19fb8970fbb666e884",
+      "scope": "application"
+    },
+    {
+      "path": "PLANS.md",
+      "blob_sha1": "25d9f5222d50281e529aba2b8534cf8d10794965",
+      "scope": "application"
+    },
+    {
+      "path": "README.md",
+      "blob_sha1": "1c5cd80e9d2b4fbee13701f6e3e3eb9d7e478cf0",
+      "scope": "application"
+    },
+    {
+      "path": "app/analytics/page.tsx",
+      "blob_sha1": "4b3b4b5285b0447dadcbb0e3a5d37c6595ef84bd",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/api/auth/csrf/route.ts",
+      "blob_sha1": "a76e41c06b977c1be315765baf935c883a9fcdcd",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/forgot-password/route.ts",
+      "blob_sha1": "4becd14aa86ecf36c35cd25e7c114a95a011387c",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/login/route.ts",
+      "blob_sha1": "2a262800406a7914fd8c087b5f1ede00f285ed18",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/logout-all/route.ts",
+      "blob_sha1": "4e2890d47275848745d43b8e4ecc9337105aaeea",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/logout/route.ts",
+      "blob_sha1": "54a725a99c0b236426c1006da6333c1f62773442",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/reset-password/route.ts",
+      "blob_sha1": "02e049e33e7713019c556f291c18578c7497ba2a",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/auth/signup/route.ts",
+      "blob_sha1": "64974c9db4e418059f898b385840fdf91254b87b",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/automations/[id]/route.ts",
+      "blob_sha1": "4cd17e74ba929ccfbace4b0c42c35da74fbb1146",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/automations/route.ts",
+      "blob_sha1": "23f3e32c05b14ba63c8250f2b43d0296cfe2ae84",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/connections/meta/callback/route.ts",
+      "blob_sha1": "0433b87f409e1e0c79ed1d60ccfe88d1f72643a5",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/connections/meta/route.ts",
+      "blob_sha1": "d1fdfc5013add830fce0422a4e98d4e7aa9e5ecf",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/connections/meta/start/route.ts",
+      "blob_sha1": "7badb6917b2e48893e98013622fa28e07c9eb905",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/customers/[id]/route.ts",
+      "blob_sha1": "aeb132e399b4b80d675337232cf6b6e840bb0f11",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/customers/route.ts",
+      "blob_sha1": "db50af0d25d4531042707146a0802c615f6df287",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/exports/[id]/route.ts",
+      "blob_sha1": "6017f48a370cac0c5f56fb5c5541f93c6c655e84",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/exports/route.ts",
+      "blob_sha1": "97134e94c1c250aea8889995a5b32aaa81ed59d5",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/imports/route.ts",
+      "blob_sha1": "567a380109cb330394024658a9fc3016b36c464c",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/crm/media/route.ts",
+      "blob_sha1": "e4a50aaadf10f375e6ca6c715f7a633d581cb907",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "blob_sha1": "2dc1b2480048f08348047b05ca411e8097549590",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/inbox/takeover/route.ts",
+      "blob_sha1": "8682b516aefc4d5cf17210b4e529a38bc1123442",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/inngest/route.ts",
+      "blob_sha1": "cbdaf2a22734eb7852b949ff2f7b8d1fb7f987cf",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/onboarding/complete/route.ts",
+      "blob_sha1": "728b449f5bf26f7b458cb7ca529cce160efe7910",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/onboarding/progress/route.ts",
+      "blob_sha1": "55351259ae48bc7482ca10bdfa09248f0e1bd62d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/preferences/route.ts",
+      "blob_sha1": "174150e3978cbe55365427b7c54f3c656fe577cd",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/settings/ai-credentials/route.ts",
+      "blob_sha1": "8a4174babea69207cfcfc710480a95a4b3a649ce",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/settings/business-profile/route.ts",
+      "blob_sha1": "e3189c7ed419fe516360c5101680e1fb19a8b364",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/settings/faqs/route.ts",
+      "blob_sha1": "b38dec4701db07e5136876f46da9766881844c73",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/settings/prices/route.ts",
+      "blob_sha1": "2380617a0d0a48c9caef078b7eb7783caee9eaff",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/api/webhooks/meta/route.ts",
+      "blob_sha1": "2a6338849baa09c9bca9baa48ca990cd91e7b6a7",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/auth/callback/route.ts",
+      "blob_sha1": "b8037c0e1c6409f56e79b5000299859f8db9667b",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "app/automations/[id]/page.tsx",
+      "blob_sha1": "0f6f2d91b0e320189076432ec6609786c94f7a54",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/automations/loading.tsx",
+      "blob_sha1": "18cc035c1ab69b88988fedbf8df87d29f7df017b",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/automations/page.tsx",
+      "blob_sha1": "51bd2922811db10521ba86ffa0e7483a390a5e33",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/automations/recipes/page.tsx",
+      "blob_sha1": "4d398260d58321e0126898d1fa0962507771c5a2",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/automations/test-center/page.tsx",
+      "blob_sha1": "46ce04025ea987e83097a06fa0c7eade73bac597",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/connections/loading.tsx",
+      "blob_sha1": "ee33653a53261db9ad338bb54bcfc40f3f12b578",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/connections/page.tsx",
+      "blob_sha1": "c11f2b20133a5ff89d056bf673d848e7db13590e",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/crm/[id]/page.tsx",
+      "blob_sha1": "2a3b7c5ea441b910549c229f35aba506607e1083",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/crm/loading.tsx",
+      "blob_sha1": "f82be7caa6f3a623b171b077e8a27810740e88b1",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/crm/page.tsx",
+      "blob_sha1": "5b8df77b85ea22cf0b1c0cbb2fc5daaaa7fef2d7",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/dashboard/loading.tsx",
+      "blob_sha1": "32615009e693551dc350aa8244c9c48f9b59b785",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/dashboard/page.tsx",
+      "blob_sha1": "5726f2deb9ff95000ee9f9e6e010c696c477fea9",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/error.tsx",
+      "blob_sha1": "62159e4e5c93e4be23004e00e7123442af2b14d8",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/forgot-password/page.tsx",
+      "blob_sha1": "cda848d289b3d7d798cbba7afb05a24dd6a64896",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/globals.css",
+      "blob_sha1": "badf85dc249e721a2776fa9a5b1003307ba6c11e",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/inbox/loading.tsx",
+      "blob_sha1": "91a63d3ca56952081399e7d595eb536b33274bbc",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/inbox/page.tsx",
+      "blob_sha1": "5e7f9c309640ebf4a4bfea350022715fa8324242",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/layout.tsx",
+      "blob_sha1": "fd4a20eba9f9eb472bb77b28125e9d20b51302e2",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/login/page.tsx",
+      "blob_sha1": "d9ffdfe662a77903b93dd90a1b074e18497f1296",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/not-found.tsx",
+      "blob_sha1": "3b46c361e27ff2695ac5c55c3e63f7cb7643b4ed",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/onboarding/page.tsx",
+      "blob_sha1": "ce14a75c33d55b9ccd85bca4ef0d2d23bb7943d0",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/page.tsx",
+      "blob_sha1": "a74cb27f168f88cb63ef1d1405a9d4f486e7c095",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/reset-password/page.tsx",
+      "blob_sha1": "9ec77da40bc4c40cda01e7747aaa8d4166b1a066",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/settings/loading.tsx",
+      "blob_sha1": "b2998b1bead1ec7df6b7835639c9af6224d24e00",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/settings/page.tsx",
+      "blob_sha1": "4150228edca9768f74ad0703c9f9c61f0efe5616",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/signup/page.tsx",
+      "blob_sha1": "d2f85df56226f6b24d630b00b296a7101b121d9e",
+      "scope": "frontend"
+    },
+    {
+      "path": "app/theme-script.tsx",
+      "blob_sha1": "6279437b38987a83dc39218156bd02f09994f386",
+      "scope": "frontend"
+    },
+    {
+      "path": "docs/AI_ACCOUNT_SETUP.md",
+      "blob_sha1": "66dc3e66598712e9a429e92d4e667ad142763a47",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/AI_PRIVACY.md",
+      "blob_sha1": "89022c788ef0e3ee3f1d6206e598f08a69c6dfab",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "blob_sha1": "fd4f13b734a4b700f991a4bcc1a1c6e0b05fa4f1",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/AUTOMATION_POLICY_MATRIX.md",
+      "blob_sha1": "0e7cda7cb91ac1a7eef9fdf237c73b4731f3533a",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/AUTOMATION_RECOVERY_RUNBOOK.md",
+      "blob_sha1": "3a44500741f395c0f47d6938289a7c4a6dd039d0",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/AUTOMATION_SPECIFICATION.md",
+      "blob_sha1": "a0435acc18ad8089b66ad693011841216bb9f55b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/BACKUP_RESTORE.md",
+      "blob_sha1": "9179164305ff30aca629facfebc1682e1b24c837",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/BACKUP_RESTORE_RUNBOOK.md",
+      "blob_sha1": "9aa99548f90bc1e44c4237772f12d27d89c97a95",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/BUSINESS_OWNER_GUIDE.md",
+      "blob_sha1": "0e69ebd666436e57ce1ea772ba9bd4795517210c",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/CAPACITY_MODEL.md",
+      "blob_sha1": "0fdf91853b95cf2a5907388eaadc9306c209b48a",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/CREDENTIAL_ROTATION.md",
+      "blob_sha1": "d6aa69b61fab6553bd107315978a5c5891574477",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/DATA_MODEL.md",
+      "blob_sha1": "055442ba97d7ee30b4e8ed22c4370dd2a02f2881",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/DECISIONS.md",
+      "blob_sha1": "23d844c48d8826ac31560dab8b7faf8feb165526",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/DEPLOYMENT.md",
+      "blob_sha1": "d4846d1bef7806c8856096b5cc541c7fd19234ae",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ENVIRONMENT_MATRIX.md",
+      "blob_sha1": "ba883c274fd49dbd72f6183845ea9ab6b968182b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ENVIRONMENT_VARIABLES.md",
+      "blob_sha1": "ea0634f5873f043f405bb5bb002fdddd0f2c4a72",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/EXPORT_DICTIONARY.md",
+      "blob_sha1": "8a6a07a223a6ca379b146ac727722c1ba503de7b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/EXTRACTION_MATRIX.md",
+      "blob_sha1": "251293f87039c90312bad33884a5eff412cc71f7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/I18N_AND_RTL.md",
+      "blob_sha1": "44b1c11e39451e52508863d79ab1cc380dfbff1e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/INCIDENT_RESPONSE.md",
+      "blob_sha1": "581bad8f028035b32d91d2d511985dca43872fb5",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/INFRASTRUCTURE_SETUP.md",
+      "blob_sha1": "38ebdf5efa1a071b05f304e4e91bc23fcfcde421",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/KNOWN_LIMITATIONS.md",
+      "blob_sha1": "201c9262987a837fc6c71171ff24320de84c5150",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/META_APP_REVIEW_EVIDENCE.md",
+      "blob_sha1": "07af511a97b3752749850356ca9cc3de04608a12",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/META_INTEGRATION.md",
+      "blob_sha1": "5db60a7834708455dd860b0a7644fd585b92424e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/META_SETUP_REQUIRED.md",
+      "blob_sha1": "7890d2e52f402ea4c2be32467c4b168d9ba5f512",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/OPERATIONS.md",
+      "blob_sha1": "04309e75e8f9e58a838df82024859eb19b39c400",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/OPERATIONS_MANUAL.md",
+      "blob_sha1": "247c5b27b0ffa831021ee226cb4c893173ddc6bf",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/OWNER_VALUE_MANIFEST.md",
+      "blob_sha1": "6a25a571b6bb6f0ab86505e5016de3c1e4d3e768",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/PERFORMANCE_PROFILE_RC.md",
+      "blob_sha1": "a707671ba2dc86013bb59110243f57937f0e5ab8",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/PRODUCTION_ACCESS_MATRIX.md",
+      "blob_sha1": "a8adeba0f5ba24b938b6592aabe6a523405a22ad",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/PROVIDER_STATUS_MATRIX.md",
+      "blob_sha1": "434e74a157f24551c0b2fc3c072391f864cd9d58",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/RELEASE_CHECKLIST.md",
+      "blob_sha1": "34b2751f060d6b9d4f216a94f5613d213312187b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/RELEASE_MANIFEST.md",
+      "blob_sha1": "5d93d8d5a223975e0ede176f12ab25f118977074",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/RETENTION_POLICY.md",
+      "blob_sha1": "f58f9b099ab50431ee0eeebc7e4a091701c5be11",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ROLLBACK.md",
+      "blob_sha1": "96adaac3b5adaaa4eafb2a393959d3256ab9af06",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ROUTE_MAP.md",
+      "blob_sha1": "0c4698081c2e20cdeab0883e536fedff2851056b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/SECURITY_MODEL.md",
+      "blob_sha1": "27f0bae05398b54d85079231e304692363e3e8e2",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/SECURITY_REVIEW_RC.md",
+      "blob_sha1": "5fed3c3a5b561483cabc98673ca433cf5e7b6540",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/SECURITY_THREAT_MODEL.md",
+      "blob_sha1": "9761a1326d956d115a0b89933c7227adc74a9ea3",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/SETUP_AND_ONBOARDING_SPEC.md",
+      "blob_sha1": "b6e593ef661065fd412eedaf61d6ea97dda1745c",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/SLOS_AND_ALERTS.md",
+      "blob_sha1": "55e2211faa54bd188dd93cd4f16f671303e90667",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/STORAGE_SECURITY.md",
+      "blob_sha1": "1e5fb2d2a88f96b4843c3701722c911b1c2fa5d9",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/TENANT_MODEL.md",
+      "blob_sha1": "10b6c047d466bb7fe0d11ecb8b437db436c14c5e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/TEST_REPORT_RC.md",
+      "blob_sha1": "491acde4862c94696ec98b7afa55a1c39cacfca9",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/THEME_AND_DESIGN_SYSTEM.md",
+      "blob_sha1": "17d0f3e6013579342631f16f0ae75f862f7446b8",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/UI_STATE_MATRIX.md",
+      "blob_sha1": "060ef567ac25eb4c89745c293ece88fe4c4fcb59",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/USER_GUIDE.md",
+      "blob_sha1": "5b67b2f58271ff9438739a829642900e04268299",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/V1_SCOPE_LOCK.md",
+      "blob_sha1": "c8cbbe52d0953d82fc59158d8fd521b97816e6ec",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/VERCEL_PLAN_COMPATIBILITY.md",
+      "blob_sha1": "5c608ce69983b9c7890ba2a6b33a280d467ccea3",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260728090000_auth_workspace_isolation.md",
+      "blob_sha1": "79a296573862e57d383b735e0a8bb0174d71ad6f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260728180000_crm_inbox_exports.md",
+      "blob_sha1": "03df237fe542ad8f6d8ffde4b3c7e9b8665a3795",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260728210000_business_profile_ai.md",
+      "blob_sha1": "9b875e1a9e2e1d262335d55b9b7e1f57c7269d77",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260728230000_meta_connections_webhooks.md",
+      "blob_sha1": "74adeda06a7b8e7fd05e53860c79f9cae744173b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260729010000_automation_engine.md",
+      "blob_sha1": "1aca4dac5292af60aadcd8e11e4c31778a549782",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260729150000_production_hardening.md",
+      "blob_sha1": "dfb7e96777b877dbec0795d48a7ce6dcdfdfde41",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/migrations/20260729180000_v1_experience.md",
+      "blob_sha1": "7e3e2d0d046fce241837ba86f50f93525d522acc",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/DATABASE_TARGET_DECISION.md",
+      "blob_sha1": "79dad7f6e59394a6c309f3950b445703b6a6e72b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/DEPLOYMENT_AUTOMATION_REPORT.md",
+      "blob_sha1": "23a43d6af2b65c4d94f2d9546fb6219434714654",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/EXTERNAL_ACCESS_LEDGER.md",
+      "blob_sha1": "305ade65aa0799d19226f3aac2e433017b16676e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/HOSTED_STAGING_REPORT.md",
+      "blob_sha1": "1e6860bd76c0324e1b7797b6d88b7b1a91b4a632",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/LIVE_META_PILOT_REPORT.md",
+      "blob_sha1": "1273a0db7e16820f7fbd3002d15546caca2c0a21",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/LOAD_1000_REPORT.md",
+      "blob_sha1": "60714ff1e1ceaad20d093988b71121fa4553c285",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/OWNER_ACCESS_PACKET.md",
+      "blob_sha1": "2f1b541f51840512b27463efa5a67b575d7fd7aa",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PRODUCTION_GAP_MATRIX.md",
+      "blob_sha1": "348779304a570e23217e40dab9eef2b3ba50f8cf",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PRODUCTION_RELEASE_REPORT.md",
+      "blob_sha1": "80d255beb549ea3b6fe1b1d0651d4b2de47de0c7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_0_REPORT.md",
+      "blob_sha1": "43de385f99101026cbcf154e86bbc9ec06225f9d",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_ACCESSIBILITY.md",
+      "blob_sha1": "dcdba56bb628f957ad4cfbc9275af8f3efd715eb",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_BASELINE.md",
+      "blob_sha1": "9c19fc21b7680a2e8450e26c2c95740cad2cd723",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_CONFLICT_LEDGER.md",
+      "blob_sha1": "de3f325bb49a274912fe1101ea2d41664d6ef936",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_EXTERNAL_ACCESS_LEDGER.md",
+      "blob_sha1": "121047bf8092f4b44d5a3efe99df01c91824c6cb",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_FINAL_REPORT.md",
+      "blob_sha1": "170d3a59632ce6ef120c35d24c6210f98c150a13",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_HOSTED_PREVIEW_QA.md",
+      "blob_sha1": "456769e4ec63dbda6f94fe4ce48bece98e13d258",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_LOCAL_SERVICE_TESTS.md",
+      "blob_sha1": "88624cfcbd61927327308cb0bab8268ba08e01a3",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_PREVIEW_ACCESS_HANDOFF.md",
+      "blob_sha1": "a7eb06246188eba069c80bb6c9056b94338d3db7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_PREVIEW_ROUTE_MATRIX.md",
+      "blob_sha1": "7766d893454eec8292c053cec6eb4cf9ebb51eac",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_PROMPT_11_HANDOFF.md",
+      "blob_sha1": "b787a1b802aa30224d783a6c983564439ef0935b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_RELEASE_QA.md",
+      "blob_sha1": "8f9a6092f2b57142591bd9d7e59afe4d15c2303e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_UIUX_REPORT.md",
+      "blob_sha1": "43468c52e26d21c0788165de402e5f41cfa79f8f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_10_VISUAL_REGRESSION.md",
+      "blob_sha1": "63a1155e33c959b1d25bb3246de30891b7fd1fd2",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_1_REPORT.md",
+      "blob_sha1": "0992e68268f872e6925eed7bbe12300795255aab",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_2_REPORT.md",
+      "blob_sha1": "4358c7a3abcea407299ccdd9a83c0bb331625c81",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_3_REPORT.md",
+      "blob_sha1": "1ef060205765112af96ed633814fc0f8ca9f357e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_4_REPORT.md",
+      "blob_sha1": "8648331181472a68fc258e72bb9bae313e9fb305",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_5_REPORT.md",
+      "blob_sha1": "e0fd654caab9f5ac7a8cd144414164d1cc65c1e1",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_6_REPORT.md",
+      "blob_sha1": "a84476bc4cd50d333bab043405fa3efcc2614980",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_7_REPORT.md",
+      "blob_sha1": "f28ed8d0088de9d3d8b7fb14f19b518456e15a42",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/PROMPT_8_RECOVERY_REPORT.md",
+      "blob_sha1": "a2ca44e75a9e6698021db49e3a8ed78cab10ccdd",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/REAL_VALUE_REQUIREMENTS.md",
+      "blob_sha1": "7a3200421665d142af89f7d4ed09edf96775ccbc",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/SECURITY_QA_REPORT.md",
+      "blob_sha1": "ae6577f313bc97bc0bd9df9b8579606472af1da7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/reports/TENANT_ISOLATION_REPORT.md",
+      "blob_sha1": "a9f2c1623605f0d67137cf36a7f7677fea592a80",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/collab-backend-baseline.txt",
+      "blob_sha1": "4ab88f9fdb3f63c963e9ea954c085cad00814c5b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/collab-final-visual-review.md",
+      "blob_sha1": "dc5ebc3756c960d6be59ee4b7bc03922539fafe1",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/collab-functional-differences.md",
+      "blob_sha1": "d98b372fc22aef90a88a5d2769428408e47edce4",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/collab-source-frontend-inventory.md",
+      "blob_sha1": "b4f4e1325c1695887aed327fc3e3f86b85a5997b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/collab-sync-report.md",
+      "blob_sha1": "63235fe900aa4e8c333d47a31024038c9acaa32b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/README.md",
+      "blob_sha1": "f3ed2304bc59d3f818d3e40891f004c9827856b6",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/backend-guard.md",
+      "blob_sha1": "f359b85e6a0ace060548267dba8406e64d5a57f0",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/SHA256SUMS.txt",
+      "blob_sha1": "022afb137527ce952816238afbdf900cd55f6268",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/analytics__fa__dark__390__operational.png",
+      "blob_sha1": "663db4892d22464a43229d623e7537bb6e524101",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/automations__en__dark__1024__builder.png",
+      "blob_sha1": "a8c4f7b4727876907b40f3a4a17f5eb83db119f2",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/customer-detail__tr__light__768__overview.png",
+      "blob_sha1": "cdae344b43666c0f6d54d3a1c8b3401cfa860a44",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/inbox-active__fa__light__768__human.png",
+      "blob_sha1": "1336aaaa224f1a8594ae60e984f1f99e84d5ae3f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/integrations__en__light__1440__disconnected.png",
+      "blob_sha1": "41f0b5dcb8a5a1c97438dc067a4ca2a75df6e7c9",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/login__en__light__1440__default.png",
+      "blob_sha1": "15a574eb5cec7937954af7c151baa0ffe3ead6fd",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/not-found__en__light__390__recovery.png",
+      "blob_sha1": "d497a38d69008d56f0f998156d029c9009973b7b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/onboarding__fa__dark__390__step-1.png",
+      "blob_sha1": "9403962507a69407b5ccbbd0237a0dd6e3c28823",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/overview__en__light__1440__ready.png",
+      "blob_sha1": "6c853dd6764fc7421f6af34aaf0f222f88648e23",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/local/settings__tr__dark__768__default.png",
+      "blob_sha1": "736a1d5f00d16dc59ffab308d7693640e53fce7f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/2eb66b71aeee3e233e0c94bd81388916da60e007/tests.md",
+      "blob_sha1": "6fb8ef9007f60c667e3059a2b0eab6ead50c5808",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/README.md",
+      "blob_sha1": "e7a33d3249892bbe32753a510a0b7d7811912879",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/accessibility/README.md",
+      "blob_sha1": "3b369b1c18529488485cc679139c8b88f1b2519e",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/diffs/backend-guard.md",
+      "blob_sha1": "468cae4bd841613de5a051f0db11b99dc9c66442",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/figma/README.md",
+      "blob_sha1": "019066642d3c8043889410f7c6cbdd7858d1e1a7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/SHA256SUMS.txt",
+      "blob_sha1": "20b4b2e0c836c24962dc9c218913a342ba0d172b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/automations__en__light__1440__inventory.png",
+      "blob_sha1": "277907df7337661d861746b5abf7a0ed5eb407b6",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/automations__fa__dark__390__inventory.png",
+      "blob_sha1": "c348f9a2f4f6299121a29e1463e320d755f90089",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/customer-detail__tr__light__768__overview.png",
+      "blob_sha1": "cdae344b43666c0f6d54d3a1c8b3401cfa860a44",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/inbox-active__en__dark__1024__human.png",
+      "blob_sha1": "73c0d6797535f0dc7361d26b7b003532b93923d5",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/inbox-active__fa__light__768__human.png",
+      "blob_sha1": "1336aaaa224f1a8594ae60e984f1f99e84d5ae3f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/login__en__light__1440__default.png",
+      "blob_sha1": "15a574eb5cec7937954af7c151baa0ffe3ead6fd",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/login__fa__dark__390__default.png",
+      "blob_sha1": "d0e3c3f7e9daa64f865a817dff0c105240c35943",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/not-found__en__light__390__recovery.png",
+      "blob_sha1": "d497a38d69008d56f0f998156d029c9009973b7b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/onboarding__fa__dark__1440__welcome.png",
+      "blob_sha1": "d07133e133447a79ecce32d5a4dfdf26319e7d95",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/overview__en__light__1440__ready.png",
+      "blob_sha1": "6c853dd6764fc7421f6af34aaf0f222f88648e23",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/overview__fa__dark__390__ready.png",
+      "blob_sha1": "07047f22437607f1d8766ffb2e37365f71220f9b",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/local/settings__tr__dark__768__default.png",
+      "blob_sha1": "736a1d5f00d16dc59ffab308d7693640e53fce7f",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/preview/README.md",
+      "blob_sha1": "c1a5046c307bc28973594866d6cc0669bee885a3",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/evidence/53b230e787bb596622cc1ce8497dc4f4949b316b/tests/results.md",
+      "blob_sha1": "b9bc54968e8949bd9039f2aaaf2004025d37a4a8",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/figma-final-export/README.md",
+      "blob_sha1": "c19c96afa0ae835316c60302e4d2dc77522ba139",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/figma-final-inventory.md",
+      "blob_sha1": "d45d5474955bee39d12c5846292f0e491b19e964",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/figma-inventory-before.md",
+      "blob_sha1": "bb0ed6557ef5db17d705dcddd387da50a4f1c044",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-baseline.md",
+      "blob_sha1": "f567170a04bc6d20dbb9185de73c2589c29d0fb2",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-competitor-uiux-final-research.md",
+      "blob_sha1": "faedb5360e049205f2830740a2adbebcfb4ac370",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-final-implementation-report.md",
+      "blob_sha1": "a54de3994f18607bad923da4093718a9a85aa833",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-final-visual-matrix.json",
+      "blob_sha1": "d8bff9b20d6d5ae3c168907c93a3afe54576e196",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-final-visual-review.md",
+      "blob_sha1": "edc82d83faa3690b4acc78a1fc7fd55821421fb1",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-route-figma-map.md",
+      "blob_sha1": "42aee2dd06c9bc02ea15d7b4d67c34c32e87991d",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/rellooma-v7-final-review.md",
+      "blob_sha1": "6078bb06813db1b829414a95e8b69f145c7b37a7",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/v11-resume-checkpoint.json",
+      "blob_sha1": "5dd376d6a0e58ba14e3ad164385efe5050166f45",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/v11-sigma-backend-baseline.json",
+      "blob_sha1": "2ab3ef8caa409e61cbdf4266bb2be0fe96968699",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/v11-sigma-current-state.md",
+      "blob_sha1": "a1546b7e3d5f8ad9f32d9647c2758d134af07bb1",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/v11-sigma-production-review.md",
+      "blob_sha1": "5d886e16ba9e14e2d4bb8b55526d7ccce3d761f8",
+      "scope": "documentation"
+    },
+    {
+      "path": "docs/ui-ux/v7-package-read-manifest.md",
+      "blob_sha1": "954894f7069fa259d7caa7c6abb0538629b6aa6b",
+      "scope": "documentation"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "blob_sha1": "a2df45bbbfc6bac82a9631c452a2b97db0a58c96",
+      "scope": "tests-config"
+    },
+    {
+      "path": "load/k6/conversations.js",
+      "blob_sha1": "e07f0c75e02634d549997df5ef40964b6728ad2d",
+      "scope": "application"
+    },
+    {
+      "path": "load/k6/panel.js",
+      "blob_sha1": "396823648b04e75a0a9b29d770466b2c3dfdb216",
+      "scope": "application"
+    },
+    {
+      "path": "neon/README.md",
+      "blob_sha1": "b626f995676caad312a8e7b27cdde1205298ada7",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "neon/migrations/0000_supabase_compatibility.sql",
+      "blob_sha1": "a5f69eed6c5ce77c6a9593c1a03617605bc64b4d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "neon/migrations/0001_authenticated_mutations.sql",
+      "blob_sha1": "9868ac0e6366002623348329a451a08e8fdcd334",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "next.config.ts",
+      "blob_sha1": "e61241665974a05f18d1575505c7eea4d943266c",
+      "scope": "tests-config"
+    },
+    {
+      "path": "package.json",
+      "blob_sha1": "bbd54a578fff6300037c75f630bb35e23cb53947",
+      "scope": "tests-config"
+    },
+    {
+      "path": "patches/minimatch@3.1.5.patch",
+      "blob_sha1": "a62a5dcac2964de91efad0d1d36f6bb99c0128b6",
+      "scope": "application"
+    },
+    {
+      "path": "playwright.config.ts",
+      "blob_sha1": "65195a62204eab9b2cf32236d28ec071eb55baae",
+      "scope": "tests-config"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "blob_sha1": "80a4bb5cc17e7505f3e6f26f71f2df72eb5c2aba",
+      "scope": "tests-config"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "blob_sha1": "a896d2de08799b14a2d8bd64f34a4467cbf16ae9",
+      "scope": "tests-config"
+    },
+    {
+      "path": "proxy.ts",
+      "blob_sha1": "39bf8b09dd63beb35f6883199086deaeae695833",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "public/brand/rellooma-app-icon.png",
+      "blob_sha1": "ebf7d45377844953839df4a47d80ae5fed23e5f9",
+      "scope": "approved-brand-asset"
+    },
+    {
+      "path": "public/brand/rellooma-horizontal.png",
+      "blob_sha1": "c3bb06dd7d95e5afd58f2bfe3da439e0cbff9900",
+      "scope": "approved-brand-asset"
+    },
+    {
+      "path": "public/brand/rellooma-stacked.png",
+      "blob_sha1": "9bbea6723d65601a608b3bc882bd911a290a99dd",
+      "scope": "approved-brand-asset"
+    },
+    {
+      "path": "scripts/check-client-bundle.mjs",
+      "blob_sha1": "d0bcc542f76d10005b519ae171150ed087f78790",
+      "scope": "tests-config"
+    },
+    {
+      "path": "scripts/local-backup.sh",
+      "blob_sha1": "c194c19956aa254f4a0031673343403d5d605c94",
+      "scope": "tests-config"
+    },
+    {
+      "path": "scripts/production-preflight.mjs",
+      "blob_sha1": "b3a82226e33216b79bd314c89b62b8503711a407",
+      "scope": "tests-config"
+    },
+    {
+      "path": "scripts/validate-export-workbook.mjs",
+      "blob_sha1": "61a0001f6ee1b0eeea2f0b96e764b1c37d612b47",
+      "scope": "tests-config"
+    },
+    {
+      "path": "scripts/with-supabase-env.mjs",
+      "blob_sha1": "d232fe88d2914bfe9e99f8959f2a0b8e5cadc88c",
+      "scope": "tests-config"
+    },
+    {
+      "path": "src/lib/env.ts",
+      "blob_sha1": "0d1ffa20ede215562fa25e8db0b2bc23aa86ae67",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/health.ts",
+      "blob_sha1": "4e119ec5ebcd952de51c4610292dd429e2cb507e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/i18n/client.tsx",
+      "blob_sha1": "6caf03bc0a1ba4f7ba636707fcd32496cd9eef94",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/lib/i18n/config.ts",
+      "blob_sha1": "ce6ec63cf6ddbe6e430dccf1b65a24d857c73161",
+      "scope": "application"
+    },
+    {
+      "path": "src/lib/i18n/dictionaries.ts",
+      "blob_sha1": "fb42ad92e57af01e6c12e0d714f6acebca564f06",
+      "scope": "application"
+    },
+    {
+      "path": "src/lib/i18n/server.ts",
+      "blob_sha1": "f333dde0a26cc4dd98755dfa90e334f791eb8b7a",
+      "scope": "application"
+    },
+    {
+      "path": "src/lib/inngest/client.ts",
+      "blob_sha1": "0307b788b31ad598e765d36ed508b4b46807d87a",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/inngest/events.ts",
+      "blob_sha1": "e6f2b09c9cf2cb0098aedbc7d94f8b8adf0e302a",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/inngest/functions.ts",
+      "blob_sha1": "92b87137cb04e3534d1f3bed3f1d850f5afb8a12",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/neon/server.ts",
+      "blob_sha1": "8b1dd0dbbac3b59f9ed43dab2a50c6a06af338b6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/result.ts",
+      "blob_sha1": "706baa8bd6593ab7d3e525db393a4e68eae243a5",
+      "scope": "application"
+    },
+    {
+      "path": "src/lib/safe-download.ts",
+      "blob_sha1": "c7eea8d455f26df018486d8357c7e45bf42c850c",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/lib/security-headers.ts",
+      "blob_sha1": "686735a749683b58a32bdd0382c2c35c0623a088",
+      "scope": "application"
+    },
+    {
+      "path": "src/lib/supabase/admin.ts",
+      "blob_sha1": "f4aeebc49411eac544c08677e07789a1270864a4",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/supabase/contracts.ts",
+      "blob_sha1": "0574112d5995fda2c1287134b7095f0bf2343b26",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/lib/supabase/server.ts",
+      "blob_sha1": "cff40572179d74c24437ce3f2f8709d337c67893",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/contracts.ts",
+      "blob_sha1": "6f7548a27901ce3c2d60922a42f19404f3e62900",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/credential-service.ts",
+      "blob_sha1": "1695eb4b5a428b05621e0e87211df121dc2a88c7",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/credential-vault.ts",
+      "blob_sha1": "56fb4b4d24ba8f9a029fb1562508dd420eee6157",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/index.ts",
+      "blob_sha1": "7c4e018552fc2dce55d5d4ae7e93f0af9e4baee4",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/provider-policy.ts",
+      "blob_sha1": "bbc1496ce77fdb411e41a8a2d46db7602bce689e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/provider-selector.ts",
+      "blob_sha1": "cc1bc3acef2ad1891636228aa057120820accf8b",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/ai/providers/deterministic-provider.ts",
+      "blob_sha1": "4eac3e05fee8a503ef040ec33182d5491abca664",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/audit/index.ts",
+      "blob_sha1": "e324ea951e17b80f0388961ae91e9a2499d5572b",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/adapters/captcha.ts",
+      "blob_sha1": "5ada2df6a8a1cbdbe5cf653ff869d5248e92ee58",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/adapters/rate-limiter.ts",
+      "blob_sha1": "c33fab0cbdb16b6ce1adee5cdc9fa30b6ad9fbd5",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/adapters/supabase-auth-repository.ts",
+      "blob_sha1": "ed032f8ce2ee34404737038b761adccc3ceb0637",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/contracts.ts",
+      "blob_sha1": "2724131bda6515ded24d885da12f8177ea81b336",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/http.ts",
+      "blob_sha1": "701163013c3ef4cb755fb4be1f0b2f879a999ea1",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/index.ts",
+      "blob_sha1": "6b3b1450ad9408c4e6f237b1b47ed0b459ab7c74",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/runtime.ts",
+      "blob_sha1": "58e6942824d4c86847ed086c4941ee7a96f51c6e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/security/csrf.ts",
+      "blob_sha1": "112f1d9c700e18d1bb7f9186e3dfbde7e1e7880e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/security/route.ts",
+      "blob_sha1": "3d54fc8b690274393fd04cd2df5ff2e40c5dd586",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/service.ts",
+      "blob_sha1": "c9b427637614887a2b2660b7c8a1a479bfc1b1fb",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/auth/ui/auth-form.tsx",
+      "blob_sha1": "e2c5ad411ed6114c2df2fed33f2b2f9012b4d95a",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/auth/ui/auth-shell.tsx",
+      "blob_sha1": "6c3c511412834e10c099243ef5fb944fcaff52e6",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/auth/ui/logout-button.tsx",
+      "blob_sha1": "e31e5bd92a60a827194cee37467575582092a0ab",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/automations/durable.ts",
+      "blob_sha1": "47d6919c5ec25dcfdece09144ef67002662d5f88",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/automations/engine.ts",
+      "blob_sha1": "bf684eb4dc130f38431dbaf576229eaa44a0b592",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/automations/index.ts",
+      "blob_sha1": "ab9d1cc496a62cfd38aa7ca1236d9ef0164d367e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/automations/service.ts",
+      "blob_sha1": "232fdc225908999ef173bad4efa7ada02ec41276",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/automations/ui/automation-builder.tsx",
+      "blob_sha1": "887e67c0c1a5a4a6da9ee55573aa7fa932bb465f",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/business-profile/contracts.ts",
+      "blob_sha1": "9bec6d3ae990afac1cccb3b458379c4a67e46eec",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/business-profile/index.ts",
+      "blob_sha1": "a3a7de1e217cbf35c31fa5e5b6b830091ecb555d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/business-profile/repository.ts",
+      "blob_sha1": "fcd075bf54b9d3377ee321d4defffc2020ad0123",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/business-profile/runtime.ts",
+      "blob_sha1": "42bc70216348d6c6152733ea99f35e0a994ce7f6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/business-profile/ui/settings-panel.tsx",
+      "blob_sha1": "cc4d391a43ce55d4f1d413435bdb1419bc7a2048",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/conversations/index.ts",
+      "blob_sha1": "ef93099a4347c8e7a910dc1421c6fd002ac0ffe4",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/conversations/takeover-controls.tsx",
+      "blob_sha1": "3771185fbff96640460567e288cd855bd464909a",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/crm/adapters/supabase-crm-repository.ts",
+      "blob_sha1": "eab676cc32c4308e8e498a50d3380160bfbf7e68",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/contracts.ts",
+      "blob_sha1": "0e113c30438339714c14c18a65bca35158a0ff30",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/import/csv-import.ts",
+      "blob_sha1": "6a4a8267bc67644d3923d4dc667516b54151424f",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/import/import-service.ts",
+      "blob_sha1": "42e7fed14486c3b8676eaf38c2494938f0a5c669",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/index.ts",
+      "blob_sha1": "552d1a52a578c64bba85d94c43b53de3e41da1a5",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/media/media-policy.ts",
+      "blob_sha1": "c36d9cea587793ba815094083e50c3572e704f04",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/media/media-repository.ts",
+      "blob_sha1": "60fa6824b74281321ada40aae6a1247c255a6032",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/runtime.ts",
+      "blob_sha1": "1b8ca5b9ac0bcfdb5cc87bd92d62e684695ce9fc",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/crm/ui/crm-controls.tsx",
+      "blob_sha1": "675d5fcb679d600ea95eac3023e28ebea89e44c3",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/crm/ui/customer-actions.tsx",
+      "blob_sha1": "8b3e469f72ee596767eef3fd8062f5142d3d9934",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/crm/ui/customer-table.tsx",
+      "blob_sha1": "4e71d923566f39a9181ad82d76cc1e3d0c779335",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/exports/contracts.ts",
+      "blob_sha1": "b8126b79f8cb2f9ee5b7faa858b94f8232740fdf",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/exports/export-builder.ts",
+      "blob_sha1": "84f0cc27db1f44425ff38511422eebfaac162183",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/exports/export-policy.ts",
+      "blob_sha1": "f7e068186dd414f9a4c7a0d3d641737ffccc4683",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/exports/export-repository.ts",
+      "blob_sha1": "6d3e8745ff58527b49eb6fa856d1ac70657589c6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/exports/index.ts",
+      "blob_sha1": "e07914cc9413cb0c2648f8c96635c1d45b1aced4",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/index.ts",
+      "blob_sha1": "af0ad270d19e4243b748c05c2a66726beae37e5f",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/index.ts",
+      "blob_sha1": "ff33f8983458db258895106e2e853e71a813a857",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/live-send-gate.ts",
+      "blob_sha1": "e6848524956d8dfa28cd37275500f8ec72b56283",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/connection-service.ts",
+      "blob_sha1": "f85ea87aaeb86e61c9e18e19245458054bd7d409",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/connections-panel.tsx",
+      "blob_sha1": "55e68ec2950ca287b2f2c4ff6f8f29a40796eeb1",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/integrations/meta/contracts.ts",
+      "blob_sha1": "70aacd4bc7de778915862a918d6bb6bf93440862",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/live-connection-adapter.ts",
+      "blob_sha1": "fffb4a16046ed6a48734851896df45ec044c1058",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/live-media-adapter.ts",
+      "blob_sha1": "f07796a2b9b3adcee5c81972ad709ca39822a2c2",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/normalizer.ts",
+      "blob_sha1": "46cf45d9c88a0fb3d9685fd8c763cd2103be1873",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/oauth-state.ts",
+      "blob_sha1": "cb76c9cad93f88bcee19eb81588a80b92f387b5d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/runtime.ts",
+      "blob_sha1": "801622c4fda28f43d2ddc8046e25b6c62e35cd59",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/sandbox-adapter.ts",
+      "blob_sha1": "fe58d3de6fbcea4607c6de669eecb47049ca4d9c",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/template-inventory-adapter.ts",
+      "blob_sha1": "d1655286613bb1688a48c241a053b5f743b769d6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/webhook-ingestion.ts",
+      "blob_sha1": "7f420c48b2f46fea7b7fb9c1db4d0c9928297a98",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/meta/webhook-security.ts",
+      "blob_sha1": "8bfc5030d88259d8c2d366109d24c16104529546",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/providers/fake-messaging-provider.ts",
+      "blob_sha1": "42e4b9f39a5bddd49d716a5c855223e6510697dc",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/integrations/providers/messaging-provider.ts",
+      "blob_sha1": "70f59adc396110f21c111c41de7ac9bb00666c65",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/workspaces/index.ts",
+      "blob_sha1": "0f789b5e880917523fa2c3fa989aab350b1619a8",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/workspaces/server/resolve-workspace.ts",
+      "blob_sha1": "a8ebf207307ab6d37eecfe825cd4afedb7dcb369",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "src/modules/workspaces/ui/brand-lockup.tsx",
+      "blob_sha1": "10f248812eeee6212110672c1c0fe01eb6a0a36f",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/workspaces/ui/dashboard-overview.tsx",
+      "blob_sha1": "a152ac81ffccf2c5fc7bfa13eff0a91df9d7ef19",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/workspaces/ui/onboarding-form.tsx",
+      "blob_sha1": "f4aeb1dd999b4bc310a425b33860d29ba460c3d1",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/workspaces/ui/preference-controls.tsx",
+      "blob_sha1": "454c1c37bc56a6db370e9e98fc8fd768457d6cb5",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/modules/workspaces/ui/workspace-shell.tsx",
+      "blob_sha1": "031f3c21e11d920ead3e55ca7c0813f7c5b83c64",
+      "scope": "frontend"
+    },
+    {
+      "path": "src/vendor/inngest-next-runtime.d.mts",
+      "blob_sha1": "6a6e3fda1c0a27ccfaa83338e998679dbcaf1643",
+      "scope": "application"
+    },
+    {
+      "path": "src/vendor/inngest-next-runtime.mjs",
+      "blob_sha1": "04a18a658291856e3b29975655dd81d1d438b583",
+      "scope": "application"
+    },
+    {
+      "path": "src/vendor/inngest-runtime.d.mts",
+      "blob_sha1": "8b824b26a4c297719b6fead52c38f6723ec618ae",
+      "scope": "application"
+    },
+    {
+      "path": "src/vendor/inngest-runtime.mjs",
+      "blob_sha1": "1a28b5b8938d22ccbdd24099d4b8152fa5187fcf",
+      "scope": "application"
+    },
+    {
+      "path": "supabase/config.toml",
+      "blob_sha1": "5d29c9777b3f84e98138284c18c1ec35b9a3919a",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260728090000_auth_workspace_isolation.sql",
+      "blob_sha1": "e4160b075a7d5f6e0d1e34c44e8ab39f3f9d6d90",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260728180000_crm_inbox_exports.sql",
+      "blob_sha1": "01e6b47773977400ec7241933b796a9c869a7572",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260728210000_business_profile_ai.sql",
+      "blob_sha1": "48e51d89a58432f2934f68e5dd5a385aa3be45d4",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260728230000_meta_connections_webhooks.sql",
+      "blob_sha1": "a758aa1fa79002ac3995236268d7f37937c31798",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260729010000_automation_engine.sql",
+      "blob_sha1": "90bc5e949e97815f03f7f1c2c936233304a56654",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260729120000_rc_oauth_state_replay.sql",
+      "blob_sha1": "f50365d26b58d65bb760756a568fbe1393dd739d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260729150000_production_hardening.sql",
+      "blob_sha1": "9548c6f56ca31e5791bf323a499b38550541f712",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/20260729180000_v1_experience.sql",
+      "blob_sha1": "14da3211c4b7d91ebcae68ece262c655eb27c6e5",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/migrations/README.md",
+      "blob_sha1": "bfc45ebb0796d9215ae43f6c97bd7eec6c2ca10e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/seed.sql",
+      "blob_sha1": "ee0d9985269944a3124c92608a270292b87bb14c",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/auth_workspace_rls.test.sql",
+      "blob_sha1": "35ad7418e26e74c3d7f693fc6d7ab6302ff429ad",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/automation_engine.test.sql",
+      "blob_sha1": "659c598ec8c46e7a983e38b0ed432b2f62dcd744",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/business_ai_rls.test.sql",
+      "blob_sha1": "f97749c00a21d63e8e3bfd49cc9d764c4c65c6f3",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/crm_rls_storage.test.sql",
+      "blob_sha1": "8110c81766748ff32de062b4a3e30f46b163e40f",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/meta_connections_webhooks.test.sql",
+      "blob_sha1": "5e1f9fad6b497b66d621bf329de8f8365dc112a6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/production_hardening.test.sql",
+      "blob_sha1": "eb214597b2bbc351c8e659fec1966dbad8529f2d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "supabase/tests/database/v1_experience.test.sql",
+      "blob_sha1": "92588b5393b0cba155a468058e1014d737a9c81b",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/e2e/accessibility.spec.ts",
+      "blob_sha1": "ad8fdfa265095282c3853df07d291b32be8478eb",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/auth.spec.ts",
+      "blob_sha1": "b63f8450e12d920af6a4ddd1852d24c1784be17c",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/e2e/connections.spec.ts",
+      "blob_sha1": "8f5bcb6f2c82277d9b23295bd1579d9833506dec",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/crm.spec.ts",
+      "blob_sha1": "56412f534e70f3c1fc2ef7ed13e8af9693020913",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/e2e/cross-browser.spec.ts",
+      "blob_sha1": "4f5f7e2755d0026277bd06fe54a8325ebab29fe8",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/foundation.spec.ts",
+      "blob_sha1": "d2d5bfb2611c0c97c5560738aa61cce14940120a",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/i18n-theme.spec.ts",
+      "blob_sha1": "542919f2c20fa35451e46308c83dc3071e82d98f",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/owner-panel.spec.ts",
+      "blob_sha1": "d3b5b04c26e3f958326c3434061458287f82be77",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/e2e/settings.spec.ts",
+      "blob_sha1": "37310702bf2c6a07d886888178a052fb3507fb43",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/e2e/visual-qa.spec.ts",
+      "blob_sha1": "8319545afcbee2246d31e5649c78214ae1b8a749",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tests/fixtures/synthetic.ts",
+      "blob_sha1": "a0d7f8f633ebfd82a4599535563d5dba32e4ffc9",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/business-ai-isolation.test.ts",
+      "blob_sha1": "bebd83fd6c62d8c3decc01177068171c14ca625f",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/crm-isolation.test.ts",
+      "blob_sha1": "99f731af342f730a7961bfae9fe7042ed6c061a6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/foundation.test.ts",
+      "blob_sha1": "fe9cf975d9e9e2310cef52517b8149b237e6b0c3",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/meta-webhook-isolation.test.ts",
+      "blob_sha1": "ab2102d9cd1eacef0a0084e1e7b73b8b6c48136e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/production-hardening.test.ts",
+      "blob_sha1": "ca2fd4d95e094f18882ff5a9a3b86d290cc445b8",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/rc-load-profile.test.ts",
+      "blob_sha1": "5982be7dc347fddc96694b60eb8ba8c87d9bda32",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/integration/supabase-auth-isolation.test.ts",
+      "blob_sha1": "db28cdd56797aba9b18fade7122bed21fe2a35cd",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/ai-policy-encryption.test.ts",
+      "blob_sha1": "20af305bb4184d9b16a99495c596897d14b8a8c2",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/auth-service.test.ts",
+      "blob_sha1": "ab5ca1351f837c2f2cdddb82ce9571ac6ef0aa80",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/automation-engine.test.ts",
+      "blob_sha1": "a6638c5b3686f6ce86240e404cce92d287371a33",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/crm-import.test.ts",
+      "blob_sha1": "fa13c541c10548bce24ddd2ba91f02a138ff3192",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/env.test.ts",
+      "blob_sha1": "6f95c95c5fca44cc1f40331d9a769d609c4b5f65",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/i18n-theme.test.ts",
+      "blob_sha1": "b1e68a91656093e8d0cfccb0fddcff6f5bc09227",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/media-export.test.ts",
+      "blob_sha1": "e9e09adbbf2eb172e2147cf65ed2aa6688095bd6",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/meta-live-connection.test.ts",
+      "blob_sha1": "030b52254ddf92020204b90447b9189937996115",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/meta-oauth-state.test.ts",
+      "blob_sha1": "7f87e43e15d5865ea1166d0884a9f8198e6f1440",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/meta-provider-adapters.test.ts",
+      "blob_sha1": "2e958ece42e13e5448c1ea4e8798bfa748cdb15e",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/meta-webhooks.test.ts",
+      "blob_sha1": "e1bcbf9ffd03479583e637c5a45dfdd0569ecde7",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/production-preflight.test.ts",
+      "blob_sha1": "e38f43ff87e64fccff9ba65762179eeee5396d2a",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/providers.test.ts",
+      "blob_sha1": "efb8a856bc8f801ee012304169aa4721b4225621",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/result.test.ts",
+      "blob_sha1": "99d2245db7d4f64de1ff4f2cd155f3e42183fca8",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/security-headers.test.ts",
+      "blob_sha1": "7aebc6f1e3ec6ca6f2bb5782c40ee40ea004a09d",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tests/unit/turnstile.test.ts",
+      "blob_sha1": "18b966f1dd216c68a5296a20b9d9e018b0ce81a8",
+      "scope": "backend-protected"
+    },
+    {
+      "path": "tsconfig.check.json",
+      "blob_sha1": "9bbabe880429ab8a95e1b156fb46f1b2e080929e",
+      "scope": "tests-config"
+    },
+    {
+      "path": "tsconfig.json",
+      "blob_sha1": "9098aae3c9b26c4f7bc8b5664e161c64cdfae043",
+      "scope": "tests-config"
+    },
+    {
+      "path": "vitest.config.ts",
+      "blob_sha1": "00f4de3fe8fa5acd10ca4919e5b123bbff947f4a",
+      "scope": "application"
+    }
+  ]
+}
