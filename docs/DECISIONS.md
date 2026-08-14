@@ -151,3 +151,25 @@ self-service signup without that evidence.
 Production preflight for this release requires Meta Sandbox and
 `LIVE_PROVIDER_SEND_ENABLED=false`. Real provider values and allowlisted pilots
 belong to Prompt 11.
+
+## D-027 — Card-upfront trial gating with a swappable payment adapter
+
+Every workspace gets a 7-day free trial, but a verified payment card must be
+registered before the trial starts. Trial eligibility is deduped by the
+payment provider's card-token fingerprint (HMAC-only, append-only ledger in
+`private.trial_fraud_signals`, never purged by TTL), not by email, so signing
+up repeatedly with new emails does not yield repeated free trials. A card
+that already consumed a trial is not blocked from registering — it skips the
+trial and is charged the plan price immediately, so a legitimate customer
+(e.g. a second business on the same card) can still pay while a repeat-signup
+abuser never gets a second free trial.
+
+PayTR is the first real payment provider, integrated behind an
+application-owned `PaymentProvider` interface (`src/modules/billing/contracts.ts`)
+so it can be replaced later without touching the domain layer, mirroring how
+Meta/AI provider SDKs stop at their adapters. A deterministic fake adapter is
+the dev/test default; going live requires `PAYMENT_PROVIDER_MODE=paytr`,
+`LIVE_BILLING_ENABLED=true` and `BILLING_LIVE_APPROVED=true` together
+(fail-closed, same shape as D-005), plus PayTR's own merchant approval for
+stored-card/recurring capability — an external gate outside this repository,
+like Meta's live-mode review.

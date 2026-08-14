@@ -2,8 +2,14 @@
 
 ## Product
 
-This independent repository builds a multi-business Instagram and WhatsApp
-automation CRM for 10–20 isolated business workspaces. It is not MetricOne.
+This independent repository builds a multi-business social media automation
+CRM for 10–20 isolated business workspaces. It is not MetricOne. Scope covers
+the Meta family (WhatsApp, Instagram — including content publishing —, and
+Facebook Pages) plus additional platform connectors (LinkedIn, X, TikTok),
+each following the same sandbox-first, workspace-scoped connector pattern.
+Outbound sends, content publishing, and ads spend are all real-provider
+actions and stay behind the same live-send safety gate (env gate, explicit
+approval, allowlist/scope limits, default deny) regardless of platform.
 
 ## Layout
 

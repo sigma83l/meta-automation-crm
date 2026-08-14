@@ -207,3 +207,28 @@ The V1 route set adds operational Analytics, a five-recipe Gallery and a
 distinct Test Center. Meta adapters now include bounded server-side media
 resolution and WhatsApp template inventory contracts, but no live outbound
 adapter.
+
+## Billing and trial-abuse module
+
+`src/modules/billing/` owns the trial/subscription state machine behind an
+application-owned `PaymentProvider` interface; a deterministic fake adapter
+is the dev/test default, PayTR is the first real adapter, and provider SDK
+types stop at the adapter exactly like Meta and AI. Card registration follows
+the same signed, single-use, workspace-bound callback-state pattern as Meta
+OAuth (`billing_callback_nonces`, consumed exactly once via a guarded SQL
+update); provider tokens are stored through the same AES-256-GCM envelope
+seam used for Meta tokens and AI BYOK keys.
+
+Trial eligibility is deduped by an HMAC-only, append-only ledger
+(`private.trial_fraud_signals`) keyed by the payment provider's card-token
+fingerprint rather than email, following the same private-schema,
+service-role-only pattern as `private.auth_rate_limits`; unlike a rate limit
+this ledger never expires. `resolveEntitledWorkspace` wraps
+`resolveTrustedWorkspace` with a subscription-status check and is used by the
+CRM, automations, inbox and Meta-connection runtimes; billing itself and the
+dashboard overview stay on the plain resolver so a blocked workspace can
+still reach `/settings/billing` to fix payment. PayTR webhooks follow the
+verified-payload → durable outbox → Inngest-cron-relay → per-workspace
+concurrency-limited consumer shape used for Meta webhooks; an ambiguous
+charge outcome is recorded as `charge_unknown` and never auto-retried, per
+the same uncertain-persistence rule as provider sends.
