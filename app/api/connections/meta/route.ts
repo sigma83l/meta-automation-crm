@@ -6,6 +6,7 @@ import {
   updateMetaConnection
 } from "@/src/modules/integrations/meta/connection-service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 function channel(value: unknown) {
   if (value !== "whatsapp" && value !== "instagram") throw new Error("Invalid channel.");
   return value;
@@ -14,8 +15,8 @@ export async function GET() {
   try {
     const { workspace } = await createMetaRuntime();
     return NextResponse.json({ connections: await listMetaConnections(workspace) });
-  } catch {
-    return NextResponse.json({ error: "CONNECTIONS_UNAVAILABLE" }, { status: 403 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CONNECTIONS_UNAVAILABLE", 403);
   }
 }
 export async function POST(request: NextRequest) {
@@ -28,8 +29,8 @@ export async function POST(request: NextRequest) {
       { connection: await connectSandbox(workspace, channel(body.channel)) },
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json({ error: "CONNECTION_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CONNECTION_FAILED", 400);
   }
 }
 export async function PATCH(request: NextRequest) {
@@ -42,8 +43,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(
       await updateMetaConnection(workspace, channel(body.channel), body.action)
     );
-  } catch {
-    return NextResponse.json({ error: "CONNECTION_UPDATE_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CONNECTION_UPDATE_FAILED", 400);
   }
 }
 export async function DELETE(request: NextRequest) {
@@ -55,7 +56,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       await updateMetaConnection(workspace, channel(body.channel), "disconnect")
     );
-  } catch {
-    return NextResponse.json({ error: "CONNECTION_DELETE_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CONNECTION_DELETE_FAILED", 400);
   }
 }

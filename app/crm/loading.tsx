@@ -1,11 +1,10 @@
+import { EmptyState } from "@/src/components/ui/empty-state";
+
 export default function Loading() {
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <div className="empty-guidance">
-          <strong>Loading customers…</strong>
-          <span>Applying workspace filters.</span>
-        </div>
+        <EmptyState title="Loading customers…" description="Applying workspace filters." />
       </section>
     </main>
   );

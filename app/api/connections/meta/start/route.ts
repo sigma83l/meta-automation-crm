@@ -7,6 +7,7 @@ import {
 } from "@/src/modules/integrations/meta/connection-service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { assertWorkspaceManager } from "@/src/modules/workspaces/server/resolve-workspace";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       status: "AWAITING_META_AUTHORIZATION",
       authorizationUrl: authorization.toString()
     });
-  } catch {
-    return NextResponse.json({ error: "OAUTH_START_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "OAUTH_START_FAILED", 400);
   }
 }

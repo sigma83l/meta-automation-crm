@@ -3,9 +3,27 @@ import { listAutomations } from "@/src/modules/automations/service";
 import { AutomationActions } from "@/src/modules/automations/ui/automation-builder";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 const tabs = ["Overview", "Runs", "Versions", "Analytics", "Settings"];
 export default async function AutomationDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { workspace } = await createMetaRuntime();
+  const { locale } = await getRequestPreferences();
+  let workspace: Awaited<ReturnType<typeof createMetaRuntime>>["workspace"];
+  try {
+    ({ workspace } = await createMetaRuntime());
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="automations" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
   const id = (await params).id;
   const item = (await listAutomations(workspace)).find((row) => row.id === id);
   if (!item) notFound();

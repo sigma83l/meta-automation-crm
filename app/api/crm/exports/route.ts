@@ -6,6 +6,7 @@ import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { buildCrmExport } from "@/src/modules/exports/export-builder";
 import { ExportRepository } from "@/src/modules/exports/export-repository";
 import { getServerEnvironment } from "@/src/lib/env";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 const scopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("one"), customerId: z.uuid() }),
@@ -21,7 +22,13 @@ const scopeSchema = z.discriminatedUnion("kind", [
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
-  const { client, workspace } = await createCrmRuntime();
+  let runtime: Awaited<ReturnType<typeof createCrmRuntime>>;
+  try {
+    runtime = await createCrmRuntime();
+  } catch (error) {
+    return billingBlockedResponse(error, "EXPORT_UNAVAILABLE", 403);
+  }
+  const { client, workspace } = runtime;
   const parsedScope = scopeSchema.safeParse(await request.json());
   if (!parsedScope.success) {
     return NextResponse.json({ error: "INVALID_EXPORT_SCOPE" }, { status: 400 });

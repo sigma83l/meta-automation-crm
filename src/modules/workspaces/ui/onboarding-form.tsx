@@ -176,9 +176,19 @@ export function OnboardingForm({
   return (
     <section className="setup-program" aria-label={t("onboarding.progress")}>
       <aside className="setup-rail">
-        <div className="setup-progress" aria-hidden="true">
+        <div
+          className="setup-progress"
+          role="progressbar"
+          aria-label={t("onboarding.progress")}
+          aria-valuenow={index + 1}
+          aria-valuemin={1}
+          aria-valuemax={stages.length}
+        >
           <span style={{ inlineSize: `${((index + 1) / stages.length) * 100}%` }} />
         </div>
+        <p className="setup-progress-label">
+          {t("onboarding.progress")} · {index + 1}/{stages.length}
+        </p>
         <ol>
           {stages.map(([id, title], stageIndex) => (
             <li
@@ -410,13 +420,21 @@ export function OnboardingForm({
               </time>
             ) : null}
           </div>
-          <button type="button" className="button-muted" onClick={() => void save("skip", true)}>
+          <button
+            type="button"
+            className="button-text action-skip"
+            onClick={() => void save("skip", true)}
+          >
             {t("common.skip")}
           </button>
-          <button type="button" className="button-muted" onClick={enterSandbox}>
+          <button type="button" className="button-muted action-exit" onClick={enterSandbox}>
             {t("common.exit")}
           </button>
-          <button type="button" onClick={() => void save("complete", true)}>
+          <button
+            type="button"
+            className="action-continue"
+            onClick={() => void save("complete", true)}
+          >
             {index === stages.length - 1 ? t("onboarding.enter") : t("common.next")}
           </button>
         </footer>

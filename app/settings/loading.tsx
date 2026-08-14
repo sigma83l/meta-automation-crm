@@ -1,11 +1,13 @@
+import { EmptyState } from "@/src/components/ui/empty-state";
+
 export default function SettingsLoading() {
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <div className="empty-guidance">
-          <strong>Loading workspace settings…</strong>
-          <span>Reading business policy and masked credential status.</span>
-        </div>
+        <EmptyState
+          title="Loading workspace settings…"
+          description="Reading business policy and masked credential status."
+        />
       </section>
     </main>
   );

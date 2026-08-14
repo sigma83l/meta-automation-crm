@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { importCrmCsv } from "@/src/modules/crm/import/import-service";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { requireCsrf } from "@/src/modules/auth/security/route";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       String(body.csv ?? "")
     );
     return NextResponse.json(result, { status: result.status === "completed" ? 201 : 422 });
-  } catch {
-    return NextResponse.json({ error: "CRM_IMPORT_REJECTED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CRM_IMPORT_REJECTED", 400);
   }
 }

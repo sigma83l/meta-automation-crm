@@ -1,11 +1,13 @@
+import { EmptyState } from "@/src/components/ui/empty-state";
+
 export default function Loading() {
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <div className="empty-guidance">
-          <strong>Loading integrations…</strong>
-          <span>Checking permissions and webhook health.</span>
-        </div>
+        <EmptyState
+          title="Loading integrations…"
+          description="Checking permissions and webhook health."
+        />
       </section>
     </main>
   );

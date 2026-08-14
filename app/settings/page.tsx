@@ -2,12 +2,27 @@ import { createBusinessProfileRuntime } from "@/src/modules/business-profile/run
 import { SettingsPanel } from "@/src/modules/business-profile/ui/settings-panel";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
-  const [{ client, repository, workspace }, { locale, t }] = await Promise.all([
-    createBusinessProfileRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
+  let runtime: Awaited<ReturnType<typeof createBusinessProfileRuntime>>;
+  try {
+    runtime = await createBusinessProfileRuntime();
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="settings" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+  const { client, repository, workspace } = runtime;
   const [data, memberships] = await Promise.all([
     repository.get(),
     client

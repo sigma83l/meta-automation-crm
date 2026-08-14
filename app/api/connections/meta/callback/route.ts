@@ -6,6 +6,7 @@ import {
 } from "@/src/modules/integrations/meta/connection-service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { assertWorkspaceManager } from "@/src/modules/workspaces/server/resolve-workspace";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 export async function GET(request: NextRequest) {
   try {
     const channel = request.nextUrl.searchParams.get("channel");
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
         status: connection.status
       }
     });
-  } catch {
-    return NextResponse.json({ error: "OAUTH_CALLBACK_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "OAUTH_CALLBACK_FAILED", 400);
   }
 }

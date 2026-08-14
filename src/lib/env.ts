@@ -28,7 +28,7 @@ const serverEnvironmentSchema = z.object({
   NEON_AUTH_COOKIE_SECRET: optionalNonEmpty,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmpty,
   SUPABASE_SERVICE_ROLE_KEY: optionalNonEmpty,
-  META_GRAPH_API_VERSION: optionalMetaVersion,  // ← Make sure it's optionalMetaVersion, not z.string()...
+  META_GRAPH_API_VERSION: optionalMetaVersion, // ← Make sure it's optionalMetaVersion, not z.string()...
   INNGEST_EVENT_KEY: optionalNonEmpty,
   INNGEST_SIGNING_KEY: optionalNonEmpty,
   LIVE_PROVIDER_SEND_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -59,7 +59,17 @@ const serverEnvironmentSchema = z.object({
   CRM_EXPORT_MAX_ROWS: z.coerce.number().int().min(1).max(100000).default(25000),
   CRM_EXPORT_MAX_FILES: z.coerce.number().int().min(0).max(10000).default(1000),
   CRM_EXPORT_MAX_BYTES: z.coerce.number().int().min(1048576).max(104857600).default(104857600),
-  CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900)
+  CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
+  PAYMENT_PROVIDER_MODE: z.enum(["fake", "paytr"]).default("fake"),
+  PAYTR_MERCHANT_ID: optionalNonEmpty,
+  PAYTR_MERCHANT_KEY: optionalNonEmpty,
+  PAYTR_MERCHANT_SALT: optionalNonEmpty,
+  LIVE_BILLING_ENABLED: z.enum(["true", "false"]).default("false"),
+  BILLING_LIVE_APPROVED: z.enum(["true", "false"]).default("false"),
+  BILLING_FINGERPRINT_HASH_KEY: optionalNonEmpty,
+  BILLING_CALLBACK_STATE_SECRET: optionalNonEmpty,
+  BILLING_TRIAL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+  BILLING_PLAN_PRICE_MINOR_UNITS: z.coerce.number().int().min(1).default(49900)
 });
 
 export type ServerEnvironment = Readonly<{
@@ -106,6 +116,16 @@ export type ServerEnvironment = Readonly<{
   crmExportMaxFiles: number;
   crmExportMaxBytes: number;
   crmExportTtlSeconds: number;
+  paymentProviderMode: "fake" | "paytr";
+  paytrMerchantId?: string;
+  paytrMerchantKey?: string;
+  paytrMerchantSalt?: string;
+  liveBillingEnabled: boolean;
+  billingLiveApproved: boolean;
+  billingFingerprintHashKey?: string;
+  billingCallbackStateSecret?: string;
+  billingTrialDays: number;
+  billingPlanPriceMinorUnits: number;
 }>;
 
 export function parseServerEnvironment(
@@ -190,7 +210,21 @@ export function parseServerEnvironment(
     crmExportMaxRows: parsed.CRM_EXPORT_MAX_ROWS,
     crmExportMaxFiles: parsed.CRM_EXPORT_MAX_FILES,
     crmExportMaxBytes: parsed.CRM_EXPORT_MAX_BYTES,
-    crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS
+    crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS,
+    paymentProviderMode: parsed.PAYMENT_PROVIDER_MODE,
+    ...(parsed.PAYTR_MERCHANT_ID ? { paytrMerchantId: parsed.PAYTR_MERCHANT_ID } : {}),
+    ...(parsed.PAYTR_MERCHANT_KEY ? { paytrMerchantKey: parsed.PAYTR_MERCHANT_KEY } : {}),
+    ...(parsed.PAYTR_MERCHANT_SALT ? { paytrMerchantSalt: parsed.PAYTR_MERCHANT_SALT } : {}),
+    liveBillingEnabled: parsed.LIVE_BILLING_ENABLED === "true",
+    billingLiveApproved: parsed.BILLING_LIVE_APPROVED === "true",
+    ...(parsed.BILLING_FINGERPRINT_HASH_KEY
+      ? { billingFingerprintHashKey: parsed.BILLING_FINGERPRINT_HASH_KEY }
+      : {}),
+    ...(parsed.BILLING_CALLBACK_STATE_SECRET
+      ? { billingCallbackStateSecret: parsed.BILLING_CALLBACK_STATE_SECRET }
+      : {}),
+    billingTrialDays: parsed.BILLING_TRIAL_DAYS,
+    billingPlanPriceMinorUnits: parsed.BILLING_PLAN_PRICE_MINOR_UNITS
   });
 }
 
@@ -256,6 +290,22 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
       throw new Error("Live Meta mode requires exact same-origin provider configuration.");
     }
   }
+  if ((parsed.BILLING_FINGERPRINT_HASH_KEY?.length ?? 0) < 32) {
+    throw new Error("BILLING_FINGERPRINT_HASH_KEY must contain at least 32 characters.");
+  }
+  if ((parsed.BILLING_CALLBACK_STATE_SECRET?.length ?? 0) < 32) {
+    throw new Error("BILLING_CALLBACK_STATE_SECRET must contain at least 32 characters.");
+  }
+  if (parsed.PAYMENT_PROVIDER_MODE === "paytr") {
+    if (!parsed.PAYTR_MERCHANT_ID || !parsed.PAYTR_MERCHANT_KEY || !parsed.PAYTR_MERCHANT_SALT) {
+      throw new Error("Live PayTR mode requires merchant id, key and salt.");
+    }
+    if (parsed.LIVE_BILLING_ENABLED === "true" && parsed.BILLING_LIVE_APPROVED !== "true") {
+      throw new Error(
+        "Live billing requires explicit BILLING_LIVE_APPROVED alongside the environment gate."
+      );
+    }
+  }
 }
 
 export function getServerEnvironment(): ServerEnvironment {
@@ -270,6 +320,7 @@ export function configuredInfrastructure(environment: ServerEnvironment) {
       Boolean(environment.supabaseServiceRoleKey),
     inngest: Boolean(environment.inngestEventKey) && Boolean(environment.inngestSigningKey),
     credentialEncryption: Boolean(environment.credentialEncryptionKey),
-    liveSending: environment.liveProviderSendEnabled
+    liveSending: environment.liveProviderSendEnabled,
+    liveBilling: environment.liveBillingEnabled && environment.billingLiveApproved
   });
 }

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { createAutomation } from "@/src/modules/automations/service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
       }),
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json({ error: "AUTOMATION_CREATE_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "AUTOMATION_CREATE_FAILED", 400);
   }
 }

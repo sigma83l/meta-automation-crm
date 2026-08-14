@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 export async function PATCH(request: NextRequest) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
@@ -37,7 +38,7 @@ export async function PATCH(request: NextRequest) {
       if (event.error) throw new Error();
     }
     return NextResponse.json({ owner: takeover ? "human" : "automation" });
-  } catch {
-    return NextResponse.json({ error: "TAKEOVER_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "TAKEOVER_FAILED", 400);
   }
 }

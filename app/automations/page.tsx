@@ -4,16 +4,31 @@ import { AutomationBuilder } from "@/src/modules/automations/ui/automation-build
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 export const dynamic = "force-dynamic";
 export default async function AutomationsPage({
   searchParams
 }: {
   searchParams: Promise<{ recipe?: string }>;
 }) {
-  const [{ workspace }, { locale, t }] = await Promise.all([
-    createMetaRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
+  let runtime: Awaited<ReturnType<typeof createMetaRuntime>>;
+  try {
+    runtime = await createMetaRuntime();
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="automations" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+  const { workspace } = runtime;
   const items = await listAutomations(workspace);
   const requestedRecipe = (await searchParams).recipe;
   return (

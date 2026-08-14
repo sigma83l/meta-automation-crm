@@ -35,15 +35,27 @@ export type FoundationEventMap = {
       provider: "instagram" | "whatsapp";
     };
   };
+  "billing/webhook.received": {
+    data: {
+      webhookEventId: string;
+      trustedWorkspaceId: string;
+      chargeAttemptId: string;
+      provider: "paytr" | "fake";
+      providerEventRef: string;
+    };
+  };
 };
 
 export const inngestFoundationContract = Object.freeze({
   applicationId: "meta-automation-crm",
-  registeredFunctions: 3,
+  registeredFunctions: 6,
   functionIds: Object.freeze([
     "relay-meta-event-outbox",
     "process-verified-meta-event",
-    "cleanup-expired-private-artifacts"
+    "cleanup-expired-private-artifacts",
+    "relay-billing-outbox",
+    "process-verified-billing-webhook",
+    "charge-due-trials-and-subscriptions"
   ]),
   productionEnvironmentRequired: true
 });

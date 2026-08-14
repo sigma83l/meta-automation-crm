@@ -39,14 +39,15 @@ describe("foundation wiring", () => {
       "integrations",
       "ai",
       "exports",
-      "audit"
+      "audit",
+      "billing"
     ]);
   });
 
   it("registers production-shaped durable handlers without claiming hosted provisioning", () => {
     expect(supabaseFoundationContract.migrationsApplied).toBe(false);
     expect(supabaseFoundationContract.privateBucket).toBe("crm-private");
-    expect(inngestFoundationContract.registeredFunctions).toBe(3);
+    expect(inngestFoundationContract.registeredFunctions).toBe(6);
     expect(inngestFoundationContract.productionEnvironmentRequired).toBe(true);
   });
 });

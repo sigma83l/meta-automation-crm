@@ -4,6 +4,8 @@ import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { CustomerActions } from "@/src/modules/crm/ui/customer-actions";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 
 const tabs = [
   "Overview",
@@ -26,12 +28,25 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const selected = (await searchParams).tab ?? "Overview";
-  const [{ repository, workspace }, { locale }] = await Promise.all([
-    createCrmRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale } = await getRequestPreferences();
   const text = (english: string, turkish: string, persian: string) =>
     locale === "tr" ? turkish : locale === "fa" ? persian : english;
+  let runtime: Awaited<ReturnType<typeof createCrmRuntime>>;
+  try {
+    runtime = await createCrmRuntime();
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="crm" workspaceName={error.workspace.name}>
+          <div className="content crm-content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+  const { repository, workspace } = runtime;
   const detail = await repository.detail(id);
   const customer = detail.customer as { display_name: string; company_name?: string };
   return (

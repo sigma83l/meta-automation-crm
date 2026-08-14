@@ -1,6 +1,8 @@
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { TakeoverControls } from "@/src/modules/conversations/takeover-controls";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 
 export const dynamic = "force-dynamic";
 
@@ -9,12 +11,25 @@ export default async function InboxPage({
 }: {
   searchParams: Promise<{ conversation?: string }>;
 }) {
-  const [{ client, workspace }, { locale, t }] = await Promise.all([
-    createCrmRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
   const text = (english: string, turkish: string, persian: string) =>
     locale === "tr" ? turkish : locale === "fa" ? persian : english;
+  let runtime: Awaited<ReturnType<typeof createCrmRuntime>>;
+  try {
+    runtime = await createCrmRuntime();
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="inbox" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+  const { client, workspace } = runtime;
   const conversations = await client
     .from("conversations")
     .select("*,customers(display_name)")

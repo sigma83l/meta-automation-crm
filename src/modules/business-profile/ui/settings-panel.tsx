@@ -457,6 +457,19 @@ export function SettingsPanel({
               {text("Log out all sessions", "Tüm oturumları kapat", "خروج از همه نشست‌ها")}
             </button>
           </article>
+          <article>
+            <strong>{text("Billing", "Faturalandırma", "صورتحساب")}</strong>
+            <span>
+              {text(
+                "Trial status, subscription and payment method",
+                "Deneme durumu, abonelik ve ödeme yöntemi",
+                "وضعیت آزمایشی، اشتراک و روش پرداخت"
+              )}
+            </span>
+            <Link href="/settings/billing">
+              {text("Manage billing", "Faturalandırmayı yönet", "مدیریت صورتحساب")}
+            </Link>
+          </article>
         </div>
       </section>
     </div>

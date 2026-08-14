@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { requireCsrf } from "@/src/modules/auth/security/route";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,8 +15,8 @@ export async function GET(request: NextRequest) {
       ...(status === "active" || status === "archived" ? { status } : {})
     });
     return NextResponse.json({ customers });
-  } catch {
-    return NextResponse.json({ error: "CRM_UNAVAILABLE" }, { status: 403 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CRM_UNAVAILABLE", 403);
   }
 }
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       ...(body.phone ? { phone: String(body.phone) } : {})
     });
     return NextResponse.json({ customer }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "INVALID_CUSTOMER" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "INVALID_CUSTOMER", 400);
   }
 }

@@ -12,7 +12,8 @@ describe("environment contract", () => {
       supabase: false,
       inngest: false,
       credentialEncryption: false,
-      liveSending: false
+      liveSending: false,
+      liveBilling: false
     });
   });
 
@@ -58,7 +59,9 @@ describe("environment contract", () => {
       AUTH_CAPTCHA_MODE: "turnstile",
       AUTH_SIGNUP_MODE: "invite_only",
       AUTH_RATE_LIMIT_MODE: "database",
-      AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum"
+      AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum",
+      BILLING_FINGERPRINT_HASH_KEY: "synthetic-billing-fingerprint-key-32-bytes-minimum",
+      BILLING_CALLBACK_STATE_SECRET: "synthetic-billing-callback-secret-32-bytes-minimum"
     });
     expect(environment.deploymentMode).toBe("production");
     expect(environment.liveProviderSendEnabled).toBe(false);

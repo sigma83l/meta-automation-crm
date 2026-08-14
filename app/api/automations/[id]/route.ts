@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { updateAutomation } from "@/src/modules/automations/service";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
@@ -11,7 +12,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!actions.includes(body.action)) throw new Error();
     const { workspace } = await createMetaRuntime();
     return NextResponse.json(await updateAutomation(workspace, (await params).id, body.action));
-  } catch {
-    return NextResponse.json({ error: "AUTOMATION_ACTION_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "AUTOMATION_ACTION_FAILED", 400);
   }
 }
