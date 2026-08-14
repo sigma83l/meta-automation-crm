@@ -4,7 +4,10 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL(".", import.meta.url))
+      "@": fileURLToPath(new URL(".", import.meta.url)),
+      // See tests/fixtures/server-only-stub.ts — lets unit tests import server
+      // modules. The real client/server guard is the Next bundler + bundle:scan.
+      "server-only": fileURLToPath(new URL("./tests/fixtures/server-only-stub.ts", import.meta.url))
     }
   },
   test: {

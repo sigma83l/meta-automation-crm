@@ -5,6 +5,7 @@ import Script from "next/script";
 export function ThemeScript() {
   return (
     <Script
+      id="relay-theme-init"
       strategy="beforeInteractive"
       dangerouslySetInnerHTML={{
         __html:

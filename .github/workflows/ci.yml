@@ -3,25 +3,58 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - release/v1-preview
+      - feature/v2-platforms
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The job runs the full gate: pnpm install, Supabase (Docker images), a
+    # production build, Playwright browser download and the e2e suite with
+    # retries. 20 minutes is not enough for a cold runner.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      # pnpm must already be on PATH when setup-node runs, because
+      # `cache: pnpm` shells out to `pnpm store path` to locate the cache dir.
+      # No `version` input on purpose: action-setup reads the pinned
+      # `packageManager: pnpm@11.17.0` from package.json, so the CI pnpm and the
+      # local pnpm can never drift.
+      - name: Install pnpm (version pinned by packageManager in package.json)
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node (version pinned by .nvmrc)
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
-      - run: corepack enable
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
+
+      # tsconfig.check.json includes `.next/types/**/*.ts` (the generated route
+      # and page/layout validators). On a clean runner that directory does not
+      # exist yet, so without typegen the typecheck would silently cover fewer
+      # files than it does locally. `next typegen` produces those types without
+      # a full build.
+      - name: Generate Next.js route types
+        run: pnpm exec next typegen
+
       - run: pnpm typecheck
       - run: pnpm test:unit
       - run: pnpm db:start

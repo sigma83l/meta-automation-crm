@@ -1,7 +1,7 @@
 "use client";
 
 import { Turnstile } from "@marsidev/react-turnstile";
-import { useState, type FormEvent, useEffect } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/lib/i18n/client";
 
@@ -21,17 +21,13 @@ export function AuthForm({
 }) {
   const router = useRouter();
   const { t } = useI18n();
-  // Initialize without checking turnstileSiteKey to avoid hydration mismatch
-  const [captchaToken, setCaptchaToken] = useState("");
+  // Derived initial state, not an effect: when no site key is configured (local dev)
+  // there is no Turnstile widget to produce a token, so start with the bypass token.
+  // `turnstileSiteKey` comes from a NEXT_PUBLIC_* env var inlined at build time, so it
+  // is identical on the server and the client and cannot cause a hydration mismatch.
+  const [captchaToken, setCaptchaToken] = useState(() => (turnstileSiteKey ? "" : "local-pass"));
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
-
-  // Handle hydration: set initial captcha token after mount
-  useEffect(() => {
-    if (!turnstileSiteKey) {
-      setCaptchaToken("local-pass");
-    }
-  }, [turnstileSiteKey]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
