@@ -48,7 +48,17 @@ export async function proxy(request: NextRequest) {
   });
   const { data } = await client.auth.getUser();
   if (!data.user && isProtected) {
-    if (process.env.AUTH_BYPASS_ENABLED === "true") {
+    // Local-only developer convenience. The deployment-mode check is the load
+    // bearing half: without it, setting one environment variable in a deployed
+    // environment would silently sign in every visitor to a protected route as
+    // the bypass user. Middleware reads process.env directly (importing the
+    // validated schema here would re-run it on every request), so this fails
+    // closed on its own, and assertProductionConfiguration refuses to boot a
+    // production build with the flag set.
+    if (
+      process.env.AUTH_BYPASS_ENABLED === "true" &&
+      (process.env.APP_DEPLOYMENT_MODE ?? "local") === "local"
+    ) {
       const bypassEmail = process.env.AUTH_BYPASS_EMAIL;
       const bypassPassword = process.env.AUTH_BYPASS_PASSWORD;
       if (bypassEmail && bypassPassword) {

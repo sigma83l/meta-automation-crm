@@ -50,6 +50,12 @@ const serverEnvironmentSchema = z.object({
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
   AUTH_SIGNUP_MODE: z.enum(["self_service", "invite_only"]).default("self_service"),
+  // Local developer convenience only; enforced in proxy.ts and refused outright
+  // by assertProductionConfiguration. Declared here so it is part of the
+  // validated surface rather than an undocumented process.env read.
+  AUTH_BYPASS_ENABLED: z.enum(["true", "false"]).default("false"),
+  AUTH_BYPASS_EMAIL: optionalNonEmpty,
+  AUTH_BYPASS_PASSWORD: optionalNonEmpty,
   PREVIEW_OWNER_EMAIL_ALLOWLIST: z.string().default(""),
   AUTH_RATE_LIMIT_MODE: z.enum(["memory", "database"]).default("memory"),
   AUTH_RATE_LIMIT_HASH_KEY: optionalNonEmpty,
@@ -86,6 +92,7 @@ export type ServerEnvironment = Readonly<{
   inngestEventKey?: string;
   inngestSigningKey?: string;
   liveProviderSendEnabled: boolean;
+  authBypassEnabled: boolean;
   liveTestRecipientAllowlist: readonly string[];
   credentialEncryptionKey?: string;
   platformAiProvider: "gemini" | "openai" | "anthropic";
@@ -153,6 +160,7 @@ export function parseServerEnvironment(
     ...(parsed.INNGEST_EVENT_KEY ? { inngestEventKey: parsed.INNGEST_EVENT_KEY } : {}),
     ...(parsed.INNGEST_SIGNING_KEY ? { inngestSigningKey: parsed.INNGEST_SIGNING_KEY } : {}),
     liveProviderSendEnabled: parsed.LIVE_PROVIDER_SEND_ENABLED === "true",
+    authBypassEnabled: parsed.AUTH_BYPASS_ENABLED === "true",
     liveTestRecipientAllowlist: Object.freeze(
       parsed.LIVE_TEST_RECIPIENT_ALLOWLIST.split(",")
         .map((value) => value.trim())
@@ -271,6 +279,12 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
   }
   if ((parsed.AUTH_RATE_LIMIT_HASH_KEY?.length ?? 0) < 32) {
     throw new Error("AUTH_RATE_LIMIT_HASH_KEY must contain at least 32 characters.");
+  }
+  if (parsed.AUTH_BYPASS_ENABLED === "true") {
+    // Refuse to boot rather than serve an authentication bypass. Every other
+    // dangerous switch here fails closed; this one used to be an unvalidated
+    // process.env read that nothing checked.
+    throw new Error("AUTH_BYPASS_ENABLED must never be enabled in production.");
   }
   if (parsed.META_CONNECTION_MODE === "live") {
     const callback = parsed.META_OAUTH_REDIRECT_URL
