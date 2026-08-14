@@ -57,6 +57,10 @@ jobs:
 
       - run: pnpm typecheck
       - run: pnpm test:unit
+      # Executes the migrations against an in-process Postgres (WASM), so a
+      # broken constraint or plpgsql body fails here in seconds rather than
+      # after the Docker/Supabase stack has finished starting.
+      - run: pnpm test:migrations
       - run: pnpm db:start
       - run: pnpm db:reset
       - run: pnpm test:db

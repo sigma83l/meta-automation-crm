@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:migrations": "vitest run tests/migrations",
     "test:integration:local": "node scripts/with-supabase-env.mjs pnpm vitest run tests/integration",
     "test:db": "supabase test db",
     "test:e2e": "node scripts/with-supabase-env.mjs pnpm playwright test",
@@ -50,8 +51,10 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.5",
     "@playwright/test": "1.62.0",
     "@secretlint/secretlint-rule-preset-recommend": "13.0.4",
+    "@types/emscripten": "1.41.5",
     "@types/node": "22.20.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
