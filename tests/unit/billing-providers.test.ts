@@ -11,9 +11,50 @@ const sandboxAuthorization = Object.freeze({
 });
 
 describe("billing entitlement", () => {
-  it("authorizes an active subscription regardless of trial dates", () => {
-    const result = authorizeWorkspaceEntitlement({ status: "active", trialEndsAt: null });
+  it("authorizes an active subscription inside its paid period, regardless of trial dates", () => {
+    const result = authorizeWorkspaceEntitlement({
+      status: "active",
+      trialEndsAt: null,
+      currentPeriodEndsAt: "2026-09-09T00:00:00.000Z",
+      now: "2026-08-09T00:00:00.000Z"
+    });
     expect(result).toEqual({ ok: true, value: "ACTIVE" });
+  });
+
+  it("denies an active subscription whose paid period lapsed beyond the grace window", () => {
+    // The defect: 'active' was entitlement forever. If the renewal cron ever
+    // stopped, an expired subscription kept full CRM and automation access
+    // indefinitely, because the clock was never consulted.
+    const result = authorizeWorkspaceEntitlement({
+      status: "active",
+      trialEndsAt: null,
+      currentPeriodEndsAt: "2026-08-01T00:00:00.000Z",
+      now: "2026-09-09T00:00:00.000Z"
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("keeps an active subscription entitled briefly after expiry", () => {
+    // The cron runs every 15 minutes, so a renewal can land just after the
+    // boundary. Customers must not lose access over our scheduler latency.
+    const result = authorizeWorkspaceEntitlement({
+      status: "active",
+      trialEndsAt: null,
+      currentPeriodEndsAt: "2026-08-09T00:00:00.000Z",
+      now: "2026-08-09T06:00:00.000Z"
+    });
+    expect(result).toEqual({ ok: true, value: "ACTIVE" });
+  });
+
+  it("denies an active subscription with no recorded period end", () => {
+    // Cannot be verified as paid, so it is not entitled.
+    const result = authorizeWorkspaceEntitlement({
+      status: "active",
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+      now: "2026-08-09T00:00:00.000Z"
+    });
+    expect(result.ok).toBe(false);
   });
 
   it("authorizes a trial that has not yet expired", () => {

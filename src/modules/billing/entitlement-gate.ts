@@ -37,7 +37,7 @@ export async function resolveEntitledWorkspace(client: SupabaseClient): Promise<
   const workspace = await resolveTrustedWorkspace(client);
   const { data, error } = await client
     .from("workspace_subscriptions")
-    .select("status,trial_ends_at")
+    .select("status,trial_ends_at,current_period_ends_at")
     .eq("workspace_id", workspace.id)
     .single();
   if (error || !data) throw new Error("Workspace subscription is unavailable.");
@@ -45,7 +45,8 @@ export async function resolveEntitledWorkspace(client: SupabaseClient): Promise<
   const status = data.status as SubscriptionStatus;
   const authorization = authorizeWorkspaceEntitlement({
     status,
-    trialEndsAt: data.trial_ends_at as string | null
+    trialEndsAt: data.trial_ends_at as string | null,
+    currentPeriodEndsAt: data.current_period_ends_at as string | null
   });
   if (!authorization.ok) throw new BillingEntitlementError(status, workspace);
 
