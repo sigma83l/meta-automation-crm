@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { appError, err, ok, type Result } from "@/src/lib/result";
 
 import type { AuthOutcome, AuthRepository, Credentials, SignupInput } from "../contracts";
+import { logAuthDiagnostic } from "../diagnostics";
 
 type WorkspaceResolution = { workspace_id: string };
 
@@ -50,7 +51,16 @@ export class SupabaseAuthRepository implements AuthRepository {
 
   async login(input: Credentials): Promise<Result<AuthOutcome>> {
     const { error } = await this.client.auth.signInWithPassword(input);
-    if (error) return mapAuthError(error.message, error.status);
+    if (error) {
+      // Distinguishes a genuinely wrong password from a project misconfiguration
+      // — an anon key issued by a different project than the configured URL
+      // fails here, not later, and says so in the status.
+      logAuthDiagnostic("password_sign_in_failed", {
+        status: error.status ?? 0,
+        code: error.code ?? "none"
+      });
+      return mapAuthError(error.message, error.status);
+    }
     const workspace = await this.resolveWorkspace();
     if (!workspace.ok) {
       await this.client.auth.signOut({ scope: "global" });
@@ -83,7 +93,28 @@ export class SupabaseAuthRepository implements AuthRepository {
   private async resolveWorkspace(): Promise<Result<WorkspaceResolution>> {
     const { data, error } = await this.client.rpc("resolve_workspace", { workspace_hint: null });
     const row = Array.isArray(data) ? (data[0] as WorkspaceResolution | undefined) : undefined;
-    return error || !row ? unavailable() : ok(row);
+    if (!error && row) return ok(row);
+
+    // Three very different faults previously produced one identical message:
+    // the RPC failed, the RPC returned nothing, or no session was attached so
+    // auth.uid() was null inside it. Separate them, at the cost of one extra
+    // round trip on the failure path only.
+    if (error) {
+      logAuthDiagnostic("resolve_workspace_error", {
+        code: error.code ?? "none",
+        message: error.message.slice(0, 200)
+      });
+      return unavailable();
+    }
+
+    const { data: session } = await this.client.auth.getUser();
+    logAuthDiagnostic("resolve_workspace_empty", {
+      rows: Array.isArray(data) ? data.length : 0,
+      // If this is false the JWT never reached the RPC, so auth.uid() was null
+      // and the query could not have matched regardless of the data.
+      sessionAttached: Boolean(session?.user)
+    });
+    return unavailable();
   }
 
   private async audit(eventType: string) {
