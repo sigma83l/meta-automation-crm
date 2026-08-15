@@ -119,7 +119,8 @@ export function OnboardingForm({
     }));
   }
 
-  async function save(action: "save" | "complete" | "skip", move = false) {
+  /** Returns false when the step could not be saved, so callers can stop. */
+  async function save(action: "save" | "complete" | "skip", move = false): Promise<boolean> {
     setStatus(t("common.saving"));
     const response = await fetch("/api/onboarding/progress", {
       method: "PATCH",
@@ -145,7 +146,7 @@ export function OnboardingForm({
             ? "ذخیره نشد. دوباره تلاش کنید."
             : "Save failed. Try again."
       );
-      return;
+      return false;
     }
     const result = (await response.json()) as {
       completed: string[];
@@ -157,17 +158,27 @@ export function OnboardingForm({
     setLastSavedAt(result.lastSavedAt);
     setStatus(t("common.saved"));
     if (move && index < stages.length - 1) setIndex(index + 1);
+    return true;
   }
 
   async function enterSandbox() {
-    await save("save");
-    const response = await fetch("/api/onboarding/complete", {
-      method: "POST",
-      headers: { "x-csrf-token": await csrf() }
-    });
-    if (response.ok) {
+    // Every failure here used to be silent: a rejected save was ignored, a
+    // failed completion produced no message, and a thrown request left the
+    // button looking inert. The user saw a click that did nothing.
+    try {
+      if (!(await save("save"))) return;
+      const response = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "x-csrf-token": await csrf() }
+      });
+      if (!response.ok) {
+        setStatus(t("system.errorDetail"));
+        return;
+      }
       router.push("/dashboard");
       router.refresh();
+    } catch {
+      setStatus(t("system.errorDetail"));
     }
   }
 
