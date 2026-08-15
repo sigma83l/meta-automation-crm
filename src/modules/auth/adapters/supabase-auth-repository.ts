@@ -27,7 +27,17 @@ export class SupabaseAuthRepository implements AuthRepository {
         emailRedirectTo: `${this.appUrl}/auth/callback?next=/onboarding`
       }
     });
-    if (error) return mapAuthError(error.message, error.status);
+    if (error) {
+      // The provider refused outright. Previously unlogged, which left the most
+      // common signup failure — an address that already exists — invisible and
+      // indistinguishable from the branches below.
+      logAuthDiagnostic("signup_rejected_by_provider", {
+        status: error.status ?? 0,
+        code: error.code ?? "none",
+        message: error.message.slice(0, 200)
+      });
+      return mapAuthError(error.message, error.status);
+    }
 
     // A user without a session is Supabase telling us the project requires
     // email confirmation. That response is authoritative; the environment flag
