@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerEnvironment } from "@/src/lib/env";
-import { buildHealthPayload, type SupabaseReachability } from "@/src/lib/health";
+import {
+  buildHealthPayload,
+  type CaptchaConfiguration,
+  type SupabaseReachability
+} from "@/src/lib/health";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +37,44 @@ async function probeSupabase(): Promise<SupabaseReachability> {
   }
 }
 
+/**
+ * Asks Cloudflare whether it recognises the configured captcha secret.
+ *
+ * siteverify answers "invalid-input-secret" for a secret it does not know, and
+ * "invalid-input-response" when the secret is fine but the token is not — so a
+ * deliberately invalid token separates a misconfigured secret from a healthy
+ * one without needing a real challenge.
+ */
+async function probeCaptcha(): Promise<CaptchaConfiguration> {
+  const environment = getServerEnvironment();
+  if (environment.authCaptchaMode !== "turnstile") return "not-configured";
+  if (!environment.turnstileSecretKey) return "not-configured";
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: new URLSearchParams({
+        secret: environment.turnstileSecretKey,
+        response: "health-probe-not-a-real-token"
+      }),
+      signal: AbortSignal.timeout(4000),
+      cache: "no-store"
+    });
+    const body = (await response.json()) as { "error-codes"?: readonly string[] };
+    const codes = body["error-codes"] ?? [];
+    return codes.includes("invalid-input-secret") ? "secret-rejected" : "ok";
+  } catch {
+    return "unreachable";
+  }
+}
+
 export async function GET() {
   return NextResponse.json(
-    buildHealthPayload(getServerEnvironment(), new Date(), await probeSupabase()),
+    buildHealthPayload(
+      getServerEnvironment(),
+      new Date(),
+      await probeSupabase(),
+      await probeCaptcha()
+    ),
     {
       status: 200,
       headers: {

@@ -30,15 +30,30 @@ export type HealthPayload = Readonly<{
   infrastructure: Readonly<{
     supabase: "configured" | "pending";
     supabaseConnection: SupabaseReachability;
+    captcha: CaptchaConfiguration;
     inngest: "configured" | "pending";
     liveSending: "disabled" | "enabled";
   }>;
 }>;
 
+/**
+ * Whether the captcha secret is one Cloudflare recognises.
+ *
+ * A site key and its secret are a pair, and this deployment has more than one
+ * widget in play. A secret from the wrong widget lets the challenge render and
+ * then fails every verification server-side, which is indistinguishable from a
+ * user failing the captcha.
+ *
+ * This cannot prove the pair matches — Cloudflare will not say which widget a
+ * secret belongs to — only that the secret itself is known.
+ */
+export type CaptchaConfiguration = "ok" | "secret-rejected" | "unreachable" | "not-configured";
+
 export function buildHealthPayload(
   environment: ServerEnvironment,
   now = new Date(),
-  supabaseConnection: SupabaseReachability = "not-configured"
+  supabaseConnection: SupabaseReachability = "not-configured",
+  captcha: CaptchaConfiguration = "not-configured"
 ): HealthPayload {
   const readiness = configuredInfrastructure(environment);
   return Object.freeze({
@@ -49,6 +64,7 @@ export function buildHealthPayload(
     infrastructure: Object.freeze({
       supabase: readiness.supabase ? "configured" : "pending",
       supabaseConnection,
+      captcha,
       inngest: readiness.inngest ? "configured" : "pending",
       liveSending: readiness.liveSending ? "enabled" : "disabled"
     })
