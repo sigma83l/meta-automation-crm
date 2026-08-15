@@ -1,0 +1,21 @@
+# Template — Repository Baseline
+
+- Repository:
+- Branch:
+- BASE_SHA:
+- Dirty state:
+- Framework/runtime:
+- Package manager:
+- Site routes:
+- App routes:
+- Webhook/API routes:
+- DB migrations current head:
+- RLS/storage summary:
+- Auth/workspace resolver summary:
+- Meta connector summary:
+- Background jobs summary:
+- CI checks:
+- Test counts/types:
+- Provider project IDs (non-secret):
+- Environment matrix:
+- Known conflicts with implementation pack:

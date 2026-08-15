@@ -4,3 +4,6 @@ playwright-report
 test-results
 coverage
 pnpm-lock.yaml
+
+# Vendored specification pack (upstream formatting preserved)
+Rellooma_V1_Backend_Launch_MD_Pack/

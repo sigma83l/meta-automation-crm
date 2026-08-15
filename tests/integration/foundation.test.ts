@@ -20,6 +20,10 @@ describe("foundation wiring", () => {
       timestamp: "2026-07-27T12:00:00.000Z",
       infrastructure: {
         supabase: "pending",
+        // Both probes default to not-configured when the caller supplies no
+        // live reachability result, so the payload stays pure and testable.
+        supabaseConnection: "not-configured",
+        captcha: "not-configured",
         inngest: "pending",
         liveSending: "disabled"
       }
