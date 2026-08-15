@@ -1,7 +1,7 @@
 "use client";
 
-import { Turnstile } from "@marsidev/react-turnstile";
-import { useState, type FormEvent } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/lib/i18n/client";
 
@@ -28,6 +28,22 @@ export function AuthForm({
   const [captchaToken, setCaptchaToken] = useState(() => (turnstileSiteKey ? "" : "local-pass"));
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const captcha = useRef<TurnstileInstance | null>(null);
+
+  /**
+   * A Turnstile token is single-use and short-lived. Once the server has
+   * verified one, Cloudflare rejects any reuse as timeout-or-duplicate.
+   *
+   * The widget does not know that, so it keeps showing a solved tick while
+   * holding a spent token. Any submit that leaves the user on this form must
+   * therefore issue a fresh challenge, or the next attempt fails with "human
+   * verification failed" no matter what they type.
+   */
+  function renewCaptcha() {
+    if (!turnstileSiteKey) return;
+    setCaptchaToken("");
+    captcha.current?.reset();
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,16 +65,19 @@ export function AuthForm({
       if (!result.ok) {
         setState("error");
         setMessage(result.error?.message ?? t("auth.genericFailure"));
+        renewCaptcha();
         return;
       }
       if (mode === "forgot-password") {
         setState("success");
         setMessage(t("auth.resetSent"));
+        renewCaptcha();
         return;
       }
       if (result.value?.confirmationRequired) {
         setState("success");
         setMessage(t("auth.confirmEmail"));
+        renewCaptcha();
         return;
       }
       router.push(result.value?.next ?? (mode === "reset-password" ? "/login" : "/dashboard"));
@@ -66,6 +85,7 @@ export function AuthForm({
     } catch {
       setState("error");
       setMessage(t("auth.serverUnavailable"));
+      renewCaptcha();
     }
   }
 
@@ -105,11 +125,16 @@ export function AuthForm({
       ) : null}
       {turnstileSiteKey && mode !== "reset-password" ? (
         <Turnstile
+          ref={captcha}
           siteKey={turnstileSiteKey}
           options={{
             action: mode === "forgot-password" ? "recovery" : mode === "signup" ? "signup" : "login"
           }}
           onSuccess={setCaptchaToken}
+          // Tokens expire on their own after a few minutes. Drop the stale one
+          // so the button disables rather than submitting something Cloudflare
+          // will refuse.
+          onExpire={() => setCaptchaToken("")}
           onError={() => {
             console.error("Turnstile error - check your site key and network");
             setCaptchaToken("");
