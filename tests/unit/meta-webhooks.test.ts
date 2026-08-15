@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeMetaWebhook } from "@/src/modules/integrations/meta/normalizer";
+import { acceptsInbound, permitsOutbound } from "@/src/modules/integrations/meta/contracts";
 import {
   createSandboxMetaConnectionAdapter,
   sandboxMetaFixtures
@@ -436,5 +437,46 @@ describe("batched ingestion", () => {
     const result = await ingestVerifiedMetaPayload(batched, repository);
     expect(persisted).toEqual(["wamid.b1", "wamid.b3"]);
     expect(result).toMatchObject({ acknowledged: true, acceptedCount: 2, eventCount: 3 });
+  });
+});
+
+describe("connection state predicates", () => {
+  it("accepts inbound only where the connection is live", () => {
+    expect(acceptsInbound("active")).toBe(true);
+    // Impaired, not absent: refusing would lose the customer's words rather
+    // than surface our problem.
+    expect(acceptsInbound("degraded")).toBe(true);
+    for (const status of [
+      "pending",
+      "policy_blocked",
+      "disabled",
+      "reauth_required",
+      "disconnected"
+    ] as const) {
+      expect(`${status}:${acceptsInbound(status)}`).toBe(`${status}:false`);
+    }
+  });
+
+  it("permits outbound on a narrower set than inbound", () => {
+    // A degraded connection may still record what arrives, but is not a safe
+    // send target; a policy-blocked one must never be sent to at all.
+    expect(permitsOutbound("active")).toBe(true);
+    expect(permitsOutbound("degraded")).toBe(false);
+    expect(permitsOutbound("policy_blocked")).toBe(false);
+  });
+
+  it("never permits outbound where inbound is refused", () => {
+    for (const status of [
+      "pending",
+      "active",
+      "degraded",
+      "policy_blocked",
+      "disabled",
+      "reauth_required",
+      "disconnected"
+    ] as const) {
+      if (permitsOutbound(status))
+        expect(`${status}:${acceptsInbound(status)}`).toBe(`${status}:true`);
+    }
   });
 });

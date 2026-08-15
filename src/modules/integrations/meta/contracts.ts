@@ -1,7 +1,33 @@
 import type { Result } from "@/src/lib/result";
 export type MetaChannel = "whatsapp" | "instagram";
 export type MetaConnectionStatus =
-  "pending" | "active" | "disabled" | "reauth_required" | "disconnected";
+  | "pending"
+  | "active"
+  /** Live but impaired: refresh failures, elevated errors, partial capability. */
+  | "degraded"
+  /** The provider has restricted the account; sending is not permitted. */
+  | "policy_blocked"
+  | "disabled"
+  | "reauth_required"
+  | "disconnected";
+
+/** States that accept inbound. Degraded is impaired, not absent. */
+export const LIVE_META_CONNECTION_STATUSES = ["active", "degraded"] as const;
+
+export function acceptsInbound(status: MetaConnectionStatus): boolean {
+  return (LIVE_META_CONNECTION_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Whether an outbound send may be attempted at all.
+ *
+ * Narrower than inbound on purpose: a degraded connection should still record
+ * what the customer said, but a provider that has restricted the account must
+ * not be sent to, and an impaired one is not a safe target either.
+ */
+export function permitsOutbound(status: MetaConnectionStatus): boolean {
+  return status === "active";
+}
 export type AttachmentMetadata = Readonly<{
   providerMediaId: string;
   kind: "image" | "video" | "audio" | "document";

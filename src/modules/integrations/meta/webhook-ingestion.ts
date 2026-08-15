@@ -8,6 +8,8 @@ export type IngestionResult = Readonly<{
     | "duplicate"
     | "unknown_connection"
     | "disabled"
+    | "degraded"
+    | "policy_blocked"
     | "reauth_required"
     | "disconnected"
     | "pending";
