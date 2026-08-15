@@ -53,6 +53,26 @@ export async function ingestVerifiedMetaPayload(
 ) {
   const normalized = normalizeMetaWebhook(payload);
   if (!normalized.ok) return { acknowledged: false, status: "invalid_payload" as const };
-  const result = await repository.ingest(normalized.value);
-  return { acknowledged: true, status: result.result, event: normalized.value, ...result };
+
+  // A delivery can carry many events. Each is ingested on its own so that one
+  // unroutable item cannot discard the rest, and so the unique constraint on
+  // (channel, provider_event_id) deduplicates per event rather than per POST.
+  // Sequential on purpose: per-conversation ordering must survive the batch.
+  const results: IngestionResult[] = [];
+  for (const event of normalized.value) {
+    results.push(await repository.ingest(event));
+  }
+
+  const firstResult = results[0]!;
+  const accepted = results.filter((result) => result.result === "accepted").length;
+  return {
+    acknowledged: true,
+    // Reported for the batch as a whole; per-event outcomes are in `results`.
+    status: firstResult.result,
+    events: normalized.value,
+    results,
+    acceptedCount: accepted,
+    eventCount: normalized.value.length,
+    ...firstResult
+  };
 }
