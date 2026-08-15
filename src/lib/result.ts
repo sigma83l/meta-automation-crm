@@ -17,6 +17,8 @@ export type AppErrorCode =
   | "BILLING_LIVE_BLOCKED"
   | "BILLING_CARD_REGISTRATION_FAILED"
   | "BILLING_STATE_INVALID"
+  /** A provider price that exists at the provider but not in our catalogue. */
+  | "BILLING_PRICE_UNKNOWN"
   | "BILLING_CHARGE_FAILED"
   | "UNEXPECTED_ERROR";
 
