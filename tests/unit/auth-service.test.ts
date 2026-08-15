@@ -132,8 +132,11 @@ describe("AuthService", () => {
         context
       )
     ).resolves.toMatchObject({
+      // Distinct from AUTH_ACCOUNT_UNAVAILABLE: signup being switched off for
+      // the whole deployment is not a statement about anyone's account, and
+      // reporting it as one is what made this hard to diagnose in production.
       ok: false,
-      error: { code: "AUTH_ACCOUNT_UNAVAILABLE" }
+      error: { code: "AUTH_SIGNUP_DISABLED" }
     });
     expect(repo.signup).not.toHaveBeenCalled();
   });
@@ -157,7 +160,7 @@ describe("AuthService", () => {
         },
         context
       )
-    ).resolves.toMatchObject({ ok: false, error: { code: "AUTH_ACCOUNT_UNAVAILABLE" } });
+    ).resolves.toMatchObject({ ok: false, error: { code: "AUTH_SIGNUP_DISABLED" } });
     expect(repo.signup).not.toHaveBeenCalled();
   });
 });

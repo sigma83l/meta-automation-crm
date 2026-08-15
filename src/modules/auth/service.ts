@@ -35,7 +35,7 @@ export class AuthService {
     if (!this.signupEnabled) {
       return err(
         appError(
-          "AUTH_ACCOUNT_UNAVAILABLE",
+          "AUTH_SIGNUP_DISABLED",
           "Account creation is not available. Contact your workspace administrator."
         )
       );
@@ -47,7 +47,7 @@ export class AuthService {
       !this.signupEmailAllowlist.includes(parsed.data.email.toLowerCase())
     ) {
       return err(
-        appError("AUTH_ACCOUNT_UNAVAILABLE", "Account creation is not available for this email.")
+        appError("AUTH_SIGNUP_DISABLED", "Account creation is not available for this email.")
       );
     }
     const guarded = await this.guard("signup", parsed.data.email, context);

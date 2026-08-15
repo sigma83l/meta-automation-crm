@@ -24,6 +24,8 @@ function publicError(error: AppError) {
     VALIDATION_ERROR: "Check the information and try again.",
     AUTH_INVALID_CREDENTIALS: "Email or password could not be accepted.",
     AUTH_ACCOUNT_UNAVAILABLE: "This account is unavailable.",
+    AUTH_SIGNUP_DISABLED:
+      "Account creation is currently disabled for this deployment. Contact your workspace administrator.",
     AUTH_RATE_LIMITED: "Too many attempts. Try again shortly.",
     AUTH_CAPTCHA_FAILED: "Human verification failed.",
     AUTH_SESSION_EXPIRED: "Your session has expired.",
