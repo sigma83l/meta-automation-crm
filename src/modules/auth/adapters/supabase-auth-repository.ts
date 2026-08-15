@@ -28,10 +28,23 @@ export class SupabaseAuthRepository implements AuthRepository {
       }
     });
     if (error) return mapAuthError(error.message, error.status);
-    if (emailConfirmationEnabled && !data.session) {
-      return ok({ next: "/login", confirmationRequired: true });
+
+    // A user without a session is Supabase telling us the project requires
+    // email confirmation. That response is authoritative; the environment flag
+    // is a second copy of the same fact and the two can drift. When they did,
+    // this fell through to unavailable() and reported a successfully created
+    // account as unusable, with no way to tell the two apart.
+    if (!data.session) {
+      if (data.user) {
+        logAuthDiagnostic("signup_awaiting_email_confirmation", {
+          flagSaysConfirmationEnabled: emailConfirmationEnabled
+        });
+        return ok({ next: "/login", confirmationRequired: true });
+      }
+      // No user and no session: the provider accepted nothing.
+      logAuthDiagnostic("signup_returned_no_user");
+      return unavailable();
     }
-    if (!data.session) return unavailable();
     // Managed Better Auth sets its secure session cookie on the response. The
     // database trigger has already provisioned the workspace atomically, while
     // authenticated resolution is intentionally deferred to the next request.
