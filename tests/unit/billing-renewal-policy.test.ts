@@ -4,7 +4,9 @@ import {
   buildDueSubscriptionFilter,
   countConsecutiveFailures,
   hasExhaustedChargeAttempts,
+  graceHasLapsed,
   isTrialGrantable,
+  stateForUnchargeableTrial,
   trialEndAfterTransition
 } from "@/src/modules/billing/renewal-policy";
 
@@ -136,5 +138,42 @@ describe("trial eligibility", () => {
 
   it("refuses when both gates fail", () => {
     expect(isTrialGrantable(false, "2026-08-01T00:00:00.000Z")).toBe(false);
+  });
+});
+
+describe("lapsed trial handling", () => {
+  it("sends a trial with no stored card into a bounded grace window", () => {
+    // The defect this replaces: such a trial became past_due, which the cron
+    // re-selected forever, found no card, and rewrote - no access, no exit.
+    expect(stateForUnchargeableTrial(false)).toBe("trial_expired_grace");
+  });
+
+  it("treats a non-trial with no card as genuinely past due", () => {
+    expect(stateForUnchargeableTrial(true)).toBe("past_due");
+  });
+
+  it("keeps an open grace window open", () => {
+    const now = new Date("2026-08-15T00:00:00.000Z");
+    expect(graceHasLapsed("2026-08-17T00:00:00.000Z", now)).toBe(false);
+  });
+
+  it("closes a grace window at its deadline", () => {
+    const now = new Date("2026-08-18T00:00:00.000Z");
+    expect(graceHasLapsed("2026-08-17T00:00:00.000Z", now)).toBe(true);
+  });
+
+  it("treats an absent deadline as not lapsed", () => {
+    // Any other status carries no deadline; a null must not be read as expiry.
+    expect(graceHasLapsed(null)).toBe(false);
+  });
+
+  it("selects a lapsed grace window for termination", () => {
+    const filter = buildDueSubscriptionFilter("2026-08-15T10:00:00.000Z");
+    expect(filter).toContain("and(status.eq.trial_expired_grace,grace_ends_at.lte.");
+  });
+
+  it("never lets the scheduler resolve a suspended workspace", () => {
+    // Suspension is a policy decision; a background job must not undo it.
+    expect(buildDueSubscriptionFilter("2026-08-15T10:00:00.000Z")).not.toContain("suspended");
   });
 });

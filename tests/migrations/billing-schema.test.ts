@@ -18,9 +18,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * DDL, constraints, plpgsql control flow, and the grant layer.
  */
 
-const migrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260730010000_billing_subscriptions.sql", import.meta.url)
-);
+// Billing schema plus the lifecycle migration that extends its state machine.
+// Applied in order, because the later one redefines the transition function.
+const migrationPaths = [
+  "20260730010000_billing_subscriptions.sql",
+  "20260815130000_account_lifecycle_states.sql"
+].map((name) => fileURLToPath(new URL(`../../supabase/migrations/${name}`, import.meta.url)));
 const preludePath = fileURLToPath(new URL("./prelude.sql", import.meta.url));
 
 let db: PGlite;
@@ -37,11 +40,21 @@ async function newWorkspace(name: string): Promise<string> {
 async function transition(
   id: string,
   status: string,
-  options: { trialEndsAt?: string | null; periodEndsAt?: string | null } = {}
+  options: {
+    trialEndsAt?: string | null;
+    periodEndsAt?: string | null;
+    graceEndsAt?: string | null;
+  } = {}
 ) {
   const result = await db.query<{ ok: boolean }>(
-    "select public.transition_workspace_subscription($1,$2,null,$3,$4) as ok",
-    [id, status, options.trialEndsAt ?? null, options.periodEndsAt ?? null]
+    "select public.transition_workspace_subscription($1,$2,null,$3,$4,$5) as ok",
+    [
+      id,
+      status,
+      options.trialEndsAt ?? null,
+      options.periodEndsAt ?? null,
+      options.graceEndsAt ?? null
+    ]
   );
   return result.rows[0]!.ok;
 }
@@ -62,7 +75,7 @@ async function subscription(id: string) {
 beforeAll(async () => {
   db = await PGlite.create();
   await db.exec(readFileSync(preludePath, "utf8"));
-  await db.exec(readFileSync(migrationPath, "utf8"));
+  for (const path of migrationPaths) await db.exec(readFileSync(path, "utf8"));
   // The migration seeds its own default plan, which the workspace trigger
   // attaches to every new subscription.
   workspaceId = await newWorkspace("acme");
@@ -135,6 +148,74 @@ describe("subscription state machine", () => {
   it("does not penalise a workspace that has never trialed", async () => {
     const fresh = await newWorkspace("beta");
     expect(await transition(fresh, "trialing", { trialEndsAt: "2026-08-25T00:00:00Z" })).toBe(true);
+  });
+});
+
+describe("lapsed trial lifecycle", () => {
+  let lapsing: string;
+
+  it("moves a trial into grace and records the deadline", async () => {
+    lapsing = await newWorkspace("lapsing");
+    expect(await transition(lapsing, "trialing", { trialEndsAt: "2026-08-20T00:00:00Z" })).toBe(
+      true
+    );
+    expect(
+      await transition(lapsing, "trial_expired_grace", {
+        graceEndsAt: "2026-08-23T00:00:00Z"
+      })
+    ).toBe(true);
+    const row = await db.query<{ status: string; grace_ends_at: string | null }>(
+      "select status, grace_ends_at from public.workspace_subscriptions where workspace_id = $1",
+      [lapsing]
+    );
+    expect(row.rows[0]!.status).toBe("trial_expired_grace");
+    expect(row.rows[0]!.grace_ends_at).not.toBeNull();
+  });
+
+  it("refuses to re-enter grace, which would extend the window indefinitely", async () => {
+    await expect(
+      transition(lapsing, "trial_expired_grace", { graceEndsAt: "2026-09-30T00:00:00Z" })
+    ).rejects.toThrow(/illegal subscription transition/);
+  });
+
+  it("lets a workspace escape grace by paying", async () => {
+    expect(await transition(lapsing, "active", { periodEndsAt: "2026-09-23T00:00:00Z" })).toBe(
+      true
+    );
+    const row = await db.query<{ grace_ends_at: string | null }>(
+      "select grace_ends_at from public.workspace_subscriptions where workspace_id = $1",
+      [lapsing]
+    );
+    // A stale deadline must not survive; it could otherwise re-close later.
+    expect(row.rows[0]!.grace_ends_at).toBeNull();
+  });
+
+  it("refuses grace for anything that was never trialing", async () => {
+    const paid = await newWorkspace("never-trialed");
+    expect(await transition(paid, "active", { periodEndsAt: "2026-09-23T00:00:00Z" })).toBe(true);
+    await expect(
+      transition(paid, "trial_expired_grace", { graceEndsAt: "2026-09-30T00:00:00Z" })
+    ).rejects.toThrow(/illegal subscription transition/);
+  });
+});
+
+describe("suspension", () => {
+  it("can suspend from any live status and reinstate", async () => {
+    const ws = await newWorkspace("suspendable");
+    expect(await transition(ws, "active", { periodEndsAt: "2026-09-23T00:00:00Z" })).toBe(true);
+    expect(await transition(ws, "suspended")).toBe(true);
+    // Recoverable by design: suspension withdraws access, it does not end the
+    // relationship the way cancellation does.
+    expect(await transition(ws, "active", { periodEndsAt: "2026-10-23T00:00:00Z" })).toBe(true);
+  });
+
+  it("still refuses a second trial after suspension", async () => {
+    const ws = await newWorkspace("suspended-trialer");
+    expect(await transition(ws, "trialing", { trialEndsAt: "2026-08-20T00:00:00Z" })).toBe(true);
+    expect(await transition(ws, "suspended")).toBe(true);
+    await expect(
+      transition(ws, "trialing", { trialEndsAt: "2026-12-01T00:00:00Z" })
+    ).rejects.toThrow(/already consumed/);
   });
 });
 

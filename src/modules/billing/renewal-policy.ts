@@ -10,6 +10,35 @@
 /** Consecutive failed charges tolerated before a subscription is cancelled. */
 export const BILLING_MAX_CHARGE_ATTEMPTS = 5;
 
+/**
+ * How long a lapsed trial keeps its data before the subscription is closed.
+ *
+ * Bounded on purpose. Previously a trial that ended without a payment method
+ * became past_due, which the charge cron re-selected on every tick, found no
+ * card, and wrote again - an unbounded dead end with no access and no exit.
+ */
+export const TRIAL_GRACE_MS = 72 * 60 * 60 * 1000;
+
+/**
+ * Where a due trial goes when it cannot be charged.
+ *
+ * With a stored card the charge is attempted. Without one there is nothing to
+ * attempt, so the workspace enters a deadline-bounded grace window instead of
+ * a state it could never leave.
+ */
+export function stateForUnchargeableTrial(
+  hasPaymentMethod: boolean
+): "past_due" | "trial_expired_grace" {
+  return hasPaymentMethod ? "past_due" : "trial_expired_grace";
+}
+
+/** Whether an open grace window has closed. */
+export function graceHasLapsed(graceEndsAt: string | null, now: Date = new Date()): boolean {
+  if (!graceEndsAt) return false;
+  const deadline = new Date(graceEndsAt).getTime();
+  return Number.isFinite(deadline) && deadline <= now.getTime();
+}
+
 export type ChargeAttemptStatus = "pending" | "succeeded" | "declined" | "charge_unknown";
 
 /**
@@ -24,7 +53,11 @@ export function buildDueSubscriptionFilter(nowIso: string): string {
   return [
     `and(status.eq.trialing,trial_ends_at.lte.${nowIso})`,
     `and(status.eq.active,current_period_ends_at.lte.${nowIso})`,
-    `and(status.eq.past_due,current_period_ends_at.lte.${nowIso})`
+    `and(status.eq.past_due,current_period_ends_at.lte.${nowIso})`,
+    // A closed grace window must be picked up so it can be terminated;
+    // suspended is deliberately absent, being a policy state the scheduler
+    // must never resolve on its own.
+    `and(status.eq.trial_expired_grace,grace_ends_at.lte.${nowIso})`
   ].join(",");
 }
 

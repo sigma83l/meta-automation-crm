@@ -3,7 +3,16 @@ import type { BillingActionAuthorization } from "./live-billing-gate";
 
 export type BillingProviderName = "fake" | "paytr";
 
-export type SubscriptionStatus = "incomplete" | "trialing" | "active" | "past_due" | "canceled";
+export type SubscriptionStatus =
+  | "incomplete"
+  | "trialing"
+  /** Trial ended unpaid; data preserved, bounded window to add a card. */
+  | "trial_expired_grace"
+  | "active"
+  | "past_due"
+  /** Access withdrawn by policy rather than billing; recoverable. */
+  | "suspended"
+  | "canceled";
 
 export type BillingStatus = Readonly<{
   status: SubscriptionStatus;

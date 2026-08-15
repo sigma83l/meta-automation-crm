@@ -6,9 +6,12 @@ import { decryptCredential } from "@/src/modules/ai/credential-vault";
 import { resolvePaymentProvider } from "@/src/modules/billing/subscription-service";
 import {
   BILLING_MAX_CHARGE_ATTEMPTS,
+  TRIAL_GRACE_MS,
   buildDueSubscriptionFilter,
   countConsecutiveFailures,
+  graceHasLapsed,
   hasExhaustedChargeAttempts,
+  stateForUnchargeableTrial,
   trialEndAfterTransition
 } from "@/src/modules/billing/renewal-policy";
 import { inngest } from "./client";
@@ -290,7 +293,7 @@ export const chargeDueTrialsAndSubscriptions = inngest.createFunction(
       const nowIso = new Date().toISOString();
       const { data, error } = await admin
         .from("workspace_subscriptions")
-        .select("id,workspace_id,status,trial_ends_at,current_period_ends_at,plan_id")
+        .select("id,workspace_id,status,trial_ends_at,current_period_ends_at,grace_ends_at,plan_id")
         .or(buildDueSubscriptionFilter(nowIso))
         .limit(100);
       if (error) throw new Error("DUE_SUBSCRIPTIONS_READ_FAILED");
@@ -320,6 +323,22 @@ export const chargeDueTrialsAndSubscriptions = inngest.createFunction(
           .order("attempt_number", { ascending: false })
           .limit(1)
           .maybeSingle();
+
+        // A grace window that has closed ends the subscription. Checked before
+        // anything else: there is nothing to charge and nothing to retry.
+        if (row.status === "trial_expired_grace") {
+          if (graceHasLapsed((row.grace_ends_at as string | null) ?? null)) {
+            await admin.rpc("transition_workspace_subscription", {
+              trusted_workspace_id: row.workspace_id,
+              trusted_new_status: "canceled",
+              trusted_plan_id: row.plan_id,
+              trusted_trial_ends_at: row.trial_ends_at,
+              trusted_current_period_ends_at: row.current_period_ends_at,
+              trusted_grace_ends_at: null
+            });
+          }
+          return { action: "skip" as const };
+        }
 
         if (lastAttempt?.status === "charge_unknown") {
           // Ambiguous prior outcome — requires manual reconciliation before
@@ -368,12 +387,19 @@ export const chargeDueTrialsAndSubscriptions = inngest.createFunction(
           .eq("status", "active")
           .maybeSingle();
         if (!paymentMethod) {
+          // Without a stored card there is nothing to attempt. A trial gets a
+          // deadline-bounded grace window; anything else is genuinely past due.
+          const nextStatus = stateForUnchargeableTrial(row.status !== "trialing");
           await admin.rpc("transition_workspace_subscription", {
             trusted_workspace_id: row.workspace_id,
-            trusted_new_status: "past_due",
+            trusted_new_status: nextStatus,
             trusted_plan_id: row.plan_id,
             trusted_trial_ends_at: row.trial_ends_at,
-            trusted_current_period_ends_at: row.current_period_ends_at
+            trusted_current_period_ends_at: row.current_period_ends_at,
+            trusted_grace_ends_at:
+              nextStatus === "trial_expired_grace"
+                ? new Date(Date.now() + TRIAL_GRACE_MS).toISOString()
+                : null
           });
           return { action: "skip" as const };
         }
