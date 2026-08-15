@@ -21,8 +21,7 @@ than silently overwritten.
 
 ## Immediate blockers
 
-- **C-012** blocks P1: applying new migrations to a project whose current state
-  was not produced by these migrations risks failure or drift.
+- ~~**C-012** blocks P1~~ — resolved, no drift. P1 proceeded.
 - **C-001** blocks P6 and needs an owner decision before any billing work.
 - **C-011** determines whether `06_site_backend/` applies to this repository at
   all.
