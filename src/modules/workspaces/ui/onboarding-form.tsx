@@ -182,6 +182,17 @@ export function OnboardingForm({
     }
   }
 
+  /** Leaves the setup without marking it complete; the rail keeps the place. */
+  async function saveAndExit() {
+    try {
+      if (!(await save("save"))) return;
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setStatus(t("system.errorDetail"));
+    }
+  }
+
   const blurSave = () => void save("save");
 
   return (
@@ -438,13 +449,19 @@ export function OnboardingForm({
           >
             {t("common.skip")}
           </button>
-          <button type="button" className="button-muted action-exit" onClick={enterSandbox}>
+          <button
+            type="button"
+            className="button-muted action-exit"
+            onClick={() => void saveAndExit()}
+          >
             {t("common.exit")}
           </button>
           <button
             type="button"
             className="action-continue"
-            onClick={() => void save("complete", true)}
+            onClick={() =>
+              void (index === stages.length - 1 ? enterSandbox() : save("complete", true))
+            }
           >
             {index === stages.length - 1 ? t("onboarding.enter") : t("common.next")}
           </button>
