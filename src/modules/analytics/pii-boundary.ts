@@ -1,3 +1,5 @@
+import { looksLikePersonalData } from "@/src/modules/security/pii-shapes";
+
 /**
  * What may leave for an external analytics tool, and what may never.
  *
@@ -97,13 +99,6 @@ export const NEVER_EXPORTED_PROPERTIES: readonly string[] = Object.freeze([
   "meta_payload"
 ]);
 
-const PII_SHAPED: readonly RegExp[] = Object.freeze([
-  /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/, // email address
-  /\+?\d[\d\s().-]{7,}\d/, // phone number
-  /\bwamid\.[A-Za-z0-9_-]+/i, // provider message id
-  /\bhttps?:\/\/\S+/i // any URL, which may be a signed media link
-]);
-
 /**
  * Whether a value looks like personal data regardless of what it is called.
  *
@@ -112,13 +107,11 @@ const PII_SHAPED: readonly RegExp[] = Object.freeze([
  * carrying something it should not — a `source` set to the customer's email
  * because somebody upstream used it as an identifier.
  *
- * Deliberately shape-based and therefore over-eager. A dropped property is a
- * gap in a chart; a leaked one cannot be recalled.
+ * Shared with the deletion tombstone check rather than duplicated: two copies
+ * of a security boundary is two things to keep in step, and the copy that
+ * drifts is always the one nobody remembers exists.
  */
-export function looksLikePersonalData(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  return PII_SHAPED.some((pattern) => pattern.test(value));
-}
+export { looksLikePersonalData };
 
 export type ExternalProperties = Readonly<Record<string, string | number | boolean>>;
 
