@@ -495,7 +495,9 @@ export const chargeDueTrialsAndSubscriptions = inngest.createFunction(
           // real end-user IP genuinely doesn't exist here.
           userIp: "0.0.0.0",
           authorization: {
-            mode: env.paymentProviderMode === "paytr" ? "live" : "sandbox",
+            // Naming the one sandbox mode rather than listing the live ones, so
+            // a provider added later defaults to live.
+            mode: env.paymentProviderMode === "fake" ? "sandbox" : "live",
             environmentEnabled: env.liveBillingEnabled,
             explicitApproval: env.billingLiveApproved,
             merchantAllowlisted:

@@ -26,23 +26,36 @@ import { createPaytrPaymentProvider } from "./providers/paytr-payment-provider";
 
 export function resolvePaymentProvider(): PaymentProvider {
   const env = getServerEnvironment();
-  if (env.paymentProviderMode === "paytr") {
-    if (!env.paytrMerchantId || !env.paytrMerchantKey || !env.paytrMerchantSalt) {
-      throw new Error("PayTR merchant credentials are not configured.");
+  switch (env.paymentProviderMode) {
+    case "paytr": {
+      if (!env.paytrMerchantId || !env.paytrMerchantKey || !env.paytrMerchantSalt) {
+        throw new Error("PayTR merchant credentials are not configured.");
+      }
+      return createPaytrPaymentProvider({
+        merchantId: env.paytrMerchantId,
+        merchantKey: env.paytrMerchantKey,
+        merchantSalt: env.paytrMerchantSalt
+      });
     }
-    return createPaytrPaymentProvider({
-      merchantId: env.paytrMerchantId,
-      merchantKey: env.paytrMerchantKey,
-      merchantSalt: env.paytrMerchantSalt
-    });
+    case "paddle":
+      // The Paddle webhook and authority path exist; the PaymentProvider
+      // adapter does not, because there is no account to build it against yet.
+      // Refusing here is the point: falling through to the fake provider would
+      // mean a deployment configured for Paddle quietly ran on an adapter that
+      // verifies no signature and treats itself as sandbox.
+      throw new Error("Paddle mode is configured but no Paddle payment adapter is available yet.");
+    case "fake":
+      return createFakePaymentProvider();
   }
-  return createFakePaymentProvider();
 }
 
 function billingAuthorization(): BillingActionAuthorization {
   const env = getServerEnvironment();
   return {
-    mode: env.paymentProviderMode === "paytr" ? "live" : "sandbox",
+    // Anything that is not the fake adapter is a live money path. Naming the
+    // one sandbox mode rather than listing the live ones means a provider added
+    // later defaults to live, which is the safe direction to be wrong in.
+    mode: env.paymentProviderMode === "fake" ? "sandbox" : "live",
     environmentEnabled: env.liveBillingEnabled,
     explicitApproval: env.billingLiveApproved,
     merchantAllowlisted: env.paymentProviderMode === "paytr" ? Boolean(env.paytrMerchantId) : true

@@ -66,10 +66,17 @@ const serverEnvironmentSchema = z.object({
   CRM_EXPORT_MAX_FILES: z.coerce.number().int().min(0).max(10000).default(1000),
   CRM_EXPORT_MAX_BYTES: z.coerce.number().int().min(1048576).max(104857600).default(104857600),
   CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
-  PAYMENT_PROVIDER_MODE: z.enum(["fake", "paytr"]).default("fake"),
+  PAYMENT_PROVIDER_MODE: z.enum(["fake", "paytr", "paddle"]).default("fake"),
   PAYTR_MERCHANT_ID: optionalNonEmpty,
   PAYTR_MERCHANT_KEY: optionalNonEmpty,
   PAYTR_MERCHANT_SALT: optionalNonEmpty,
+  // Paddle. The account does not exist yet, so these are unset everywhere and
+  // paddle mode cannot be selected until they are filled in - see the check in
+  // assertEnvironmentInvariants and the placeholder catalogue in
+  // src/modules/billing/providers/paddle/catalogue.ts.
+  PADDLE_API_KEY: optionalNonEmpty,
+  PADDLE_WEBHOOK_SECRET: optionalNonEmpty,
+  PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   LIVE_BILLING_ENABLED: z.enum(["true", "false"]).default("false"),
   BILLING_LIVE_APPROVED: z.enum(["true", "false"]).default("false"),
   BILLING_FINGERPRINT_HASH_KEY: optionalNonEmpty,
@@ -123,10 +130,13 @@ export type ServerEnvironment = Readonly<{
   crmExportMaxFiles: number;
   crmExportMaxBytes: number;
   crmExportTtlSeconds: number;
-  paymentProviderMode: "fake" | "paytr";
+  paymentProviderMode: "fake" | "paytr" | "paddle";
   paytrMerchantId?: string;
   paytrMerchantKey?: string;
   paytrMerchantSalt?: string;
+  paddleApiKey?: string;
+  paddleWebhookSecret?: string;
+  paddleEnvironment: "sandbox" | "production";
   liveBillingEnabled: boolean;
   billingLiveApproved: boolean;
   billingFingerprintHashKey?: string;
@@ -223,6 +233,9 @@ export function parseServerEnvironment(
     ...(parsed.PAYTR_MERCHANT_ID ? { paytrMerchantId: parsed.PAYTR_MERCHANT_ID } : {}),
     ...(parsed.PAYTR_MERCHANT_KEY ? { paytrMerchantKey: parsed.PAYTR_MERCHANT_KEY } : {}),
     ...(parsed.PAYTR_MERCHANT_SALT ? { paytrMerchantSalt: parsed.PAYTR_MERCHANT_SALT } : {}),
+    ...(parsed.PADDLE_API_KEY ? { paddleApiKey: parsed.PADDLE_API_KEY } : {}),
+    ...(parsed.PADDLE_WEBHOOK_SECRET ? { paddleWebhookSecret: parsed.PADDLE_WEBHOOK_SECRET } : {}),
+    paddleEnvironment: parsed.PADDLE_ENVIRONMENT,
     liveBillingEnabled: parsed.LIVE_BILLING_ENABLED === "true",
     billingLiveApproved: parsed.BILLING_LIVE_APPROVED === "true",
     ...(parsed.BILLING_FINGERPRINT_HASH_KEY
@@ -309,6 +322,22 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
   }
   if ((parsed.BILLING_CALLBACK_STATE_SECRET?.length ?? 0) < 32) {
     throw new Error("BILLING_CALLBACK_STATE_SECRET must contain at least 32 characters.");
+  }
+  if (parsed.PAYMENT_PROVIDER_MODE === "paddle") {
+    // The webhook secret is the whole of the trust boundary: without it every
+    // notification is unverifiable, and an unverifiable notification must never
+    // reach the billing authority.
+    if (!parsed.PADDLE_WEBHOOK_SECRET) {
+      throw new Error("Paddle mode requires PADDLE_WEBHOOK_SECRET.");
+    }
+    if (!parsed.PADDLE_API_KEY) {
+      throw new Error("Paddle mode requires PADDLE_API_KEY.");
+    }
+    if (parsed.LIVE_BILLING_ENABLED === "true" && parsed.BILLING_LIVE_APPROVED !== "true") {
+      throw new Error(
+        "Live billing requires explicit BILLING_LIVE_APPROVED alongside the environment gate."
+      );
+    }
   }
   if (parsed.PAYMENT_PROVIDER_MODE === "paytr") {
     if (!parsed.PAYTR_MERCHANT_ID || !parsed.PAYTR_MERCHANT_KEY || !parsed.PAYTR_MERCHANT_SALT) {
