@@ -29,6 +29,13 @@ create table public.workspace_memberships (
   primary key (workspace_id, user_id)
 );
 
+-- Returns null, as in platform-stub.sql: these replays check structure and
+-- privileges, not per-request identity. A policy that calls auth.uid() must
+-- still be creatable, which is what this exists for.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select null::uuid
+$$;
+
 create or replace function private.is_active_member(target_workspace_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select exists (
