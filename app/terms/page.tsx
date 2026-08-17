@@ -79,9 +79,11 @@ export default function TermsOfServicePage() {
         </p>
         <p>
           Subscriptions renew automatically until cancelled. You may cancel at any time;
-          cancellation takes effect as described in the billing settings of your workspace. Refunds
-          are handled under <code>[REFUND POLICY]</code>, and nothing here limits any statutory
-          cancellation right you may have under <code>[GOVERNING LAW]</code>.
+          cancellation takes effect as described in the billing settings of your workspace.
+          Cancelling stops future renewals and your access continues to the end of the period you
+          have already paid for. We do not refund part-used periods, except where required by law or
+          where the Service was unavailable for a sustained period through our fault. Nothing here
+          limits any statutory cancellation right you may have under <code>[GOVERNING LAW]</code>.
         </p>
       </section>
 
@@ -111,8 +113,8 @@ export default function TermsOfServicePage() {
           without warranties of any kind. Nothing in these terms excludes liability that cannot
           lawfully be excluded, including for death or personal injury caused by negligence, or for
           fraud. Subject to that, our aggregate liability arising out of these terms is limited to{" "}
-          <code>[LIABILITY CAP]</code>, and we are not liable for indirect or consequential loss, or
-          for loss of profit, revenue or data.
+          the total fees you paid to us in the twelve months before the claim, and we are not liable
+          for indirect or consequential loss, or for loss of profit, revenue or data.
         </p>
       </section>
 
