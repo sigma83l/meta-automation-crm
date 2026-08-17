@@ -25,8 +25,8 @@ export function LegalPage({
         <p className="legal-doc__notice" role="note">
           <strong>Draft pending legal review.</strong> This document describes how the service is
           built and currently behaves. It has not been reviewed by a qualified lawyer and is not
-          legal advice. Every value shown as <code>[IN BRACKETS]</code> must be replaced with real
-          company details before this is relied upon publicly.
+          legal advice. Company registration details are shown as <em>to be confirmed</em> and must
+          be completed before this is relied upon publicly.
         </p>
 
         {children}

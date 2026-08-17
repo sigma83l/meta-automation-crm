@@ -13,9 +13,9 @@ export default function TermsOfServicePage() {
         <h2>Agreement</h2>
         <p>
           These terms govern use of Relay CRM (&ldquo;the Service&rdquo;), operated by{" "}
-          <code>[LEGAL ENTITY NAME]</code>. By creating a workspace or using the Service you agree
-          to them. If you are agreeing on behalf of a company, you confirm you are authorised to
-          bind it.
+          <em>Rellooma — registered entity details to be confirmed</em>. By creating a workspace or
+          using the Service you agree to them. If you are agreeing on behalf of a company, you
+          confirm you are authorised to bind it.
         </p>
       </section>
 
@@ -84,7 +84,7 @@ export default function TermsOfServicePage() {
           Cancelling stops future renewals and your access continues to the end of the period you
           have already paid for. We do not refund part-used periods, except where required by law or
           where the Service was unavailable for a sustained period through our fault. Nothing here
-          limits any statutory cancellation right you may have under <code>[GOVERNING LAW]</code>.
+          limits any statutory cancellation right you may have under Türkiye.
         </p>
       </section>
 
@@ -141,9 +141,9 @@ export default function TermsOfServicePage() {
       <section>
         <h2>Governing law</h2>
         <p>
-          These terms are governed by the laws of <code>[GOVERNING LAW]</code>, and the courts of{" "}
-          <code>[JURISDICTION]</code> have exclusive jurisdiction, subject to any mandatory consumer
-          protections in your country of residence.
+          These terms are governed by the laws of Türkiye, and the courts of the courts of Istanbul,
+          Türkiye have exclusive jurisdiction, subject to any mandatory consumer protections in your
+          country of residence.
         </p>
         <p>
           Questions about these terms:{" "}

@@ -12,8 +12,10 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2>Who we are</h2>
         <p>
-          Relay CRM (&ldquo;the Service&rdquo;) is operated by <code>[LEGAL ENTITY NAME]</code>,
-          registered at <code>[REGISTERED ADDRESS]</code>. For any privacy question, contact{" "}
+          Relay CRM (&ldquo;the Service&rdquo;) is operated by{" "}
+          <em>Rellooma — registered entity details to be confirmed</em>, registered at{" "}
+          <em>registered address to be confirmed; write to privacy@rellooma.com in the meantime</em>
+          . For any privacy question, contact{" "}
           <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a>.
         </p>
         <p>
@@ -141,8 +143,8 @@ export default function PrivacyPolicyPage() {
           Deletion is described in detail on our <a href="/data-deletion">Data Deletion</a> page.
         </p>
         <p>
-          You may also lodge a complaint with your local supervisory authority (
-          <code>[SUPERVISORY AUTHORITY]</code>).
+          You may also lodge a complaint with your local supervisory authority ( the Turkish
+          Personal Data Protection Authority (KVKK)).
         </p>
       </section>
 

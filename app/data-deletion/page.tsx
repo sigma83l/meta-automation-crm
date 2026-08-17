@@ -78,7 +78,7 @@ export default function DataDeletionPage() {
           </li>
           <li>
             <strong>Billing and tax records</strong> — retained for the period required by
-            applicable law in <code>[GOVERNING LAW]</code>, typically for accounting purposes.
+            applicable law in Türkiye, typically for accounting purposes.
           </li>
           <li>
             <strong>Backups</strong> — deleted data persists in encrypted backups until those
@@ -115,7 +115,8 @@ export default function DataDeletionPage() {
         <p>
           Deletion requests and questions:{" "}
           <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a>. Postal address:{" "}
-          <code>[REGISTERED ADDRESS]</code>.
+          <em>registered address to be confirmed; write to privacy@rellooma.com in the meantime</em>
+          .
         </p>
       </section>
     </LegalPage>
