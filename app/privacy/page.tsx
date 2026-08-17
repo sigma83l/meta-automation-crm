@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
         </ul>
         <p>
           A current list naming each subprocessor is available at{" "}
-          <code>[SUBPROCESSOR LIST URL]</code>.
+          <a href="/subprocessors">rellooma.com/subprocessors</a>.
         </p>
       </section>
 
@@ -149,8 +149,9 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2>International transfers</h2>
         <p>
-          Data may be processed in <code>[PROCESSING REGIONS]</code>. Where data leaves your region,
-          we rely on <code>[TRANSFER MECHANISM]</code>.
+          Data may be processed in <strong>India (Mumbai, ap-south-1)</strong> for the primary
+          database and file storage, and on Vercel’s global edge network for application hosting.
+          Where data leaves your region, we rely on <code>[TRANSFER MECHANISM]</code>.
         </p>
       </section>
 

@@ -36,6 +36,7 @@ export function LegalPage({
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Service</Link>
             <Link href="/data-deletion">Data Deletion</Link>
+            <Link href="/subprocessors">Subprocessors</Link>
           </nav>
         </footer>
       </article>
