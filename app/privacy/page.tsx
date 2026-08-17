@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Relay CRM (&ldquo;the Service&rdquo;) is operated by <code>[LEGAL ENTITY NAME]</code>,
           registered at <code>[REGISTERED ADDRESS]</code>. For any privacy question, contact{" "}
-          <code>[PRIVACY CONTACT EMAIL]</code>.
+          <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a>.
         </p>
         <p>
           The Service lets a business connect its own messaging channels and manage the resulting
@@ -137,8 +137,8 @@ export default function PrivacyPolicyPage() {
           Depending on where you live, you may have rights to access, correct, export, restrict or
           delete your personal data, and to object to processing. If you are a customer of a
           business using the Service, please contact that business first, since it controls the
-          record. Otherwise contact <code>[PRIVACY CONTACT EMAIL]</code>. Deletion is described in
-          detail on our <a href="/data-deletion">Data Deletion</a> page.
+          record. Otherwise contact <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a>.
+          Deletion is described in detail on our <a href="/data-deletion">Data Deletion</a> page.
         </p>
         <p>
           You may also lodge a complaint with your local supervisory authority (

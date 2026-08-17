@@ -39,7 +39,8 @@ export default function TermsOfServicePage() {
           You are responsible for the accuracy of your account details, for keeping credentials
           secure, and for all activity in your workspace. Roles within a workspace carry different
           authority; the workspace owner is responsible for who they grant access to. Notify us at{" "}
-          <code>[SUPPORT CONTACT EMAIL]</code> if you believe an account has been compromised.
+          <a href="mailto:support@rellooma.com">support@rellooma.com</a> if you believe an account
+          has been compromised.
         </p>
       </section>
 
@@ -145,7 +146,8 @@ export default function TermsOfServicePage() {
           protections in your country of residence.
         </p>
         <p>
-          Questions about these terms: <code>[SUPPORT CONTACT EMAIL]</code>.
+          Questions about these terms:{" "}
+          <a href="mailto:support@rellooma.com">support@rellooma.com</a>.
         </p>
       </section>
     </LegalPage>

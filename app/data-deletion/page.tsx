@@ -14,8 +14,9 @@ export default function DataDeletionPage() {
         <p>
           If you are a <strong>customer of a business</strong> that uses Relay CRM to answer its
           messages, that business holds your record and decides what happens to it. Contact the
-          business directly. If you cannot reach them, write to <code>[PRIVACY CONTACT EMAIL]</code>{" "}
-          and we will forward your request and assist as the processor.
+          business directly. If you cannot reach them, write to{" "}
+          <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a> and we will forward your
+          request and assist as the processor.
         </p>
         <p>
           If you are a <strong>workspace owner or user</strong> of Relay CRM, follow the steps
@@ -50,9 +51,9 @@ export default function DataDeletionPage() {
         <h2>Delete an entire workspace and account</h2>
         <p>
           Send a request from the email address registered to the workspace owner to{" "}
-          <code>[PRIVACY CONTACT EMAIL]</code> with the subject <em>Workspace deletion</em>,
-          including the workspace name. We will verify that the request genuinely comes from the
-          owner before acting, because this is irreversible.
+          <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a> with the subject{" "}
+          <em>Workspace deletion</em>, including the workspace name. We will verify that the request
+          genuinely comes from the owner before acting, because this is irreversible.
         </p>
         <p>
           Once verified, we remove the workspace and everything scoped to it: customer records and
@@ -112,7 +113,8 @@ export default function DataDeletionPage() {
       <section>
         <h2>Contact</h2>
         <p>
-          Deletion requests and questions: <code>[PRIVACY CONTACT EMAIL]</code>. Postal address:{" "}
+          Deletion requests and questions:{" "}
+          <a href="mailto:privacy@rellooma.com">privacy@rellooma.com</a>. Postal address:{" "}
           <code>[REGISTERED ADDRESS]</code>.
         </p>
       </section>
