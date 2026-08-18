@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "@/src/lib/i18n/client";
@@ -93,13 +92,20 @@ export function OnboardingForm({
   initialData: Readonly<Record<string, Draft>>;
   initialLastSavedAt?: string;
 }) {
-  const router = useRouter();
   const { locale, theme, t, text } = useI18n();
   const firstIncomplete = stages.findIndex(
     ([id]) => !initialCompleted.includes(id) && !initialSkipped.includes(id)
   );
   const restored = stages.findIndex(([id]) => id === initialStage);
-  const [index, setIndex] = useState(restored >= 0 ? restored : Math.max(firstIncomplete, 0));
+  const restoredIsResolved =
+    restored >= 0 &&
+    (initialCompleted.includes(stages[restored]?.[0] ?? "") ||
+      initialSkipped.includes(stages[restored]?.[0] ?? ""));
+  const initialIndex =
+    firstIncomplete >= 0 && (restored < 0 || restoredIsResolved)
+      ? firstIncomplete
+      : Math.max(restored, 0);
+  const [index, setIndex] = useState(initialIndex);
   const [completed, setCompleted] = useState([...initialCompleted]);
   const [skipped, setSkipped] = useState([...initialSkipped]);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({ ...initialData });
@@ -175,8 +181,10 @@ export function OnboardingForm({
         setStatus(t("system.errorDetail"));
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      // A full navigation rather than router.push: finishing onboarding
+      // changes what every server component renders, and a client-side push
+      // can serve a cached RSC payload that still shows the setup state.
+      window.location.assign("/dashboard");
     } catch {
       setStatus(t("system.errorDetail"));
     }
@@ -186,8 +194,7 @@ export function OnboardingForm({
   async function saveAndExit() {
     try {
       if (!(await save("save"))) return;
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch {
       setStatus(t("system.errorDetail"));
     }
@@ -225,8 +232,12 @@ export function OnboardingForm({
                       : ""
               }
             >
-              <button type="button" onClick={() => setIndex(stageIndex)}>
-                <span>{completed.includes(id) ? "✓" : stageIndex + 1}</span>
+              <button
+                type="button"
+                aria-current={stageIndex === index ? "step" : undefined}
+                onClick={() => setIndex(stageIndex)}
+              >
+                <span aria-hidden="true">{completed.includes(id) ? "✓" : stageIndex + 1}</span>
                 {t(title)}
               </button>
             </li>

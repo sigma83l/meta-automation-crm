@@ -1,13 +1,14 @@
-import { EmptyState } from "@/src/components/ui/empty-state";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function SettingsLoading() {
+export default async function SettingsLoading() {
+  const { t } = await getRequestPreferences();
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <EmptyState
-          title="Loading workspace settings…"
-          description="Reading business policy and masked credential status."
-        />
+        <div className="empty-guidance">
+          <strong>{t("common.loading")}</strong>
+          <span>{t("nav.settings")}</span>
+        </div>
       </section>
     </main>
   );

@@ -1,13 +1,14 @@
-import { EmptyState } from "@/src/components/ui/empty-state";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function Loading() {
+export default async function Loading() {
+  const { t } = await getRequestPreferences();
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <EmptyState
-          title="Loading integrations…"
-          description="Checking permissions and webhook health."
-        />
+        <div className="empty-guidance">
+          <strong>{t("common.loading")}</strong>
+          <span>{t("nav.integrations")}</span>
+        </div>
       </section>
     </main>
   );

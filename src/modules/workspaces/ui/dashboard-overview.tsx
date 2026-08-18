@@ -74,24 +74,36 @@ export function DashboardOverview({
           <article>
             <span>{text("Active automations", "Etkin otomasyonlar", "اتوماسیون‌های فعال")}</span>
             <strong>{metrics.automations}</strong>
-            <small>Policy checked</small>
+            <small>{text("Policy checked", "Politika denetimli", "سیاست بررسی شده")}</small>
           </article>
           <article>
             <span>
               {text("Open service windows", "Açık hizmet pencereleri", "پنجره‌های باز گفتگو")}
             </span>
             <strong>{metrics.windows}</strong>
-            <small>Trusted provider events</small>
+            <small>
+              {text(
+                "Trusted provider events",
+                "Güvenilir sağlayıcı olayları",
+                "رویدادهای معتبر ارائه‌دهنده"
+              )}
+            </small>
           </article>
           <article>
             <span>{text("New customers", "Yeni müşteriler", "مشتریان جدید")}</span>
             <strong>{metrics.customers}</strong>
-            <small>Workspace CRM</small>
+            <small>{text("Workspace CRM", "Çalışma alanı CRM'i", "CRM فضای کاری")}</small>
           </article>
           <article>
             <span>{text("Human review", "İnsan incelemesi", "بررسی انسانی")}</span>
             <strong>{metrics.reviews}</strong>
-            <small>{metrics.errors} recent errors</small>
+            <small>
+              {text(
+                `${metrics.errors} recent errors`,
+                `${metrics.errors} yakın zamanlı hata`,
+                `${metrics.errors} خطای اخیر`
+              )}
+            </small>
           </article>
         </section>
         <div className="dashboard-grid">
@@ -101,7 +113,7 @@ export function DashboardOverview({
                 <span className="eyebrow">{t("overview.readiness")}</span>
                 <h2>{text("Launch checklist", "Başlatma listesi", "فهرست آمادگی")}</h2>
               </div>
-              <span>Resumable</span>
+              <span>{text("Resumable", "Devam edilebilir", "قابل ادامه")}</span>
             </div>
             <div className="setup-list">
               {checklist.map(([label, href], index) => (
@@ -109,7 +121,11 @@ export function DashboardOverview({
                   <span className="step">{index + 1}</span>
                   <div>
                     <strong>{label}</strong>
-                    <span>{index < 2 ? "Review details" : "Action required"}</span>
+                    <span>
+                      {index < 2
+                        ? text("Review details", "Ayrıntıları inceleyin", "مرور جزئیات")
+                        : text("Action required", "İşlem gerekli", "نیازمند اقدام")}
+                    </span>
                   </div>
                   <Link href={href}>{t("common.open")}</Link>
                 </article>
@@ -128,22 +144,42 @@ export function DashboardOverview({
               <article>
                 <span className="channel-badge">HR</span>
                 <div>
-                  <strong>Human-review queue</strong>
-                  <span>{metrics.reviews} conversations waiting</span>
+                  <strong>
+                    {text("Human-review queue", "İnsan inceleme kuyruğu", "صف بررسی انسانی")}
+                  </strong>
+                  <span>
+                    {text(
+                      `${metrics.reviews} conversations waiting`,
+                      `${metrics.reviews} görüşme bekliyor`,
+                      `${metrics.reviews} گفتگو در انتظار است`
+                    )}
+                  </span>
                 </div>
               </article>
               <article>
                 <span className="channel-badge">ER</span>
                 <div>
-                  <strong>Recent errors</strong>
-                  <span>{metrics.errors} recoverable items</span>
+                  <strong>{text("Recent errors", "Son hatalar", "خطاهای اخیر")}</strong>
+                  <span>
+                    {text(
+                      `${metrics.errors} recoverable items`,
+                      `${metrics.errors} kurtarılabilir öğe`,
+                      `${metrics.errors} مورد قابل بازیابی`
+                    )}
+                  </span>
                 </div>
               </article>
               <article>
                 <span className="channel-badge">CRM</span>
                 <div>
-                  <strong>Customer activity</strong>
-                  <span>{metrics.customers} customer records</span>
+                  <strong>{text("Customer activity", "Müşteri etkinliği", "فعالیت مشتری")}</strong>
+                  <span>
+                    {text(
+                      `${metrics.customers} customer records`,
+                      `${metrics.customers} müşteri kaydı`,
+                      `${metrics.customers} رکورد مشتری`
+                    )}
+                  </span>
                 </div>
               </article>
             </div>

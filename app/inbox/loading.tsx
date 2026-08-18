@@ -1,10 +1,14 @@
-import { EmptyState } from "@/src/components/ui/empty-state";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function Loading() {
+export default async function Loading() {
+  const { t } = await getRequestPreferences();
   return (
     <main className="content" aria-busy="true">
       <section className="panel">
-        <EmptyState title="Loading inbox…" description="Checking service windows and ownership." />
+        <div className="empty-guidance">
+          <strong>{t("common.loading")}</strong>
+          <span>{t("nav.inbox")}</span>
+        </div>
       </section>
     </main>
   );
