@@ -7,21 +7,28 @@
  * navigation. That is why this file exists, and why the two channels do not
  * share a code path.
  *
- * Two properties of the SDK drive the whole design here, and getting either
- * wrong fails silently:
+ * Three properties of the SDK drive the whole design here, and getting any of
+ * them wrong fails silently:
  *
- *   1. `window.FB` appears *after* the script's load event, not with it. Code
- *      that reads it on load sees undefined, and code that later sees it
- *      defined cannot conclude `init` has run. The documented hook is
- *      `fbAsyncInit`, which the SDK calls once it is genuinely ready.
+ *   1. `window.FB` is not one object. sdk.js is a two-stage loader: it fires
+ *      `fbAsyncInit`, then loads a bundle that replaces the global outright.
+ *      An `init` run against the first object does not carry to its
+ *      replacement, so neither the global's presence nor a remembered "we
+ *      initialised" says anything about the object you are about to call.
  *
  *   2. `FB.login` opens a popup, so it has to be called while the user gesture
  *      is still live. Anything awaited between the click and the call - a
  *      fetch, or loading this script - spends that gesture and the popup is
  *      blocked with no error to catch.
  *
- * Hence: load and initialise ahead of the click, and track readiness with our
- * own handle rather than by probing the global.
+ *   3. The authorization code is only half of what a WhatsApp connection
+ *      needs. Which WABA and which phone number the user picked are never in
+ *      the code and never in the login callback; they arrive separately, as a
+ *      `postMessage` from the dialog. Ignore it and the exchange fails
+ *      server-side for want of assets the browser was told and discarded.
+ *
+ * Hence: load ahead of the click, initialise at the point of use, and listen
+ * for the message before opening the dialog that sends it.
  */
 
 type FacebookLoginResponse = Readonly<{
@@ -153,15 +160,81 @@ export async function preloadEmbeddedSignup(config: EmbeddedSignupConfig): Promi
 }
 
 /**
- * Opens the dialog and resolves with the authorization code.
+ * What the dialog hands back.
+ *
+ * The code alone is not a connection. `verifyWhatsappAccount` needs the WABA
+ * and phone number to check that the assets the user picked are the ones it is
+ * about to store, and those only exist on the message channel.
+ */
+export type EmbeddedSignupResult = Readonly<{
+  code: string;
+  wabaId: string;
+  phoneNumberId: string;
+}>;
+
+/**
+ * Origins the signup message is accepted from.
+ *
+ * This is a trust boundary, not a formality: `message` events are delivered to
+ * this window by whoever holds a handle to it, so without an origin check any
+ * page could name the WABA that gets stored against the workspace. Both hosts
+ * are Meta's; which one serves the dialog depends on the user's region.
+ */
+const SIGNUP_ORIGINS: ReadonlySet<string> = new Set([
+  "https://www.facebook.com",
+  "https://web.facebook.com"
+]);
+
+/**
+ * How long to keep waiting for the assets once the code has arrived.
+ *
+ * The dialog posts its message before it closes and the login callback fires
+ * on the close, so in practice the assets are already here. Nothing specifies
+ * that ordering, though, and losing a real connection to a race would be worth
+ * far more than two seconds.
+ */
+const ASSET_GRACE_MS = 2 * 1000;
+
+type SignupMessage = Readonly<{
+  type?: string;
+  event?: string;
+  data?: Readonly<{ waba_id?: string; phone_number_id?: string }>;
+}>;
+
+/**
+ * Reads the message payload, which Meta sends as a JSON string.
+ *
+ * Tolerant by design: this listener sees every message posted to the window,
+ * most of them nothing to do with us, and one that fails to parse is not an
+ * error - it is somebody else's message.
+ */
+function readSignupMessage(raw: unknown): SignupMessage | null {
+  if (typeof raw === "object" && raw !== null) return raw as SignupMessage;
+  if (typeof raw !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? (parsed as SignupMessage) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Opens the dialog and resolves with the code and the chosen assets.
  *
  * `response_type: "code"` with `override_default_response_type` is what makes
  * Meta return a code rather than an access token. The distinction matters: a
  * token handed to the browser would be a credential living in client-side
  * code, whereas a code is useless without the app secret and can only be
  * exchanged server-side.
+ *
+ * The two halves arrive through different channels - the code through the
+ * login callback, the assets through a `postMessage` - so this settles only
+ * once it holds both, and names the specific failure when it cannot.
  */
-export async function launchEmbeddedSignup(config: EmbeddedSignupConfig): Promise<string> {
+export async function launchEmbeddedSignup(
+  config: EmbeddedSignupConfig
+): Promise<EmbeddedSignupResult> {
   // Use whatever is loaded so no await separates the click from the popup.
   // Falling back to a load is better than refusing, but a popup requested after
   // it is likely to be blocked.
@@ -178,22 +251,86 @@ export async function launchEmbeddedSignup(config: EmbeddedSignupConfig): Promis
     version: config.graphVersion
   });
 
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<EmbeddedSignupResult>((resolve, reject) => {
+    let assets: { wabaId: string; phoneNumberId: string } | null = null;
+    let code: string | null = null;
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function onMessage(event: { origin?: string; data?: unknown }) {
+      if (!event.origin || !SIGNUP_ORIGINS.has(event.origin)) return;
+      const message = readSignupMessage(event.data);
+      if (message?.type !== "WA_EMBEDDED_SIGNUP") return;
+
+      if (message.event === "FINISH") {
+        const wabaId = message.data?.waba_id;
+        const phoneNumberId = message.data?.phone_number_id;
+        // A FINISH is supposed to carry both. If it does not, the connection
+        // cannot be verified, and saying so beats storing half of one.
+        if (!wabaId || !phoneNumberId) {
+          settleRejected("META_WHATSAPP_PHONE_REQUIRED");
+          return;
+        }
+        assets = { wabaId, phoneNumberId };
+        settleResolved();
+        return;
+      }
+      // The portfolio exists but has no phone number on it yet. The user has
+      // to add one at Meta; nothing here can proceed without it.
+      if (message.event === "FINISH_ONLY_WABA") {
+        settleRejected("META_WHATSAPP_PHONE_REQUIRED");
+        return;
+      }
+      // Both of these are also visible through the login callback, but the
+      // message says which step failed first and arrives sooner.
+      if (message.event === "CANCEL") {
+        settleRejected("META_CANCELLED");
+        return;
+      }
+      if (message.event === "ERROR") settleRejected("META_SIGNUP_ERROR");
+    }
+
+    const done = () => {
+      clearTimeout(dialogTimer);
+      clearTimeout(graceTimer);
+      window.removeEventListener("message", onMessage);
+    };
+    const settleRejected = (reason: string) => {
+      done();
+      reject(new Error(reason));
+    };
+    const settleResolved = () => {
+      if (!code || !assets) return;
+      const settled = { code, ...assets };
+      done();
+      resolve(settled);
+    };
+
     // A blocked popup produces no callback and no error, so without this the
     // promise never settles and the caller cannot tell slow from stuck.
-    const timer = setTimeout(() => reject(new Error("META_DIALOG_TIMEOUT")), DIALOG_TIMEOUT_MS);
+    const dialogTimer = setTimeout(() => settleRejected("META_DIALOG_TIMEOUT"), DIALOG_TIMEOUT_MS);
+
+    // Before the dialog opens, not after: the message it sends cannot be
+    // waited for by a listener installed once it has already been delivered.
+    window.addEventListener("message", onMessage);
 
     sdk.login(
       (response) => {
-        clearTimeout(timer);
-        const code = response?.authResponse?.code;
-        if (code) {
-          resolve(code);
+        const returned = response?.authResponse?.code;
+        if (!returned) {
+          // Closing the dialog is the most common outcome by far and is not an
+          // error worth alarming anybody about, so it is named separately.
+          settleRejected(response?.status === "connected" ? "META_NO_CODE" : "META_CANCELLED");
           return;
         }
-        // Closing the dialog is the most common outcome by far and is not an
-        // error worth alarming anybody about, so it is named separately.
-        reject(new Error(response?.status === "connected" ? "META_NO_CODE" : "META_CANCELLED"));
+        code = returned;
+        if (assets) {
+          settleResolved();
+          return;
+        }
+        graceTimer = setTimeout(
+          () => settleRejected("META_WHATSAPP_ASSET_MISSING"),
+          ASSET_GRACE_MS
+        );
       },
       {
         config_id: config.configId,

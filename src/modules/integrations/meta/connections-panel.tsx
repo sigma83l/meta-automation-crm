@@ -4,7 +4,8 @@ import { useI18n } from "@/src/lib/i18n/client";
 import {
   launchEmbeddedSignup,
   preloadEmbeddedSignup,
-  sdkReady
+  sdkReady,
+  type EmbeddedSignupResult
 } from "@/src/modules/integrations/meta/embedded-signup";
 async function csrf() {
   return ((await fetch("/api/auth/csrf").then((r) => r.json())) as { token: string }).token;
@@ -45,12 +46,25 @@ async function requestOauthStart(channel: string): Promise<StartResponse> {
   return payload;
 }
 
-/** Hands the code and state to the callback for server-side exchange. */
-async function exchangeCode(channel: string, state: string, code: string) {
-  const exchange = await fetch(
-    `/api/connections/meta/callback?format=json&channel=${channel}` +
-      `&state=${encodeURIComponent(state)}&code=${encodeURIComponent(code)}`
-  );
+/**
+ * Hands the code, the state and the chosen assets to the callback for
+ * server-side exchange.
+ *
+ * The WABA and phone number ride along because the server cannot discover
+ * them: a token can see several portfolios, so which one the user picked in
+ * the dialog is knowledge only the browser has. The callback verifies the pair
+ * against Meta before storing it, so passing them here is not trusting them.
+ */
+async function exchangeCode(channel: string, state: string, signup: EmbeddedSignupResult) {
+  const query = new URLSearchParams({
+    format: "json",
+    channel,
+    state,
+    code: signup.code,
+    waba_id: signup.wabaId,
+    phone_number_id: signup.phoneNumberId
+  });
+  const exchange = await fetch(`/api/connections/meta/callback?${query.toString()}`);
   if (!exchange.ok) {
     const failure = (await exchange.json()) as { error?: string; status?: string };
     throw new Error(failure.error ?? failure.status ?? "OAUTH_CALLBACK_FAILED");
@@ -120,6 +134,24 @@ export function ConnectionsPanel({
         "Meta penceresi açılmadı veya kapatıldı. Bu site için açılır pencerelere izin verin.",
         "پنجره متا باز نشد یا بسته شد. برای این سایت پاپ‌آپ را مجاز کنید."
       );
+    if (message === "META_WHATSAPP_PHONE_REQUIRED")
+      return text(
+        "No WhatsApp phone number was selected. Add and verify a number on your WhatsApp Business account at Meta, then connect again.",
+        "WhatsApp telefon numarası seçilmedi. Meta'daki WhatsApp Business hesabınıza bir numara ekleyip doğrulayın, sonra yeniden bağlanın.",
+        "شماره تلفن واتساپ انتخاب نشد. در متا شماره‌ای به حساب واتساپ بیزنس خود اضافه و تأیید کنید، سپس دوباره متصل شوید."
+      );
+    if (message === "META_WHATSAPP_ASSET_MISSING")
+      return text(
+        "Meta did not report which WhatsApp account was chosen. Try connecting again.",
+        "Meta hangi WhatsApp hesabının seçildiğini bildirmedi. Yeniden bağlanmayı deneyin.",
+        "متا مشخص نکرد کدام حساب واتساپ انتخاب شده است. دوباره تلاش کنید."
+      );
+    if (message === "META_SIGNUP_ERROR")
+      return text(
+        "Meta reported an error during setup. Try connecting again.",
+        "Meta kurulum sırasında bir hata bildirdi. Yeniden bağlanmayı deneyin.",
+        "متا هنگام راه‌اندازی خطایی گزارش کرد. دوباره تلاش کنید."
+      );
     return message;
   }
 
@@ -154,11 +186,11 @@ export function ConnectionsPanel({
       // Open the dialog first and fetch the state alongside it. Reversing these
       // two costs the user gesture, and a popup requested after a network round
       // trip is blocked without any error to catch.
-      const codePromise = launchEmbeddedSignup({ appId, configId, graphVersion });
+      const signupPromise = launchEmbeddedSignup({ appId, configId, graphVersion });
       const statePromise = requestOauthStart(channel);
-      const [code, payload] = await Promise.all([codePromise, statePromise]);
+      const [signup, payload] = await Promise.all([signupPromise, statePromise]);
 
-      await exchangeCode(channel, payload.state, code);
+      await exchangeCode(channel, payload.state, signup);
       location.reload();
     } catch (error) {
       setStatus(describe((error as Error).message));
