@@ -71,3 +71,26 @@ describe("the CSP permits Meta's SDK and nothing more", () => {
     expect(csp(false)).toContain("unsafe-eval");
   });
 });
+
+describe("SDK readiness is not the same as the global existing", () => {
+  it("reports not ready before anything has loaded", async () => {
+    // The bug this guards: the SDK defines window.FB before init has run with
+    // our app id, so probing the global reports ready and FB.login then fails
+    // with "init not called with valid version".
+    const { sdkReady } = await import("@/src/modules/integrations/meta/embedded-signup");
+    expect(sdkReady()).toBe(false);
+  });
+
+  it("still reports not ready when window.FB exists but init has not run", async () => {
+    const globalWindow = globalThis as unknown as { window?: unknown };
+    const previous = globalWindow.window;
+    globalWindow.window = { FB: { init() {}, login() {} } };
+    try {
+      const { sdkReady } = await import("@/src/modules/integrations/meta/embedded-signup");
+      expect(sdkReady()).toBe(false);
+    } finally {
+      if (previous === undefined) delete globalWindow.window;
+      else globalWindow.window = previous;
+    }
+  });
+});

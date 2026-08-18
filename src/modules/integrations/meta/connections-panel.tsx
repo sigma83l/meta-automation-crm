@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
 import {
   launchEmbeddedSignup,
-  preloadEmbeddedSignup
+  preloadEmbeddedSignup,
+  sdkReady
 } from "@/src/modules/integrations/meta/embedded-signup";
 async function csrf() {
   return ((await fetch("/api/auth/csrf").then((r) => r.json())) as { token: string }).token;
@@ -107,6 +108,12 @@ export function ConnectionsPanel({
         "Meta betiği yüklenemedi. İçerik engelleyiciyi kapatıp yeniden deneyin.",
         "اسکریپت متا بارگذاری نشد. مسدودکننده محتوا را غیرفعال کنید."
       );
+    if (message === "META_SDK_NOT_READY")
+      return text(
+        "Meta's script is still loading. Wait a moment and try again.",
+        "Meta betiği hâlâ yükleniyor. Biraz bekleyip yeniden deneyin.",
+        "اسکریپت متا هنوز در حال بارگذاری است. کمی صبر کنید."
+      );
     if (message === "META_DIALOG_TIMEOUT")
       return text(
         "Meta's window did not open or was closed. Allow pop-ups for this site and retry.",
@@ -135,6 +142,14 @@ export function ConnectionsPanel({
       }
 
       if (!appId || !configId) throw new Error("META_LIVE_CONFIGURATION_REQUIRED");
+
+      // Refuse rather than let the SDK raise "init not called with valid
+      // version": window.FB exists before init has run, and taking that as
+      // readiness is what produced that error.
+      if (!sdkReady()) {
+        void preloadEmbeddedSignup({ appId, configId, graphVersion });
+        throw new Error("META_SDK_NOT_READY");
+      }
 
       // Open the dialog first and fetch the state alongside it. Reversing these
       // two costs the user gesture, and a popup requested after a network round
