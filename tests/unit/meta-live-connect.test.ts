@@ -72,26 +72,62 @@ describe("the CSP permits Meta's SDK and nothing more", () => {
   });
 });
 
-describe("SDK readiness is not the same as the global existing", () => {
-  it("reports not ready before anything has loaded", async () => {
-    // The bug this guards: the SDK defines window.FB before init has run with
-    // our app id, so probing the global reports ready and FB.login then fails
-    // with "init not called with valid version".
-    const { sdkReady } = await import("@/src/modules/integrations/meta/embedded-signup");
-    expect(sdkReady()).toBe(false);
-  });
-
-  it("still reports not ready when window.FB exists but init has not run", async () => {
+describe("the SDK is initialised at the point of use", () => {
+  const withWindow = async (
+    fb: unknown,
+    run: (
+      m: typeof import("@/src/modules/integrations/meta/embedded-signup")
+    ) => Promise<void> | void
+  ) => {
     const globalWindow = globalThis as unknown as { window?: unknown };
     const previous = globalWindow.window;
-    globalWindow.window = { FB: { init() {}, login() {} } };
+    globalWindow.window = { FB: fb };
     try {
-      const { sdkReady } = await import("@/src/modules/integrations/meta/embedded-signup");
-      expect(sdkReady()).toBe(false);
+      await run(await import("@/src/modules/integrations/meta/embedded-signup"));
     } finally {
       if (previous === undefined) delete globalWindow.window;
       else globalWindow.window = previous;
     }
+  };
+
+  it("reports not loaded when the script has not run", async () => {
+    const { sdkReady } = await import("@/src/modules/integrations/meta/embedded-signup");
+    expect(sdkReady()).toBe(false);
+  });
+
+  it("calls init before login, every time", async () => {
+    // sdk.js is a two-stage loader: it fires fbAsyncInit, then loads
+    // en_US/bundle/sdk.js which replaces window.FB. An init run against the
+    // first object does not carry to its replacement, which produced
+    // "FB.login() called before FB.init()" from an SDK we had initialised.
+    const calls: string[] = [];
+    const fb = {
+      init: () => calls.push("init"),
+      login: () => calls.push("login")
+    };
+    await withWindow(fb, async (module) => {
+      void module.launchEmbeddedSignup({
+        appId: "1597160428639176",
+        configId: "1361427298924254",
+        graphVersion: "v25.0"
+      });
+      await Promise.resolve();
+      expect(calls).toEqual(["init", "login"]);
+    });
+  });
+
+  it("initialises with the app id and version it was given", async () => {
+    const seen: Record<string, unknown>[] = [];
+    const fb = { init: (o: Record<string, unknown>) => seen.push(o), login: () => {} };
+    await withWindow(fb, async (module) => {
+      void module.launchEmbeddedSignup({
+        appId: "1597160428639176",
+        configId: "1361427298924254",
+        graphVersion: "v25.0"
+      });
+      await Promise.resolve();
+      expect(seen[0]).toMatchObject({ appId: "1597160428639176", version: "v25.0" });
+    });
   });
 });
 

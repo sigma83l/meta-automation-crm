@@ -51,21 +51,26 @@ const DIALOG_TIMEOUT_MS = 5 * 60 * 1000;
 const LOAD_TIMEOUT_MS = 15 * 1000;
 
 /**
- * The initialised SDK, or null.
+ * Whether the SDK script has finished loading.
  *
- * Deliberately not `window.FB`: the global is defined by the script before
- * `init` has been called with our app id, and using it as a readiness signal is
- * what produces "init not called with valid version" at login time.
+ * Only that. Initialisation is deliberately *not* tracked here, because it
+ * cannot be tracked meaningfully: sdk.js is a two-stage loader that fires
+ * fbAsyncInit and then loads en_US/bundle/sdk.js, which replaces window.FB
+ * outright. An init run against the first object does not carry over to its
+ * replacement, and remembering "we initialised" produced exactly one symptom -
+ * `FB.login() called before FB.init()` - from an SDK we had, in fact,
+ * initialised. So init is run at the point of use instead, where the object
+ * being initialised is the object about to be called.
  */
-let readySdk: FacebookSdk | null = null;
 let loading: Promise<FacebookSdk> | null = null;
 
 export function sdkReady(): boolean {
-  return readySdk !== null;
+  return typeof window !== "undefined" && Boolean(window.FB);
 }
 
 function loadSdk(appId: string, graphVersion: string): Promise<FacebookSdk> {
-  if (readySdk) return Promise.resolve(readySdk);
+  const present = window.FB;
+  if (present) return Promise.resolve(present);
   if (loading) return loading;
 
   loading = new Promise<FacebookSdk>((resolve, reject) => {
@@ -84,13 +89,25 @@ function loadSdk(appId: string, graphVersion: string): Promise<FacebookSdk> {
         fail("META_SDK_BLOCKED");
         return;
       }
+      // Init here too, so the common case is already initialised and the call
+      // at login time is a cheap no-op rather than the only one.
       sdk.init({ appId, cookie: true, xfbml: false, version: graphVersion });
-      readySdk = sdk;
       clearTimeout(timer);
       resolve(sdk);
     };
 
-    if (document.querySelector(`script[src="${SDK_SRC}"]`)) return;
+    // A script tag already present means a previous attempt injected it. If it
+    // has since finished, fbAsyncInit has already fired and will not fire again
+    // for the handler we just installed, so resolve on what is there rather
+    // than waiting for a callback that will never come.
+    if (document.querySelector(`script[src="${SDK_SRC}"]`)) {
+      const existing = window.FB;
+      if (existing) {
+        clearTimeout(timer);
+        resolve(existing);
+      }
+      return;
+    }
 
     const script = document.createElement("script");
     script.src = SDK_SRC;
@@ -145,10 +162,21 @@ export async function preloadEmbeddedSignup(config: EmbeddedSignupConfig): Promi
  * exchanged server-side.
  */
 export async function launchEmbeddedSignup(config: EmbeddedSignupConfig): Promise<string> {
-  // Use the initialised handle when there is one so no await separates the
-  // click from the popup. Falling back to a load is better than refusing, but
-  // a popup requested after it is likely to be blocked.
-  const sdk = readySdk ?? (await loadSdk(config.appId, config.graphVersion));
+  // Use whatever is loaded so no await separates the click from the popup.
+  // Falling back to a load is better than refusing, but a popup requested after
+  // it is likely to be blocked.
+  const sdk = window.FB ?? (await loadSdk(config.appId, config.graphVersion));
+
+  // Initialise the object we are about to call, every time. The two-stage
+  // loader may have swapped window.FB since the preload, and init on the
+  // superseded object does not carry across. It is idempotent and synchronous,
+  // so this costs nothing and does not spend the user gesture.
+  sdk.init({
+    appId: config.appId,
+    cookie: true,
+    xfbml: false,
+    version: config.graphVersion
+  });
 
   return new Promise<string>((resolve, reject) => {
     // A blocked popup produces no callback and no error, so without this the
