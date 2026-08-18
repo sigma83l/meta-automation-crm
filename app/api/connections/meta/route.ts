@@ -38,7 +38,12 @@ export async function PATCH(request: NextRequest) {
   if (rejected) return rejected;
   try {
     const body = await request.json();
-    if (!["health", "reauthorize"].includes(body.action)) throw new Error();
+    // "disconnect" is accepted here as well as on DELETE. Vercel's edge strips
+    // request bodies from DELETE, so the browser's disconnect never carried its
+    // channel and failed as a malformed request - silently, since the handler
+    // reports one generic code. The DELETE route stays for API callers that
+    // send the channel some other way.
+    if (!["health", "reauthorize", "disconnect"].includes(body.action)) throw new Error();
     const { workspace } = await createMetaRuntime();
     return NextResponse.json(
       await updateMetaConnection(workspace, channel(body.channel), body.action)

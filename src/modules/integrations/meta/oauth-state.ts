@@ -38,3 +38,23 @@ export function verifySignedMetaOauthState(
   const expected = createHmac("sha256", secret).update(value).digest();
   return timingSafeEqual(expected, Buffer.from(supplied, "hex"));
 }
+
+/**
+ * Reads the channel out of a state string without verifying it.
+ *
+ * The Instagram redirect arrives with no channel of its own — the redirect URI
+ * must match the registered one exactly, so it cannot carry our parameters —
+ * and the channel has to come from somewhere before verification can be
+ * attempted, since verification needs to be told which channel to check.
+ *
+ * Deliberately not a trust boundary. It parses an untrusted string and returns
+ * a guess; the signature check that follows is what establishes the value is
+ * genuine. Returning null for anything unrecognised keeps a malformed state
+ * from selecting a channel by accident.
+ */
+export function channelFromMetaOauthState(state: string): MetaChannel | null {
+  const parts = state.split(".");
+  if (parts.length < 5) return null;
+  const candidate = parts[1];
+  return candidate === "whatsapp" || candidate === "instagram" ? candidate : null;
+}
