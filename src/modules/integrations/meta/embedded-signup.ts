@@ -33,6 +33,15 @@ declare global {
 
 const SDK_SRC = "https://connect.facebook.net/en_US/sdk.js";
 
+/** How long to wait for the dialog before giving up on it. */
+const DIALOG_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** True once the SDK is loaded and initialised, so login can be called
+ * synchronously from a click handler. */
+export function sdkReady(): boolean {
+  return typeof window !== "undefined" && Boolean(window.FB);
+}
+
 /** Resolves once window.FB exists, loading the script the first time. */
 async function loadSdk(appId: string, graphVersion: string): Promise<FacebookSdk> {
   const alreadyLoaded = window.FB;
@@ -65,6 +74,25 @@ async function loadSdk(appId: string, graphVersion: string): Promise<FacebookSdk
   return sdk;
 }
 
+/**
+ * Loads the SDK ahead of the click.
+ *
+ * This is not an optimisation. `FB.login` opens a popup, and a browser only
+ * permits that while the user gesture is still live - which it is not after an
+ * await on a network round trip. Loading the script beforehand is what lets the
+ * click handler call login synchronously; without it the popup is blocked, the
+ * callback never fires, and the button sits on "Connecting…" forever with
+ * nothing thrown to report.
+ */
+export async function preloadEmbeddedSignup(config: EmbeddedSignupConfig): Promise<void> {
+  try {
+    await loadSdk(config.appId, config.graphVersion);
+  } catch {
+    // A blocked or failed preload is not worth surfacing on page load; the
+    // click path reports it, where the user is actually waiting for something.
+  }
+}
+
 export type EmbeddedSignupConfig = Readonly<{
   appId: string;
   configId: string;
@@ -81,19 +109,35 @@ export type EmbeddedSignupConfig = Readonly<{
  * server-side.
  */
 export async function launchEmbeddedSignup(config: EmbeddedSignupConfig): Promise<string> {
-  const sdk = await loadSdk(config.appId, config.graphVersion);
+  // Use the already-loaded SDK when there is one, so no await stands between
+  // the click and the popup. Falling back to a load is better than failing,
+  // but a popup opened after that await is likely to be blocked.
+  const sdk = window.FB ?? (await loadSdk(config.appId, config.graphVersion));
 
   return new Promise<string>((resolve, reject) => {
+    // Nothing below is guaranteed to fire. A blocked popup produces no
+    // callback and no error, so without this the promise never settles and the
+    // caller has no way to tell the difference between slow and stuck.
+    const timer = setTimeout(() => reject(new Error("META_DIALOG_TIMEOUT")), DIALOG_TIMEOUT_MS);
+    const settle =
+      <T>(fn: (value: T) => void) =>
+      (value: T) => {
+        clearTimeout(timer);
+        fn(value);
+      };
+    const resolveOnce = settle(resolve);
+    const rejectOnce = settle(reject);
+
     sdk.login(
       (response) => {
         const code = response?.authResponse?.code;
         if (code) {
-          resolve(code);
+          resolveOnce(code);
           return;
         }
         // Closing the dialog is by far the most common outcome and is not an
         // error worth alarming anybody about, so it is named separately.
-        reject(new Error(response?.status === "connected" ? "META_NO_CODE" : "META_CANCELLED"));
+        rejectOnce(new Error(response?.status === "connected" ? "META_NO_CODE" : "META_CANCELLED"));
       },
       {
         config_id: config.configId,

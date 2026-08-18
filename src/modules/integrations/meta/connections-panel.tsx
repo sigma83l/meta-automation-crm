@@ -1,7 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
-import { launchEmbeddedSignup } from "@/src/modules/integrations/meta/embedded-signup";
+import {
+  launchEmbeddedSignup,
+  preloadEmbeddedSignup
+} from "@/src/modules/integrations/meta/embedded-signup";
 async function csrf() {
   return ((await fetch("/api/auth/csrf").then((r) => r.json())) as { token: string }).token;
 }
@@ -29,7 +32,8 @@ type StartResponse = {
  * redirect. WhatsApp can only be onboarded through Meta's JS SDK, so the code
  * comes back in the browser and has to be handed to the callback explicitly.
  */
-async function startLiveConnection(channel: string, graphVersion: string) {
+/** Asks the server for a signed state and, for Instagram, the authorize URL. */
+async function requestOauthStart(channel: string): Promise<StartResponse> {
   const response = await fetch("/api/connections/meta/start", {
     method: "POST",
     headers: { "content-type": "application/json", "x-csrf-token": await csrf() },
@@ -37,24 +41,14 @@ async function startLiveConnection(channel: string, graphVersion: string) {
   });
   const payload = (await response.json()) as StartResponse & { status?: string };
   if (!response.ok) throw new Error(payload.status ?? "OAUTH_START_FAILED");
+  return payload;
+}
 
-  if (payload.authorizationUrl) {
-    window.location.assign(payload.authorizationUrl);
-    return;
-  }
-  if (!payload.embeddedSignup) throw new Error("OAUTH_START_FAILED");
-
-  const code = await launchEmbeddedSignup({
-    appId: payload.embeddedSignup.appId,
-    configId: payload.embeddedSignup.configId,
-    graphVersion
-  });
-
-  // format=json because this is a fetch, not a navigation; the same endpoint
-  // redirects browsers back to this page.
+/** Hands the code and state to the callback for server-side exchange. */
+async function exchangeCode(channel: string, state: string, code: string) {
   const exchange = await fetch(
     `/api/connections/meta/callback?format=json&channel=${channel}` +
-      `&state=${encodeURIComponent(payload.state)}&code=${encodeURIComponent(code)}`
+      `&state=${encodeURIComponent(state)}&code=${encodeURIComponent(code)}`
   );
   if (!exchange.ok) {
     const failure = (await exchange.json()) as { error?: string; status?: string };
@@ -67,17 +61,60 @@ export function ConnectionsPanel({
   canManage,
   liveMode = false,
   graphVersion = "v25.0",
-  initialNotice = ""
+  initialNotice = "",
+  appId = "",
+  configId = ""
 }: {
   connections: Record<string, unknown>[];
   canManage: boolean;
   liveMode?: boolean;
   graphVersion?: string;
   initialNotice?: string;
+  /** Public Meta app id. Passed from the server so the click handler needs no
+   * round trip before opening the dialog. */
+  appId?: string;
+  /** Embedded Signup configuration id. Public, same reasoning. */
+  configId?: string;
 }) {
   const { text } = useI18n();
   const [status, setStatus] = useState(initialNotice);
   const [busy, setBusy] = useState("");
+
+  /** Health, reauthorize and disconnect: a plain call, then re-read the page. */
+  async function run(method: string, body: unknown) {
+    try {
+      await mutate(method, body);
+      location.reload();
+    } catch (error) {
+      setStatus((error as Error).message);
+    }
+  }
+
+  // Load Meta's SDK up front so the click handler can open the popup without
+  // awaiting anything first. See preloadEmbeddedSignup for why that matters.
+  useEffect(() => {
+    if (liveMode && appId && configId) {
+      void preloadEmbeddedSignup({ appId, configId, graphVersion });
+    }
+  }, [liveMode, appId, configId, graphVersion]);
+
+  function describe(message: string) {
+    if (message === "META_CANCELLED")
+      return text("Connection cancelled.", "Bağlantı iptal edildi.", "اتصال لغو شد.");
+    if (message === "META_SDK_BLOCKED")
+      return text(
+        "Meta's script could not load. Disable any content blocker and retry.",
+        "Meta betiği yüklenemedi. İçerik engelleyiciyi kapatıp yeniden deneyin.",
+        "اسکریپت متا بارگذاری نشد. مسدودکننده محتوا را غیرفعال کنید."
+      );
+    if (message === "META_DIALOG_TIMEOUT")
+      return text(
+        "Meta's window did not open or was closed. Allow pop-ups for this site and retry.",
+        "Meta penceresi açılmadı veya kapatıldı. Bu site için açılır pencerelere izin verin.",
+        "پنجره متا باز نشد یا بسته شد. برای این سایت پاپ‌آپ را مجاز کنید."
+      );
+    return message;
+  }
 
   async function connect(channel: string) {
     setBusy(channel);
@@ -88,34 +125,33 @@ export function ConnectionsPanel({
         location.reload();
         return;
       }
-      await startLiveConnection(channel, graphVersion);
-      // Instagram navigates away; WhatsApp returns here and needs the reload.
+
+      if (channel === "instagram") {
+        // A redirect, not a popup, so nothing here depends on the gesture.
+        const payload = await requestOauthStart(channel);
+        if (!payload.authorizationUrl) throw new Error("OAUTH_START_FAILED");
+        window.location.assign(payload.authorizationUrl);
+        return;
+      }
+
+      if (!appId || !configId) throw new Error("META_LIVE_CONFIGURATION_REQUIRED");
+
+      // Open the dialog first and fetch the state alongside it. Reversing these
+      // two costs the user gesture, and a popup requested after a network round
+      // trip is blocked without any error to catch.
+      const codePromise = launchEmbeddedSignup({ appId, configId, graphVersion });
+      const statePromise = requestOauthStart(channel);
+      const [code, payload] = await Promise.all([codePromise, statePromise]);
+
+      await exchangeCode(channel, payload.state, code);
       location.reload();
     } catch (error) {
-      const message = (error as Error).message;
-      setStatus(
-        message === "META_CANCELLED"
-          ? text("Connection cancelled.", "Bağlantı iptal edildi.", "اتصال لغو شد.")
-          : message === "META_SDK_BLOCKED"
-            ? text(
-                "Meta's script could not load. Disable any content blocker and retry.",
-                "Meta betiği yüklenemedi. İçerik engelleyiciyi kapatıp yeniden deneyin.",
-                "اسکریپت متا بارگذاری نشد. مسدودکننده محتوا را غیرفعال کنید."
-              )
-            : message
-      );
+      setStatus(describe((error as Error).message));
     } finally {
       setBusy("");
     }
   }
-  async function run(method: string, body: unknown) {
-    try {
-      await mutate(method, body);
-      location.reload();
-    } catch (error) {
-      setStatus((error as Error).message);
-    }
-  }
+
   return (
     <div className="settings-stack">
       <section className="settings-card">

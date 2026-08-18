@@ -37,6 +37,8 @@ export default async function ConnectionsPage({
           canManage={workspace.role === "owner" || workspace.role === "admin"}
           liveMode={getServerEnvironment().metaConnectionMode === "live"}
           graphVersion={getServerEnvironment().metaGraphApiVersion ?? "v25.0"}
+          appId={getServerEnvironment().metaAppId ?? ""}
+          configId={getServerEnvironment().metaWhatsappConfigId ?? ""}
           initialNotice={
             typeof params.connected === "string"
               ? `Connected ${params.connected}.`
