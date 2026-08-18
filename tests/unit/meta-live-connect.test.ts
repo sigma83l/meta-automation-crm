@@ -80,7 +80,7 @@ type LoginCall = {
 /** The config the panel passes; both identifiers are real public values. */
 const CONFIG = {
   appId: "1597160428639176",
-  configId: "1361427298924254",
+  configId: "890825840460092",
   graphVersion: "v25.0"
 } as const;
 
@@ -403,7 +403,7 @@ describe("Meta identifiers are validated by shape, not by presence", () => {
   });
 
   it("accepts a real configuration id and app id", async () => {
-    expect(await parse("1361427298924254")).toBe(true);
+    expect(await parse("890825840460092")).toBe(true);
     expect(await parse("1597160428639176")).toBe(true);
   });
 
