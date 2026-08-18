@@ -8,6 +8,22 @@ const optionalUrl = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().url().optional()
 );
+/**
+ * A Meta numeric identifier - app id, Embedded Signup configuration id.
+ *
+ * Digits only, deliberately. Both of these were previously accepted as any
+ * non-empty string, and a placeholder sat in META_WHATSAPP_CONFIG_ID for weeks:
+ * it satisfied every presence check, live-mode readiness reported ready, and
+ * the only symptom was FB.login doing nothing at all - no dialog, no callback,
+ * no error. A shape this well known should never be validated as "not empty".
+ */
+const optionalMetaNumericId = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z
+    .string()
+    .regex(/^\d{8,20}$/, "Meta identifiers are numeric")
+    .optional()
+);
 const optionalMetaVersion = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z
@@ -39,10 +55,10 @@ const serverEnvironmentSchema = z.object({
   PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
   PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
-  META_APP_ID: optionalNonEmpty,
+  META_APP_ID: optionalMetaNumericId,
   META_APP_SECRET: optionalNonEmpty,
   META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
-  META_WHATSAPP_CONFIG_ID: optionalNonEmpty,
+  META_WHATSAPP_CONFIG_ID: optionalMetaNumericId,
   META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
   EMAIL_DELIVERY_VERIFIED: z.enum(["true", "false"]).default("false"),

@@ -94,3 +94,41 @@ describe("SDK readiness is not the same as the global existing", () => {
     }
   });
 });
+
+describe("Meta identifiers are validated by shape, not by presence", () => {
+  const parse = async (value: string) => {
+    const { z } = await import("zod");
+    const schema = z.preprocess(
+      (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+      z
+        .string()
+        .regex(/^\d{8,20}$/)
+        .optional()
+    );
+    return schema.safeParse(value).success;
+  };
+
+  it("rejects the placeholder that shipped to production", async () => {
+    // This exact value sat in META_WHATSAPP_CONFIG_ID: it passed every
+    // non-empty check, liveMetaReadiness reported ready, and FB.login simply
+    // did nothing — no dialog, no callback, no error to catch.
+    expect(await parse("replace_with_embedded_signup_config_id")).toBe(false);
+  });
+
+  it("rejects anything with letters, dashes or underscores", async () => {
+    for (const value of ["abc123456789", "1361-4272-9892", "config_1361427298924254", "TODO"]) {
+      expect(`${value}:${await parse(value)}`).toBe(`${value}:false`);
+    }
+  });
+
+  it("accepts a real configuration id and app id", async () => {
+    expect(await parse("1361427298924254")).toBe(true);
+    expect(await parse("1597160428639176")).toBe(true);
+  });
+
+  it("rejects a number too short to be either", async () => {
+    // A stray "1" or a truncated paste is not a Meta identifier.
+    expect(await parse("1")).toBe(false);
+    expect(await parse("12345")).toBe(false);
+  });
+});
