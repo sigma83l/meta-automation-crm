@@ -55,6 +55,13 @@ const serverEnvironmentSchema = z.object({
   PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
   PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
+  // Model identifiers per router role. Optional: an unconfigured role fails at
+  // the point of use, naming the role, rather than blocking a deployment that
+  // never reaches it. See src/modules/rcos/model-registry.ts.
+  AI_MODEL_UTILITY: optionalNonEmpty,
+  AI_MODEL_PRIMARY: optionalNonEmpty,
+  AI_MODEL_ESCALATION: optionalNonEmpty,
+  AI_MODEL_OFFLINE_EVALUATOR: optionalNonEmpty,
   META_APP_ID: optionalMetaNumericId,
   META_APP_SECRET: optionalNonEmpty,
   META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
@@ -123,6 +130,12 @@ export type ServerEnvironment = Readonly<{
   platformOpenAiApiKey?: string;
   platformAnthropicApiKey?: string;
   aiProviderTimeoutMs: number;
+  aiModels: Readonly<{
+    utility?: string;
+    primary?: string;
+    escalation?: string;
+    offline_evaluator?: string;
+  }>;
   metaAppId?: string;
   metaAppSecret?: string;
   metaWebhookVerifyToken?: string;
@@ -206,6 +219,14 @@ export function parseServerEnvironment(
       ? { platformAnthropicApiKey: parsed.PLATFORM_ANTHROPIC_API_KEY }
       : {}),
     aiProviderTimeoutMs: parsed.AI_PROVIDER_TIMEOUT_MS,
+    aiModels: Object.freeze({
+      ...(parsed.AI_MODEL_UTILITY ? { utility: parsed.AI_MODEL_UTILITY } : {}),
+      ...(parsed.AI_MODEL_PRIMARY ? { primary: parsed.AI_MODEL_PRIMARY } : {}),
+      ...(parsed.AI_MODEL_ESCALATION ? { escalation: parsed.AI_MODEL_ESCALATION } : {}),
+      ...(parsed.AI_MODEL_OFFLINE_EVALUATOR
+        ? { offline_evaluator: parsed.AI_MODEL_OFFLINE_EVALUATOR }
+        : {})
+    }),
     ...(parsed.META_APP_ID ? { metaAppId: parsed.META_APP_ID } : {}),
     ...(parsed.META_APP_SECRET ? { metaAppSecret: parsed.META_APP_SECRET } : {}),
     ...(parsed.META_WEBHOOK_VERIFY_TOKEN
