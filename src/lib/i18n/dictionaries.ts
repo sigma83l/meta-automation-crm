@@ -140,6 +140,25 @@ const en = {
   "inbox.owner": "Owner",
   "inbox.missingFields": "Missing fields",
   "inbox.attachments": "Attachments",
+  "inbox.needsReview": "Needs review",
+  "inbox.whyPaused": "Why the assistant stopped",
+  "inbox.reviewHint": "Reply yourself, or resolve the cause and the next message runs again.",
+  "review.empty_draft": "The assistant produced no reply. Usually no AI model is configured yet.",
+  "review.ungrounded_claim": "The draft cited knowledge this workspace has not approved.",
+  "review.unverified_money": "The draft stated a price no approved item confirms.",
+  "review.unverified_time": "The draft stated a time no approved source confirms.",
+  "review.unclaimed_success": "The draft claimed something was done that was never confirmed.",
+  "review.pii_leak": "The draft contained contact details.",
+  "review.pressure_tactic": "The draft used pressure wording.",
+  "review.policy_violation": "Policy did not permit a reply on this turn.",
+  "review.duplicate_send": "A reply with this reference had already been sent.",
+  "review.escalation_keyword": "The message matched one of your escalation keywords.",
+  "review.low_confidence": "The assistant was less certain than your threshold allows.",
+  "review.human_takeover": "You have taken this conversation over.",
+  "review.conversation_closed": "The conversation is closed.",
+  "review.conversation_missing": "The conversation record could not be read.",
+  "review.billing_entitlement_required":
+    "The trial or subscription does not currently allow replies.",
   "automations.create": "Create automation",
   "automations.recipes": "Recipe gallery",
   "automations.testCenter": "Test Center",
@@ -160,8 +179,24 @@ const en = {
 type TranslationKey = keyof typeof en;
 type Dictionary = { readonly [Key in TranslationKey]: string };
 
+/**
+ * Turkish and Persian no longer spread English.
+ *
+ * They used to open with `...en`, which meant a key nobody had translated
+ * silently rendered English and `dictionaryKeys` returned identical sets for
+ * every locale - so the parity test asserting exactly that could not fail, and
+ * neither could the compiler. The operating rules require en/tr/fa parity, and
+ * this is what actually enforces it: `Dictionary` demands every key, so a
+ * missing translation is a build error naming the key.
+ *
+ * The consequence is that a term staying in English has to say so explicitly,
+ * which is the point. "Relay CRM" is a product name and "CRM" is the same
+ * initialism in all three languages; both are decisions, and they now read as
+ * decisions rather than as omissions.
+ */
 const tr: Dictionary = {
-  ...en,
+  "app.name": "Relay CRM",
+  "nav.crm": "CRM",
   "app.control": "İşletme kontrolü",
   "common.open": "Aç",
   "common.save": "Değişiklikleri kaydet",
@@ -300,6 +335,26 @@ const tr: Dictionary = {
   "inbox.owner": "Sorumlu",
   "inbox.missingFields": "Eksik alanlar",
   "inbox.attachments": "Ekler",
+  "inbox.needsReview": "İnceleme gerekli",
+  "inbox.whyPaused": "Asistan neden durdu",
+  "inbox.reviewHint": "Kendiniz yanıtlayın veya nedeni giderin; sonraki mesaj yeniden çalışır.",
+  "review.empty_draft":
+    "Asistan yanıt üretmedi. Genellikle henüz bir yapay zekâ modeli tanımlı değildir.",
+  "review.ungrounded_claim": "Taslak, bu çalışma alanının onaylamadığı bilgiye atıf yaptı.",
+  "review.unverified_money": "Taslak, onaylı hiçbir kalemin doğrulamadığı bir fiyat belirtti.",
+  "review.unverified_time": "Taslak, onaylı hiçbir kaynağın doğrulamadığı bir zaman belirtti.",
+  "review.unclaimed_success": "Taslak, hiç doğrulanmamış bir işlemin yapıldığını öne sürdü.",
+  "review.pii_leak": "Taslak iletişim bilgisi içeriyordu.",
+  "review.pressure_tactic": "Taslak baskı içeren ifadeler kullandı.",
+  "review.policy_violation": "Politika bu turda yanıt verilmesine izin vermedi.",
+  "review.duplicate_send": "Bu referansla bir yanıt zaten gönderilmişti.",
+  "review.escalation_keyword": "Mesaj, yükseltme anahtar kelimelerinizden biriyle eşleşti.",
+  "review.low_confidence": "Asistan, eşiğinizin izin verdiğinden daha az emindi.",
+  "review.human_takeover": "Bu konuşmayı siz devraldınız.",
+  "review.conversation_closed": "Konuşma kapalı.",
+  "review.conversation_missing": "Konuşma kaydı okunamadı.",
+  "review.billing_entitlement_required":
+    "Deneme veya abonelik şu anda yanıt vermeye izin vermiyor.",
   "automations.create": "Otomasyon oluştur",
   "automations.recipes": "Tarif galerisi",
   "automations.testCenter": "Test Merkezi",
@@ -318,7 +373,8 @@ const tr: Dictionary = {
 };
 
 const fa: Dictionary = {
-  ...en,
+  "app.name": "Relay CRM",
+  "nav.crm": "CRM",
   "app.control": "کنترل کسب‌وکار",
   "common.open": "باز کردن",
   "common.save": "ذخیره تغییرات",
@@ -454,6 +510,24 @@ const fa: Dictionary = {
   "inbox.owner": "مسئول",
   "inbox.missingFields": "اطلاعات ناقص",
   "inbox.attachments": "پیوست‌ها",
+  "inbox.needsReview": "نیازمند بررسی",
+  "inbox.whyPaused": "چرا دستیار متوقف شد",
+  "inbox.reviewHint": "خودتان پاسخ دهید یا علت را برطرف کنید تا پیام بعدی دوباره اجرا شود.",
+  "review.empty_draft": "دستیار پاسخی تولید نکرد. معمولاً هنوز مدل هوش مصنوعی تنظیم نشده است.",
+  "review.ungrounded_claim": "پیش‌نویس به دانشی استناد کرد که این فضای کاری تأیید نکرده است.",
+  "review.unverified_money": "پیش‌نویس قیمتی را گفت که هیچ مورد تأییدشده‌ای آن را تأیید نمی‌کند.",
+  "review.unverified_time": "پیش‌نویس زمانی را گفت که هیچ منبع تأییدشده‌ای آن را تأیید نمی‌کند.",
+  "review.unclaimed_success": "پیش‌نویس ادعا کرد کاری انجام شده که هرگز تأیید نشده بود.",
+  "review.pii_leak": "پیش‌نویس شامل اطلاعات تماس بود.",
+  "review.pressure_tactic": "پیش‌نویس از عبارت‌های فشارآور استفاده کرد.",
+  "review.policy_violation": "سیاست در این نوبت اجازه پاسخ نداد.",
+  "review.duplicate_send": "پاسخی با همین شناسه پیش‌تر ارسال شده بود.",
+  "review.escalation_keyword": "پیام با یکی از کلیدواژه‌های ارجاع شما مطابقت داشت.",
+  "review.low_confidence": "اطمینان دستیار کمتر از حد آستانه شما بود.",
+  "review.human_takeover": "شما این گفتگو را در دست گرفته‌اید.",
+  "review.conversation_closed": "گفتگو بسته است.",
+  "review.conversation_missing": "رکورد گفتگو خوانده نشد.",
+  "review.billing_entitlement_required": "دوره آزمایشی یا اشتراک در حال حاضر اجازه پاسخ نمی‌دهد.",
   "automations.create": "ساخت اتوماسیون",
   "automations.recipes": "گالری دستورکارها",
   "automations.testCenter": "مرکز آزمایش",
