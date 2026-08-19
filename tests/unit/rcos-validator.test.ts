@@ -165,3 +165,29 @@ describe("safe resolution", () => {
     }
   });
 });
+
+describe("a draft with no text", () => {
+  // This is the composer's output for a provider that is down, a model that is
+  // unconfigured and a model that asked for a person — three of the most likely
+  // things to happen in production, all arriving here as the empty string. It
+  // used to satisfy every rule vacuously and be sent as a blank message.
+  it("is blocked rather than sent", () => {
+    const verdict = validateReply({ text: "", citedRefs: [] }, context());
+    expect(failuresOf(verdict)).toContain("empty_draft");
+  });
+
+  it("is blocked when it is only whitespace", () => {
+    const verdict = validateReply({ text: "  \n ", citedRefs: [] }, context());
+    expect(failuresOf(verdict)).toContain("empty_draft");
+  });
+
+  it("resolves to a person, not to a safe acknowledgement", () => {
+    // Nothing is known about what the customer needed, which is the condition
+    // a handoff exists for. A generic acknowledgement would close the turn
+    // while leaving the question unanswered.
+    expect(safeResolution(["empty_draft"])).toEqual({
+      action: "handoff",
+      reason: "empty_draft"
+    });
+  });
+});

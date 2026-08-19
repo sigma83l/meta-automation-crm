@@ -14,6 +14,7 @@
  */
 
 export const VALIDATION_FAILURES = [
+  "empty_draft",
   "ungrounded_claim",
   "unverified_money",
   "unverified_time",
@@ -82,6 +83,19 @@ export function validateReply(draft: ReplyDraft, context: ValidationContext): Va
   const failures: ValidationFailure[] = [];
   const detail: string[] = [];
 
+  // First, because every other check is about what the text says, and this one
+  // is about there being any. An empty draft is what the composer produces for
+  // a provider that is down, a model that is unconfigured, or a model that
+  // asked for a person - so it is the single most travelled failure path there
+  // is. Without this it passes every remaining rule vacuously and the engine
+  // sends a blank message, which is the one outcome worse than silence: the
+  // customer sees a reply, the workspace sees a delivered turn, and nobody
+  // sees the failure.
+  if (draft.text.trim().length === 0) {
+    failures.push("empty_draft");
+    detail.push("draft has no text");
+  }
+
   // Sending at all is a policy decision made upstream; a draft cannot override it.
   if (!context.canSend) {
     failures.push("policy_violation");
@@ -147,6 +161,10 @@ export function safeResolution(
   failures: readonly ValidationFailure[]
 ): Readonly<{ action: "handoff" | "safe_acknowledgement"; reason: string }> {
   const needsHuman: readonly ValidationFailure[] = [
+    // A draft that does not exist cannot be softened into a safe
+    // acknowledgement: nothing is known about what the customer needed, which
+    // is precisely the condition a person exists to resolve.
+    "empty_draft",
     "unverified_money",
     "unverified_time",
     "unclaimed_success",
