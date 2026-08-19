@@ -46,8 +46,16 @@ export type TurnContext = Readonly<{
 }>;
 
 export type AiTurnDependencies = Readonly<{
-  /** Providers by role. escalation may be absent; the turn then stays primary. */
-  providers: Readonly<{ utility: AiProvider; primary: AiProvider; escalation?: AiProvider }>;
+  /**
+   * Providers by role. Every one is optional, including the two a working turn
+   * needs, because "this workspace has no usable credential" is a state the
+   * caller must be able to express — and the honest way to express it is an
+   * absent provider, which `providerFor` already resolves to an uncertain
+   * understanding and therefore to a handoff. Requiring them here would only
+   * move the lie to the call site. escalation absent means the turn stays
+   * primary.
+   */
+  providers: Readonly<{ utility?: AiProvider; primary?: AiProvider; escalation?: AiProvider }>;
   models: ModelConfiguration;
   loadContext(event: TurnEvent): Promise<TurnContext>;
   /** Observes each model call. Never receives message content. */

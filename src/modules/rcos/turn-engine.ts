@@ -125,6 +125,18 @@ export function highestPriority(candidates: readonly TurnDecision[]): TurnDecisi
   );
 }
 
+/**
+ * The idempotency key for a turn's send.
+ *
+ * Exported because two places need it and they must agree: the engine passes it
+ * to `send`, and whatever persists the turn has to record the same string for
+ * `sentRefs` to recognise it later. Two literals would drift the first time
+ * either changed, and the symptom would be a reply sent twice.
+ */
+export function sendRefFor(turn: Readonly<{ conversationId: string; eventId: string }>): string {
+  return `${turn.conversationId}:${turn.eventId}`;
+}
+
 export type TurnOutcome =
   "duplicate" | "policy_blocked" | "sent" | "handoff" | "safe_acknowledgement" | "tool_refused";
 
@@ -226,7 +238,7 @@ export async function runTurn(event: TurnEvent, ports: TurnPorts): Promise<TurnR
     : true;
 
   // Step 10.
-  const sendRef = `${event.conversationId}:${event.eventId}`;
+  const sendRef = sendRefFor(event);
   const validation: ValidationContext = {
     availableRefs: retrieved.facts.map((fact) => fact.ref),
     approvedAmounts: retrieved.approvedAmounts,

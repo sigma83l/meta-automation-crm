@@ -14,6 +14,9 @@ import {
   stateForUnchargeableTrial,
   trialEndAfterTransition
 } from "@/src/modules/billing/renewal-policy";
+import { projectMetaMessage } from "@/src/modules/integrations/meta/message-projection";
+import { createTurnRuntime } from "@/src/modules/rcos/turn-runtime";
+import { runTurn, type TurnEvent } from "@/src/modules/rcos/turn-engine";
 import { inngest } from "./client";
 
 export const relayMetaOutbox = inngest.createFunction(
@@ -62,6 +65,20 @@ export const relayMetaOutbox = inngest.createFunction(
   }
 );
 
+/**
+ * Turns a verified provider event into a conversation, and then into a turn.
+ *
+ * This used to mark the event 'processed' and stop, which meant the inbound
+ * path terminated in a log table: no customer, no conversation, no message, and
+ * nothing calling the turn engine outside its own tests.
+ *
+ * Three steps rather than one, because they fail differently and a retry must
+ * not repeat the ones that already succeeded. Projection is idempotent in the
+ * database; the turn is idempotent through `turn_records`. Only a `projected`
+ * event runs a turn — a duplicate or a delivery receipt has no new customer
+ * message to answer, and answering one twice is the failure this ordering
+ * exists to prevent.
+ */
 export const processVerifiedMetaEvent = inngest.createFunction(
   {
     id: "process-verified-meta-event",
@@ -69,11 +86,12 @@ export const processVerifiedMetaEvent = inngest.createFunction(
     concurrency: [{ limit: 4, key: "event.data.trustedWorkspaceId" }],
     triggers: { event: "meta/webhook.received" }
   },
-  async ({ event, step }) =>
-    step.run("verify-trusted-routing-record", async () => {
-      const data = event.data as Record<string, unknown>;
-      const webhookEventId = String(data.webhookEventId ?? "");
-      const trustedWorkspaceId = String(data.trustedWorkspaceId ?? "");
+  async ({ event, step }) => {
+    const data = event.data as Record<string, unknown>;
+    const webhookEventId = String(data.webhookEventId ?? "");
+    const trustedWorkspaceId = String(data.trustedWorkspaceId ?? "");
+
+    const route = await step.run("verify-trusted-routing-record", async () => {
       const admin = await createSupabaseAdminClient();
       const { data: row, error } = await admin
         .from("meta_webhook_events")
@@ -90,7 +108,68 @@ export const processVerifiedMetaEvent = inngest.createFunction(
         .eq("processing_status", "accepted");
       if (updated.error) throw new Error("WEBHOOK_PROCESSING_MARK_FAILED");
       return { webhookEventId, trustedWorkspaceId };
-    })
+    });
+
+    const projected = await step.run("project-into-crm", async () => {
+      const admin = await createSupabaseAdminClient();
+      return projectMetaMessage(admin, route.webhookEventId, route.trustedWorkspaceId);
+    });
+
+    if (projected.result !== "projected") {
+      return { ...route, projection: projected.result, turn: "not_applicable" as const };
+    }
+
+    const turn = await step.run("run-turn", async () => {
+      const admin = await createSupabaseAdminClient();
+      const { data: row, error } = await admin
+        .from("meta_webhook_events")
+        .select("channel,sender_ref,body,text_summary,occurred_at,connection_id")
+        .eq("id", route.webhookEventId)
+        .eq("workspace_id", route.trustedWorkspaceId)
+        .single();
+      if (error || !row) throw new Error("TRUSTED_WEBHOOK_ROUTE_NOT_FOUND");
+
+      const { data: connection } = await admin
+        .from("meta_connections")
+        .select("mode")
+        .eq("id", row.connection_id as string)
+        .eq("workspace_id", route.trustedWorkspaceId)
+        .maybeSingle();
+
+      // Both are present on a 'projected' result by construction. Checked
+      // rather than asserted so a change to the projection surfaces here
+      // instead of as an undefined conversation id three calls later.
+      if (!projected.conversationId || !projected.customerId) {
+        throw new Error("MESSAGE_PROJECTION_INCOMPLETE");
+      }
+
+      const turnEvent: TurnEvent = {
+        eventId: route.webhookEventId,
+        workspaceId: route.trustedWorkspaceId,
+        conversationId: projected.conversationId,
+        channel: row.channel as "whatsapp" | "instagram",
+        text: String(row.body ?? row.text_summary ?? ""),
+        occurredAt: String(row.occurred_at)
+      };
+
+      const runtime = await createTurnRuntime(admin, turnEvent, {
+        customerId: projected.customerId,
+        recipientRef: String(row.sender_ref ?? ""),
+        // The stored connection decides this, never the environment: a
+        // workspace still on a sandbox connection must not inherit live mode
+        // from a deployment-wide flag.
+        connectionMode: (connection?.mode as "sandbox" | "live") ?? "sandbox"
+      });
+      // No business profile means onboarding never finished. The message is
+      // already stored; there is simply nothing to answer it with.
+      if (!runtime) return { outcome: "no_business_profile" as const };
+
+      const record = await runTurn(turnEvent, runtime.ports);
+      return { outcome: record.outcome, reasonCodes: record.reasonCodes };
+    });
+
+    return { ...route, projection: projected.result, turn };
+  }
 );
 
 export const cleanupExpiredPrivateArtifacts = inngest.createFunction(
