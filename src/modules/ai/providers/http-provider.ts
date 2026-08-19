@@ -39,8 +39,20 @@ import type { Dialect } from "./dialects";
  *     schema exists to exclude.
  */
 
-/** Bounded so a runaway generation cannot bill or stall the turn indefinitely. */
-const MAX_OUTPUT_TOKENS = 1500;
+/**
+ * Bounded so a runaway generation cannot bill or stall the turn indefinitely.
+ *
+ * 4000 rather than a tighter number because the reply schema already permits a
+ * 4000-character reply, and the JSON wrapper, the extracted fields and the
+ * cited ids all have to fit alongside it. A cap below what the schema allows
+ * does not save money on a well-behaved turn - it truncates the JSON on a long
+ * one, which fails parsing, classifies as invalid_output and spends the whole
+ * call to produce a handoff.
+ *
+ * It also has to cover reasoning tokens on models that think by default, since
+ * those count against the same ceiling and are emitted before the answer.
+ */
+const MAX_OUTPUT_TOKENS = 4000;
 
 /** Response bodies larger than this are refused before parsing. */
 const MAX_RESPONSE_BYTES = 512 * 1024;
