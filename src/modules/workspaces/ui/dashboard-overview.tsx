@@ -2,23 +2,34 @@
 
 import Link from "next/link";
 import { useI18n } from "@/src/lib/i18n/client";
+import type { WorkspaceOverview } from "../contracts";
 import { WorkspaceShell } from "./workspace-shell";
 export function DashboardOverview({
   workspaceName,
+  overview,
   metrics
 }: {
   workspaceName: string;
+  /** Null when the read model could not be read. Not the same as all zeroes. */
+  overview: WorkspaceOverview | null;
   metrics: {
     automations: number;
     windows: number;
     customers: number;
-    reviews: number;
     errors: number;
     whatsapp: string;
     instagram: string;
   };
 }) {
   const { t, text } = useI18n();
+  /**
+   * An em dash when the overview is unavailable.
+   *
+   * Showing 0 there would claim the queue is empty on the strength of a query
+   * that failed, which is the only reading of this panel that could send
+   * somebody home with work outstanding.
+   */
+  const count = (value: number | undefined) => (overview ? String(value) : "—");
   const checklist: ReadonlyArray<readonly [string, string]> = [
     [text("Business profile", "İşletme profili", "پروفایل کسب‌وکار"), "/settings"],
     [text("Brand, pricing and FAQs", "Marka, fiyat ve SSS", "برند، قیمت و پرسش‌ها"), "/settings"],
@@ -70,42 +81,71 @@ export function DashboardOverview({
             </div>
           </div>
         </section>
-        <section className="metric-grid" aria-label="Workspace status">
+        {/*
+          The four counts that mean somebody has to do something. Totals that
+          merely describe the workspace moved below them: both were competing
+          for the same row before, and a customer count never once told anyone
+          what to do next.
+        */}
+        <section className="metric-grid" aria-label="Work waiting on a person">
           <article>
-            <span>{text("Active automations", "Etkin otomasyonlar", "اتوماسیون‌های فعال")}</span>
-            <strong>{metrics.automations}</strong>
-            <small>{text("Policy checked", "Politika denetimli", "سیاست بررسی شده")}</small>
+            <span>{text("Awaiting human", "İnsan bekliyor", "در انتظار اپراتور")}</span>
+            <strong>{count(overview?.conversationsAwaitingHuman)}</strong>
+            <small>
+              <Link href="/inbox">
+                {text("Open the inbox", "Gelen kutusunu aç", "باز کردن صندوق ورودی")}
+              </Link>
+            </small>
           </article>
           <article>
+            <span>{text("Handoffs open", "Açık devirler", "تحویل‌های باز")}</span>
+            <strong>{count(overview?.handoffsOpen)}</strong>
+            <small>
+              {text("Not yet acknowledged", "Henüz teslim alınmadı", "هنوز تأیید نشده")}
+            </small>
+          </article>
+          <article>
+            <span>{text("Follow-ups due", "Vadesi gelen takipler", "پیگیری‌های سررسید")}</span>
+            <strong>{count(overview?.followupsDue)}</strong>
+            <small>{text("Eligible to send", "Göndermeye uygun", "واجد شرایط ارسال")}</small>
+          </article>
+          <article>
+            <span>
+              {text("Connections at risk", "Riskli bağlantılar", "اتصال‌های در معرض خطر")}
+            </span>
+            <strong>{count(overview?.connectionsNeedingAttention)}</strong>
+            <small>
+              <Link href="/connections">
+                {text("Review connections", "Bağlantıları incele", "بررسی اتصال‌ها")}
+              </Link>
+            </small>
+          </article>
+        </section>
+        {overview ? null : (
+          <p className="metric-unavailable" role="status">
+            {text(
+              "These counts could not be read just now. They are not zero — retry shortly.",
+              "Bu sayılar şu anda okunamadı. Sıfır değiller — birazdan yeniden deneyin.",
+              "این شمارش‌ها اکنون خوانده نشد. مقدارشان صفر نیست — کمی بعد دوباره تلاش کنید."
+            )}
+          </p>
+        )}
+        <ul className="metric-totals" aria-label="Workspace totals">
+          <li>
+            <span>{text("Active automations", "Etkin otomasyonlar", "اتوماسیون‌های فعال")}</span>
+            <strong>{metrics.automations}</strong>
+          </li>
+          <li>
             <span>
               {text("Open service windows", "Açık hizmet pencereleri", "پنجره‌های باز گفتگو")}
             </span>
             <strong>{metrics.windows}</strong>
-            <small>
-              {text(
-                "Trusted provider events",
-                "Güvenilir sağlayıcı olayları",
-                "رویدادهای معتبر ارائه‌دهنده"
-              )}
-            </small>
-          </article>
-          <article>
-            <span>{text("New customers", "Yeni müşteriler", "مشتریان جدید")}</span>
+          </li>
+          <li>
+            <span>{text("Customer records", "Müşteri kayıtları", "رکوردهای مشتری")}</span>
             <strong>{metrics.customers}</strong>
-            <small>{text("Workspace CRM", "Çalışma alanı CRM'i", "CRM فضای کاری")}</small>
-          </article>
-          <article>
-            <span>{text("Human review", "İnsan incelemesi", "بررسی انسانی")}</span>
-            <strong>{metrics.reviews}</strong>
-            <small>
-              {text(
-                `${metrics.errors} recent errors`,
-                `${metrics.errors} yakın zamanlı hata`,
-                `${metrics.errors} خطای اخیر`
-              )}
-            </small>
-          </article>
-        </section>
+          </li>
+        </ul>
         <div className="dashboard-grid">
           <section className="panel">
             <div className="panel-heading">
@@ -149,9 +189,9 @@ export function DashboardOverview({
                   </strong>
                   <span>
                     {text(
-                      `${metrics.reviews} conversations waiting`,
-                      `${metrics.reviews} görüşme bekliyor`,
-                      `${metrics.reviews} گفتگو در انتظار است`
+                      `${count(overview?.conversationsAwaitingHuman)} conversations waiting`,
+                      `${count(overview?.conversationsAwaitingHuman)} görüşme bekliyor`,
+                      `${count(overview?.conversationsAwaitingHuman)} گفتگو در انتظار است`
                     )}
                   </span>
                 </div>

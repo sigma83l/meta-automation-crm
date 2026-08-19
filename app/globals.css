@@ -1143,9 +1143,54 @@ main {
   letter-spacing: -0.05em;
 }
 
-.metric-grid .word-value {
-  color: #176e5e;
-  font-size: 1.35rem;
+.metric-grid article a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.metric-grid article a:hover {
+  text-decoration: underline;
+}
+
+/* Totals, kept visually subordinate to the counts above them: one line, no
+   cards, so the eye reaches the work-waiting figures first. */
+.metric-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  margin: -6px 0 18px;
+  padding: 13px 20px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+
+.metric-totals li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.metric-totals span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.metric-totals strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.metric-unavailable {
+  margin: -6px 0 12px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--warning-soft);
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .dashboard-grid {
