@@ -117,6 +117,42 @@ Genuinely absent, requiring new objects: `contact_facts`, `opportunities`,
 `conversion_events`, `entitlements`, `billing_cycles`, `usage_ledger`,
 `deletion_ledger`, `support_tickets`.
 
+## Drift since P0 — recorded 2026-08-19
+
+Everything above is the P0 snapshot and is deliberately left as recorded: it is
+the baseline a reconciliation is measured against, so correcting its values in
+place would remove the thing it exists to be. What follows is what has since
+changed, so a reader is not misled by an accurate record of a former state.
+
+**The Supabase project moved.** Production is now `qsvoxpnfxvikannfdybr`
+(**`crm-prod`**, organisation `jsbiaiqyiajjxnmslgow`, PostgreSQL 17.6). The
+project named throughout the sections above, `kkkfrmxlxtubdvksfjqi` in
+`ap-south-1`, is the retired Mumbai project and survives only as
+`.env.local.mumbai.bak`. See `docs/DATABASE_REGION_MIGRATION.md`. Treat
+`.env.local` and the Vercel environment as authoritative over this document for
+any provider identifier — the Turnstile site key recorded above, in particular,
+no longer matches either.
+
+**Migrations are applied.** 21 forward-only migrations, head
+`20260819130000_inbound_message_projection.sql`. The P0 note that the head
+migration had "never been applied to any hosted project" is no longer true of
+any of them: all 21 are applied to `crm-prod`, verified 79/79 relations present
+by `scripts/verify-remote-schema.mjs` on 2026-08-19. The two most recent add the
+inbound message projection, `turn_records`, and the `sent`/`sent_unknown`
+delivery states.
+
+**The inbound path reaches the CRM.** At P0 nothing wrote `conversations` or
+`messages` and `runTurn` had no production caller; both are now driven by
+`processVerifiedMetaEvent`. Outbound sending remains gated with no adapter.
+
+**Counts.** 22 pages, 33 API route handlers, 21 migrations. Tests: 56 unit, 7
+integration, 8 E2E and 10 migration-execution files, running 885 passed / 23
+skipped.
+
+**Still accurate:** repository and remotes, branch, the Vercel project ref, the
+Meta app id and its sandbox mode, the tenant-authority and RLS descriptions, and
+the schema-mapping table.
+
 ## Known conflicts
 
 See `CONFLICT_REGISTER.md`.
