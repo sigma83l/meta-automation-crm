@@ -30,6 +30,10 @@ export class SupabaseMetaWebhookRepository implements MetaWebhookRepository {
       p_sender_ref: event.senderRef ?? null,
       p_provider_message_ref: event.providerMessageRef ?? null,
       p_text_summary: event.text?.slice(0, 500) ?? null,
+      // The request body is the only place the whole message ever exists. The
+      // projection runs later, from durable state, so anything not stored here
+      // is gone by the time a conversation wants it.
+      p_body: event.text ?? null,
       p_attachment_metadata: event.attachments,
       p_status_metadata: event.status ? { status: event.status } : {},
       p_occurred_at: event.occurredAt
