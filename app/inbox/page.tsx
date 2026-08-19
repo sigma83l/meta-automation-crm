@@ -1,4 +1,9 @@
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
+import {
+  conversationsAwaitingReview,
+  isReviewReason,
+  latestTurnReview
+} from "@/src/modules/rcos/server/turn-review-read-model";
 import { TakeoverControls } from "@/src/modules/conversations/takeover-controls";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
@@ -53,6 +58,20 @@ export default async function InboxPage({
         .eq("conversation_id", activeId)
         .order("sent_at")
     : null;
+  // Why the assistant stopped, for the list and for the open conversation. Read
+  // alongside rather than joined in, so an unreadable explanation costs the
+  // marker and never the messages.
+  const [awaitingReview, activeReview] = await Promise.all([
+    conversationsAwaitingReview(
+      client,
+      workspace.id,
+      (conversations.data ?? []).map((conversation) => String(conversation.id))
+    ),
+    activeId ? latestTurnReview(client, workspace.id, activeId) : Promise.resolve(undefined)
+  ]);
+  // A code with no sentence is shown as itself: an operator seeing an
+  // identifier they can search for is better served than one seeing nothing.
+  const explain = (code: string) => (isReviewReason(code) ? t(`review.${code}`) : code);
   return (
     <WorkspaceShell active="inbox" workspaceName={workspace.name}>
       <div className={`inbox-grid ${requestedId ? "show-conversation" : "show-list"}`}>
@@ -78,6 +97,9 @@ export default async function InboxPage({
               <span>
                 {conversation.channel} · {conversation.owner}
               </span>
+              {conversation.requires_human_review || awaitingReview.has(String(conversation.id)) ? (
+                <span className="review-flag">{t("inbox.needsReview")}</span>
+              ) : null}
               {conversation.unread_count ? <b>{conversation.unread_count}</b> : null}
             </a>
           ))}
@@ -112,6 +134,17 @@ export default async function InboxPage({
             </div>
             <span>{active?.data?.owner ?? text("No owner", "Sorumlu yok", "بدون مسئول")}</span>
           </div>
+          {active?.data?.requires_human_review && activeReview?.reasonCodes.length ? (
+            <div className="review-reason" role="status">
+              <strong>{t("inbox.whyPaused")}</strong>
+              <ul>
+                {activeReview.reasonCodes.map((code) => (
+                  <li key={code}>{explain(code)}</li>
+                ))}
+              </ul>
+              <span>{t("inbox.reviewHint")}</span>
+            </div>
+          ) : null}
           <div className="message-stream">
             {(messages?.data ?? []).map((message) => (
               <article className={`message ${message.direction}`} key={message.id}>

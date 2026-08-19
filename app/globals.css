@@ -562,6 +562,45 @@ body {
   background: var(--info-soft);
   box-shadow: inset 3px 0 var(--blue);
 }
+
+/* A conversation the assistant stopped on. Amber rather than red: it is work
+   waiting, not a fault, and the operator chooses when to pick it up. Both
+   tokens are redefined per theme, so no dark-mode override is needed. */
+.review-flag {
+  width: fit-content;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--line));
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.review-reason {
+  display: grid;
+  gap: 8px;
+  margin: 16px 20px 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--amber) 36%, var(--line));
+  border-inline-start: 4px solid var(--amber);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amber) 9%, var(--surface));
+}
+.review-reason strong {
+  font-size: 0.82rem;
+}
+.review-reason ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+.review-reason > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
 .message-stream {
   display: flex;
   flex-direction: column;
