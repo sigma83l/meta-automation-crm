@@ -1,13 +1,20 @@
 import { appError, err, ok, type Result } from "@/src/lib/result";
 import {
   structuredReplySchema,
+  turnClassificationSchema,
   type AiProvider,
   type AiReplyInput,
   type ClassifiedProviderError,
   type ProviderUsage,
-  type StructuredReply
+  type StructuredReply,
+  type TurnClassification
 } from "../contracts";
-import { buildSystemPrompt, buildUserPrompt } from "../prompt";
+import {
+  buildClassificationSystemPrompt,
+  buildClassificationUserPrompt,
+  buildSystemPrompt,
+  buildUserPrompt
+} from "../prompt";
 import type { Dialect } from "./dialects";
 
 /**
@@ -160,8 +167,54 @@ export function createHttpAiProvider(options: HttpAiProviderOptions): AiProvider
     }
   }
 
+  /** Shared by both calls: parse the text, validate it, classify a failure. */
+  function parseAgainst<T>(
+    payload: unknown,
+    schema: { safeParse(value: unknown): { success: boolean; data?: T; error?: unknown } }
+  ): Result<T> {
+    const text = dialect.extractText(payload);
+    if (text === null) {
+      lastFailure = { kind: "invalid_output", retryable: false };
+      return err(
+        appError("PROVIDER_UNAVAILABLE", "The AI provider returned no usable content.", {
+          details: { kind: "invalid_output" }
+        })
+      );
+    }
+    const parsed = schema.safeParse(extractJsonObject(text));
+    if (!parsed.success || parsed.data === undefined) {
+      lastFailure = { kind: "invalid_output", retryable: false };
+      const issues = (parsed.error as { issues?: { path: (string | number)[] }[] } | undefined)
+        ?.issues;
+      return err(
+        // Names fields, never values: a rejected reply is still customer-derived.
+        appError("VALIDATION_ERROR", "The AI provider returned an off-contract reply.", {
+          details: {
+            kind: "invalid_output",
+            fields: (issues ?? [])
+              .map((issue) => issue.path.join("."))
+              .filter(Boolean)
+              .join(",")
+              .slice(0, 200)
+          }
+        })
+      );
+    }
+    return ok(parsed.data);
+  }
+
   return Object.freeze({
     name: dialect.name,
+
+    async classifyTurn(input: AiReplyInput): Promise<Result<TurnClassification>> {
+      const called = await call(
+        buildClassificationSystemPrompt(input),
+        buildClassificationUserPrompt(input)
+      );
+      if (!called.ok) return called;
+      usage = dialect.extractUsage(called.value, model);
+      return parseAgainst<TurnClassification>(called.value, turnClassificationSchema);
+    },
 
     async generateStructuredReply(input: AiReplyInput): Promise<Result<StructuredReply>> {
       const called = await call(buildSystemPrompt(input), buildUserPrompt(input));
@@ -169,34 +222,8 @@ export function createHttpAiProvider(options: HttpAiProviderOptions): AiProvider
 
       usage = dialect.extractUsage(called.value, model);
 
-      const text = dialect.extractText(called.value);
-      if (text === null) {
-        lastFailure = { kind: "invalid_output", retryable: false };
-        return err(
-          appError("PROVIDER_UNAVAILABLE", "The AI provider returned no usable content.", {
-            details: { kind: "invalid_output" }
-          })
-        );
-      }
-
-      const parsed = structuredReplySchema.safeParse(extractJsonObject(text));
-      if (!parsed.success) {
-        lastFailure = { kind: "invalid_output", retryable: false };
-        // The failure detail names fields, never values: a rejected reply is
-        // still customer-derived content.
-        return err(
-          appError("VALIDATION_ERROR", "The AI provider returned an off-contract reply.", {
-            details: {
-              kind: "invalid_output",
-              fields: parsed.error.issues
-                .map((issue) => issue.path.join("."))
-                .filter(Boolean)
-                .join(",")
-                .slice(0, 200)
-            }
-          })
-        );
-      }
+      const parsed = parseAgainst<StructuredReply>(called.value, structuredReplySchema);
+      if (!parsed.ok) return parsed;
 
       // A citation the turn never offered is invented, and citing it is how an
       // unapproved claim acquires the appearance of a source. Dropped here
@@ -208,8 +235,8 @@ export function createHttpAiProvider(options: HttpAiProviderOptions): AiProvider
       ]);
       return ok(
         Object.freeze({
-          ...parsed.data,
-          knowledgeItemIds: parsed.data.knowledgeItemIds.filter((id) => offered.has(id))
+          ...parsed.value,
+          knowledgeItemIds: parsed.value.knowledgeItemIds.filter((id) => offered.has(id))
         })
       );
     },

@@ -7,6 +7,24 @@ export function createDeterministicAiProvider(
   let usage: ProviderUsage | null = null;
   return Object.freeze({
     name: "deterministic-mock" as const,
+    async classifyTurn(input: AiReplyInput) {
+      if (options.failure)
+        return err(
+          appError("PROVIDER_UNAVAILABLE", "AI provider is temporarily unavailable.", {
+            retryable: true,
+            details: { kind: options.failure }
+          })
+        );
+      const last = input.messages.at(-1)?.content.toLowerCase() ?? "";
+      return ok({
+        intent: "business_question",
+        language: input.policy.primaryLanguage,
+        confidence: 0.8,
+        highStakes: input.policy.escalationKeywords.some((keyword) =>
+          last.includes(keyword.toLowerCase())
+        )
+      });
+    },
     async generateStructuredReply(input: AiReplyInput) {
       if (options.failure)
         return err(
