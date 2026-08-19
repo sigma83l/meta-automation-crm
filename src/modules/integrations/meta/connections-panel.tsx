@@ -146,6 +146,12 @@ export function ConnectionsPanel({
         "Meta hangi WhatsApp hesabının seçildiğini bildirmedi. Yeniden bağlanmayı deneyin.",
         "متا مشخص نکرد کدام حساب واتساپ انتخاب شده است. دوباره تلاش کنید."
       );
+    if (message === "META_WHATSAPP_APP_NOT_API")
+      return text(
+        "That account was set up for the WhatsApp Business app, which cannot be automated. Connect an account onboarded to the WhatsApp Business Platform instead.",
+        "Bu hesap, otomatikleştirilemeyen WhatsApp Business uygulaması için kuruldu. Bunun yerine WhatsApp Business Platform hesabı bağlayın.",
+        "این حساب برای اپلیکیشن WhatsApp Business راه‌اندازی شده که قابل خودکارسازی نیست. به جای آن حساب WhatsApp Business Platform را متصل کنید."
+      );
     if (message === "META_SIGNUP_ERROR")
       return text(
         "Meta reported an error during setup. Try connecting again.",

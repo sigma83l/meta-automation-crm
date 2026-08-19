@@ -374,6 +374,39 @@ describe("the WhatsApp assets are taken from the dialog's message", () => {
       });
     });
   });
+
+  it("opts into the session-info messages it then waits for", async () => {
+    // The bug this guards, and it was silent in exactly the worst way: the
+    // listener, the origin check and the grace window were all written and
+    // tested against messages this call never asked Meta to send. Every test
+    // above posts its own message, so every one of them passed while the real
+    // dialog posted nothing at all.
+    const sdk = recordingSdk();
+    await withWindow(sdk.fb, async (module) => {
+      void module.launchEmbeddedSignup(CONFIG);
+      await Promise.resolve();
+      expect(sdk.logins[0]!.options.extras).toMatchObject({ sessionInfoVersion: "3" });
+    });
+  });
+
+  it("says so when the account is on the Business app rather than the API", async () => {
+    // A real choice in the dialog with a real consequence: no phone number id,
+    // so nothing can be sent. Without this it read as a generic timeout.
+    const sdk = recordingSdk();
+    await withWindow(sdk.fb, async (module, channel) => {
+      const pending = module.launchEmbeddedSignup(CONFIG);
+      const assertion = expect(pending).rejects.toThrow("META_WHATSAPP_APP_NOT_API");
+      channel.post({
+        origin: "https://www.facebook.com",
+        data: JSON.stringify({
+          type: "WA_EMBEDDED_SIGNUP",
+          event: "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING",
+          data: { waba_id: "102290129340398" }
+        })
+      });
+      await assertion;
+    });
+  });
 });
 
 describe("Meta identifiers are validated by shape, not by presence", () => {

@@ -231,6 +231,10 @@ function readSignupMessage(raw: unknown): SignupMessage | null {
  * The two halves arrive through different channels - the code through the
  * login callback, the assets through a `postMessage` - so this settles only
  * once it holds both, and names the specific failure when it cannot.
+ *
+ * `extras.sessionInfoVersion` is what makes the second channel exist at all.
+ * It is not a version negotiation to be safely omitted: without it the dialog
+ * runs normally, the code comes back, and no message is ever posted.
  */
 export async function launchEmbeddedSignup(
   config: EmbeddedSignupConfig
@@ -278,6 +282,14 @@ export async function launchEmbeddedSignup(
       // to add one at Meta; nothing here can proceed without it.
       if (message.event === "FINISH_ONLY_WABA") {
         settleRejected("META_WHATSAPP_PHONE_REQUIRED");
+        return;
+      }
+      // The user onboarded onto the WhatsApp Business *app* rather than the
+      // API. That is a real choice with a real outcome, and the outcome is
+      // that there is no phone number id to send messages through. Named so
+      // it does not read as a fault of ours.
+      if (message.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING") {
+        settleRejected("META_WHATSAPP_APP_NOT_API");
         return;
       }
       // Both of these are also visible through the login callback, but the
@@ -336,7 +348,15 @@ export async function launchEmbeddedSignup(
         config_id: config.configId,
         response_type: "code",
         override_default_response_type: true,
-        extras: { setup: {} }
+        extras: {
+          setup: {},
+          featureType: "",
+          // Opts into the session-info messages. Without it Meta runs the
+          // dialog and posts nothing, so the listener above waits out its
+          // grace window and fails every single time - having asked for
+          // exactly the data it then refuses to be told.
+          sessionInfoVersion: "3"
+        }
       }
     );
   });
