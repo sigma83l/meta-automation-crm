@@ -1,4 +1,5 @@
 import { appError, err, ok, type Result } from "@/src/lib/result";
+import { moneyTokens, timeTokens } from "./validator";
 import type { AiProvider, AiReplyInput } from "@/src/modules/ai/contracts";
 import { buildModelRegistry, type ModelConfiguration } from "./model-registry";
 import {
@@ -213,10 +214,22 @@ export function createAiTurnPorts(
             value: `${item.name}: ${formatApprovedAmount(item.amountMinor, item.currency)}`
           }))
         ],
-        approvedAmounts: context.priceItems.map((item) =>
-          formatApprovedAmount(item.amountMinor, item.currency)
-        ),
-        approvedTimes: context.approvedTimes
+        // Price items give the amounts, and business hours give the times - but
+        // an approved FAQ answer is also the workspace's own approved words, and
+        // a reply quoting one verbatim was not inventing anything. Without this
+        // the most ordinary FAQ there is, "what are your opening hours", is
+        // offered to the model, cited correctly, and then blocked by the
+        // validator for containing the very times it was approved to state.
+        approvedAmounts: [
+          ...context.priceItems.map((item) =>
+            formatApprovedAmount(item.amountMinor, item.currency)
+          ),
+          ...context.faqItems.flatMap((item) => moneyTokens(item.answer))
+        ],
+        approvedTimes: [
+          ...context.approvedTimes,
+          ...context.faqItems.flatMap((item) => timeTokens(item.answer))
+        ]
       };
     },
 

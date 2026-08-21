@@ -290,3 +290,83 @@ describe("only a booking turn may claim completion", () => {
     });
   });
 });
+
+describe("what an approved FAQ answer approves", () => {
+  const withFaq = (answer: string): TurnContext => ({
+    requiredFields: [],
+    faqItems: [{ id: "11111111-1111-4111-8111-111111111111", question: "Q", answer }],
+    priceItems: [],
+    policy: {
+      primaryLanguage: "en",
+      fallbackLanguage: "en",
+      forbiddenClaims: [],
+      escalationKeywords: [],
+      lowConfidenceThreshold: 0.5
+    },
+    approvedTimes: [],
+    messages: [{ role: "customer", content: "when are you open?" }],
+    classification: "webhook",
+    demoMode: false
+  });
+
+  const retrieveWith = async (answer: string) => {
+    const ports = createAiTurnPorts({
+      providers: {},
+      models: {},
+      loadContext: async () => withFaq(answer)
+    });
+    return ports.retrieve(
+      {
+        eventId: "e1",
+        workspaceId: "w",
+        conversationId: "c",
+        channel: "whatsapp",
+        text: "when are you open?",
+        occurredAt: "2026-08-21T10:00:00.000Z"
+      },
+      { intents: [], locale: "en" }
+    );
+  };
+
+  it("approves the times inside an approved answer", async () => {
+    // The failure this prevents, observed in production: the model cited this
+    // exact answer, quoted it verbatim, and the validator blocked the reply for
+    // stating times no approved source confirmed - while the source it quoted
+    // was itself approved.
+    const retrieved = await retrieveWith("We are open Monday to Friday, 09:00 to 18:00.");
+    expect(retrieved.approvedTimes).toEqual(expect.arrayContaining(["Monday", "Friday", "18:00"]));
+  });
+
+  it("approves money stated in an approved answer", async () => {
+    const retrieved = await retrieveWith("Delivery costs 50 TL within the city.");
+    expect(retrieved.approvedAmounts).toEqual(expect.arrayContaining(["50 TL"]));
+  });
+
+  it("approves nothing extra when the answer states no times or money", async () => {
+    // The set must stay tight: this is what stops an unrelated FAQ from
+    // silently licensing a figure the workspace never approved.
+    const retrieved = await retrieveWith("Yes, we offer gift wrapping on request.");
+    expect(retrieved.approvedTimes).toEqual([]);
+    expect(retrieved.approvedAmounts).toEqual([]);
+  });
+
+  it("still approves business hours supplied by the profile", async () => {
+    const ports = createAiTurnPorts({
+      providers: {},
+      models: {},
+      loadContext: async () => ({ ...withFaq("Nothing dated here."), approvedTimes: ["09:00"] })
+    });
+    const retrieved = await ports.retrieve(
+      {
+        eventId: "e2",
+        workspaceId: "w",
+        conversationId: "c",
+        channel: "whatsapp",
+        text: "hi",
+        occurredAt: "2026-08-21T10:00:00.000Z"
+      },
+      { intents: [], locale: "en" }
+    );
+    expect(retrieved.approvedTimes).toEqual(["09:00"]);
+  });
+});

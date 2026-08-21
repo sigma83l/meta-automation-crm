@@ -69,6 +69,23 @@ function normalize(value: string): string {
 }
 
 /**
+ * The money and time tokens this validator would check in a piece of text.
+ *
+ * Exported so that whatever assembles the approved sets can approve a workspace's
+ * own words using the same reading the validator applies to a draft. The
+ * alternative - two regexes that are meant to agree - disagrees the first time
+ * either is edited, and the symptom is a reply blocked for quoting an approved
+ * answer verbatim.
+ */
+export function moneyTokens(text: string): readonly string[] {
+  return text.match(MONEY) ?? [];
+}
+
+export function timeTokens(text: string): readonly string[] {
+  return text.match(TIME) ?? [];
+}
+
+/**
  * Whether every occurrence of a pattern in the draft appears in the approved
  * set. Comparison is normalised so "1,200 TL" and "1200 tl" are the same value
  * — otherwise formatting differences would produce false blocks.
