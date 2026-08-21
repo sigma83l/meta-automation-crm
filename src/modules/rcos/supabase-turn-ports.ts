@@ -304,6 +304,7 @@ export function createSupabaseTurnPorts(
         model: call.model,
         outcome: call.outcome,
         ...(call.failureCode ? { failureCode: call.failureCode } : {}),
+        ...(call.failureKind ? { failureKind: call.failureKind } : {}),
         ...(call.deferredToHuman === undefined ? {} : { deferredToHuman: call.deferredToHuman }),
         ...(call.usage
           ? { inputTokens: call.usage.inputTokens, outputTokens: call.usage.outputTokens }

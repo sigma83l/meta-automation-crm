@@ -82,6 +82,14 @@ export type ModelCallRecord = Readonly<{
   outcome: "ok" | "failed" | "skipped";
   /** Why a call was skipped, or which error class it failed with. */
   failureCode?: string;
+  /**
+   * The transport classification behind a failure: `invalid_output` for a 4xx
+   * the provider rejected outright (a wrong model identifier lands here),
+   * `unavailable` for 5xx or a network fault, plus `rate_limit`, `timeout` and
+   * `authentication`. The code alone cannot separate "the model name is wrong"
+   * from "the provider is down", and those have different fixes.
+   */
+  failureKind?: string;
   /** True only when the model itself asked for a person. */
   deferredToHuman?: boolean;
   usage: ReturnType<AiProvider["getUsageMetadata"]>;
@@ -171,7 +179,14 @@ export function createAiTurnPorts(
         role: "utility",
         model: model.value,
         outcome: classified.ok ? "ok" : "failed",
-        ...(classified.ok ? {} : { failureCode: classified.error.code }),
+        ...(classified.ok
+          ? {}
+          : {
+              failureCode: classified.error.code,
+              ...(classified.error.details?.kind
+                ? { failureKind: classified.error.details.kind }
+                : {})
+            }),
         usage: provider.value.getUsageMetadata()
       });
       if (!classified.ok) return UNCERTAIN;
@@ -246,7 +261,14 @@ export function createAiTurnPorts(
         role,
         model: model.value,
         outcome: generated.ok ? "ok" : "failed",
-        ...(generated.ok ? {} : { failureCode: generated.error.code }),
+        ...(generated.ok
+          ? {}
+          : {
+              failureCode: generated.error.code,
+              ...(generated.error.details?.kind
+                ? { failureKind: generated.error.details.kind }
+                : {})
+            }),
         // The distinction this whole record exists for: a model that answered
         // and asked for a person is not a model that failed.
         ...(generated.ok ? { deferredToHuman: generated.value.needsHuman } : {}),
