@@ -8,7 +8,7 @@ import { selectAiProvider, type AiProviderSet } from "@/src/modules/ai/provider-
 import { DIALECTS } from "@/src/modules/ai/providers/dialects";
 import { createHttpAiProvider } from "@/src/modules/ai/providers/http-provider";
 import { MAX_RECENT_TURN_PAIRS } from "./context-budget";
-import { createAiTurnPorts, type TurnContext } from "./ai-turn-ports";
+import { createAiTurnPorts, type ModelCallRecord, type TurnContext } from "./ai-turn-ports";
 import {
   createDraftRegistry,
   createSupabaseTurnPorts,
@@ -280,6 +280,11 @@ export async function createTurnRuntime(
 
   const providers = await providersForWorkspace(admin, event.workspaceId, mode);
   const drafts = createDraftRegistry();
+  // Collected per turn and handed to observe(). Without this an empty draft is
+  // reported identically whether no model was configured, the provider refused
+  // the key, or the model answered and asked for a person - three causes with
+  // three different owners, arriving as one reason code.
+  const calls: ModelCallRecord[] = [];
 
   const aiPorts = createAiTurnPorts({
     // Possibly empty. No provider at all is a legitimate state — an
@@ -287,7 +292,8 @@ export async function createTurnRuntime(
     // test — and the turn resolves every one of them to a handoff.
     providers,
     models: env.aiModels,
-    loadContext: contextFor
+    loadContext: contextFor,
+    onCall: (record) => void calls.push(record)
   });
 
   const decisionContext = async (turn: TurnEvent): Promise<DecisionContext> => {
@@ -310,7 +316,8 @@ export async function createTurnRuntime(
       explicitApproval: false
     },
     decisionContext,
-    draft: (eventId) => drafts.get(eventId)
+    draft: (eventId) => drafts.get(eventId),
+    modelCalls: () => calls
   });
 
   return {

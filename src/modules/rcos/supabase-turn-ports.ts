@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement";
 import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
+import type { ModelCallRecord } from "./ai-turn-ports";
 import type { StoredFact } from "./memory-policy";
 import {
   sendRefFor,
@@ -62,6 +63,12 @@ export type SupabaseTurnDependencies = Readonly<{
   decisionContext(event: TurnEvent): Promise<DecisionContext>;
   /** The reply `compose` produced this turn. */
   draft(eventId: string): ComposedReply | undefined;
+  /**
+   * The model calls this turn made. Read at observe time so the audit row can
+   * say whether a handoff came from an unconfigured model, a failed call, or a
+   * model that answered and asked for a person.
+   */
+  modelCalls?(eventId: string): readonly ModelCallRecord[];
 }>;
 
 /**
@@ -289,6 +296,20 @@ export function createSupabaseTurnPorts(
       // Never the message, never the draft: reason codes and counts only. This
       // table is read by operators and is not covered by the conversation's
       // retention policy.
+      // Token counts and model identifiers only. A provider's own error text
+      // can echo the request, and the request carries customer messages, so the
+      // failure code travels and the message never does.
+      const calls = (dependencies.modelCalls?.(record.eventId) ?? []).map((call) => ({
+        role: call.role,
+        model: call.model,
+        outcome: call.outcome,
+        ...(call.failureCode ? { failureCode: call.failureCode } : {}),
+        ...(call.deferredToHuman === undefined ? {} : { deferredToHuman: call.deferredToHuman }),
+        ...(call.usage
+          ? { inputTokens: call.usage.inputTokens, outputTokens: call.usage.outputTokens }
+          : {})
+      }));
+
       const { error } = await admin.from("ai_execution_audit_events").insert({
         workspace_id: record.workspaceId,
         event_type: "rcos_turn",
@@ -299,7 +320,9 @@ export function createSupabaseTurnPorts(
           reasonCodes: record.reasonCodes,
           toolExecuted: record.toolExecuted,
           acceptedMemoryWrites: record.acceptedMemoryWrites,
-          refusedMemoryWrites: record.refusedMemoryWrites
+          refusedMemoryWrites: record.refusedMemoryWrites,
+          // Empty means no model was reached at all this turn.
+          modelCalls: calls
         }
       });
       // Deliberately swallowed. Observation failing must not undo a committed

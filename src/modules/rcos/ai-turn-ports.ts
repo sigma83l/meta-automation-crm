@@ -59,11 +59,32 @@ export type AiTurnDependencies = Readonly<{
   models: ModelConfiguration;
   loadContext(event: TurnEvent): Promise<TurnContext>;
   /** Observes each model call. Never receives message content. */
-  onCall?(record: {
-    role: ModelRole;
-    model: string;
-    usage: ReturnType<AiProvider["getUsageMetadata"]>;
-  }): void;
+  onCall?(record: ModelCallRecord): void;
+}>;
+
+/**
+ * What happened on one model call.
+ *
+ * `outcome` exists because an empty draft has three causes that are
+ * indistinguishable from the turn record alone: no call was attempted, a call
+ * failed, or a call succeeded and the model asked for a person. The first is a
+ * misconfiguration, the second is an outage or a rejected key, and the third is
+ * the system working correctly. Answering "why did this hand off" without them
+ * is guesswork, and it is the question every handoff raises.
+ *
+ * `failureCode` is the error code only, never the message: a provider's error
+ * text can echo the request, and the request carries customer messages.
+ */
+export type ModelCallRecord = Readonly<{
+  role: ModelRole;
+  /** Empty when the outcome is `skipped` — there was no model to name. */
+  model: string;
+  outcome: "ok" | "failed" | "skipped";
+  /** Why a call was skipped, or which error class it failed with. */
+  failureCode?: string;
+  /** True only when the model itself asked for a person. */
+  deferredToHuman?: boolean;
+  usage: ReturnType<AiProvider["getUsageMetadata"]>;
 }>;
 
 /** Renders a price exactly as the prompt renders it, so the two never diverge. */
@@ -132,12 +153,25 @@ export function createAiTurnPorts(
       const context = await contextFor(event);
       const model = resolveModel("utility", registry);
       const provider = providerFor("utility");
-      if (!model.ok || !provider.ok) return UNCERTAIN;
+      if (!model.ok || !provider.ok) {
+        // Reported rather than returned silently. This is the unconfigured
+        // case, and it looks identical downstream to a provider outage.
+        dependencies.onCall?.({
+          role: "utility",
+          model: model.ok ? model.value : "",
+          outcome: "skipped",
+          failureCode: model.ok ? "AI_CREDENTIAL_UNAVAILABLE" : model.error.code,
+          usage: null
+        });
+        return UNCERTAIN;
+      }
 
       const classified = await provider.value.classifyTurn(replyInput(event, context));
       dependencies.onCall?.({
         role: "utility",
         model: model.value,
+        outcome: classified.ok ? "ok" : "failed",
+        ...(classified.ok ? {} : { failureCode: classified.error.code }),
         usage: provider.value.getUsageMetadata()
       });
       if (!classified.ok) return UNCERTAIN;
@@ -184,17 +218,38 @@ export function createAiTurnPorts(
 
       // A role that may not speak to a customer, or no budget, means no call.
       if (!mayAnswerCustomer(role) || generativeCallBudget(role, signals) === 0) {
+        dependencies.onCall?.({
+          role,
+          model: "",
+          outcome: "skipped",
+          failureCode: "NO_GENERATIVE_BUDGET",
+          usage: null
+        });
         return { text: "", citedRefs: [], claimsCompletion: false };
       }
 
       const model = resolveModel(role, registry);
       const provider = providerFor(role);
-      if (!model.ok || !provider.ok) return { text: "", citedRefs: [], claimsCompletion: false };
+      if (!model.ok || !provider.ok) {
+        dependencies.onCall?.({
+          role,
+          model: model.ok ? model.value : "",
+          outcome: "skipped",
+          failureCode: model.ok ? "AI_CREDENTIAL_UNAVAILABLE" : model.error.code,
+          usage: null
+        });
+        return { text: "", citedRefs: [], claimsCompletion: false };
+      }
 
       const generated = await provider.value.generateStructuredReply(replyInput(event, context));
       dependencies.onCall?.({
         role,
         model: model.value,
+        outcome: generated.ok ? "ok" : "failed",
+        ...(generated.ok ? {} : { failureCode: generated.error.code }),
+        // The distinction this whole record exists for: a model that answered
+        // and asked for a person is not a model that failed.
+        ...(generated.ok ? { deferredToHuman: generated.value.needsHuman } : {}),
         usage: provider.value.getUsageMetadata()
       });
       // An empty draft fails validation, which routes to a handoff. That is the

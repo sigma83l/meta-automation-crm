@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createFakeSupabase, type FakeRow } from "@/tests/fixtures/fake-supabase";
 import { createDeterministicAiProvider } from "@/src/modules/ai/providers/deterministic-provider";
 import type { AiProvider } from "@/src/modules/ai/contracts";
-import { createAiTurnPorts, type TurnContext } from "@/src/modules/rcos/ai-turn-ports";
+import {
+  createAiTurnPorts,
+  type ModelCallRecord,
+  type TurnContext
+} from "@/src/modules/rcos/ai-turn-ports";
 import {
   createDraftRegistry,
   createSupabaseTurnPorts
@@ -262,5 +266,99 @@ describe("a reply quoting a price", () => {
 
     expect(record.outcome).toBe("sent");
     expect(fake.database.rows("messages")[0]!.body).toBe("A consultation is 1200.00 TL.");
+  });
+});
+
+describe("telling the three causes of an empty draft apart", () => {
+  // All three reach the same outcome by design - one route to safety. What
+  // differs is who has to act: an unconfigured model is the operator's, a
+  // failed call is the provider's, and a model asking for a person is nobody's,
+  // because that is the system working. The turn record cannot express that
+  // difference; these records are where it survives.
+  function recordingPipeline(
+    over: Parameters<typeof pipeline>[0] & {
+      models?: Readonly<{ utility?: string; primary?: string }>;
+    }
+  ) {
+    const calls: ModelCallRecord[] = [];
+    const fake = createFakeSupabase({ tables: tables() });
+    const drafts = createDraftRegistry();
+    const provider = "provider" in over ? over.provider : createDeterministicAiProvider();
+
+    const aiPorts = createAiTurnPorts({
+      providers: provider ? { utility: provider, primary: provider } : {},
+      models: over.models ?? { utility: "test-utility", primary: "test-primary" },
+      loadContext: async () => over.turnContext ?? context,
+      onCall: (record) => void calls.push(record)
+    });
+    const durable = createSupabaseTurnPorts({
+      admin: fake.client,
+      subject: { customerId: CUSTOMER, recipientRef: "905551112233", connectionMode: "sandbox" },
+      send: { liveSendEnabled: false, recipientAllowlist: [], explicitApproval: false },
+      decisionContext: async () => ({
+        escalationKeywords: [],
+        lowConfidenceThreshold: (over.turnContext ?? context).policy.lowConfidenceThreshold
+      }),
+      draft: (id) => drafts.get(id),
+      modelCalls: () => calls
+    });
+    const ports: TurnPorts = {
+      ...durable,
+      ...aiPorts,
+      async compose(turn, decision) {
+        const reply = await aiPorts.compose(turn, decision);
+        drafts.record(turn.eventId, reply);
+        return reply;
+      }
+    };
+    return { fake, ports, calls };
+  }
+
+  it("reports skipped, naming the missing configuration, when no model is set", async () => {
+    const { ports, calls } = recordingPipeline({ models: {} });
+    const record = await runTurn(event, ports);
+
+    expect(record.outcome).toBe("handoff");
+    expect(calls.every((call) => call.outcome === "skipped")).toBe(true);
+    expect(calls[0]?.failureCode).toBe("CONFIGURATION_MISSING");
+  });
+
+  it("reports failed, with the error class, when the provider refuses", async () => {
+    const { ports, calls } = recordingPipeline({
+      provider: createDeterministicAiProvider({ failure: "timeout" })
+    });
+    const record = await runTurn(event, ports);
+
+    expect(record.outcome).toBe("handoff");
+    expect(calls.some((call) => call.outcome === "failed")).toBe(true);
+    expect(calls.find((call) => call.outcome === "failed")?.failureCode).toBe(
+      "PROVIDER_UNAVAILABLE"
+    );
+  });
+
+  it("reports ok and deferredToHuman when the model itself asks for a person", async () => {
+    // No FAQ and no prices, so the fixture has nothing approved to cite and
+    // sets needsHuman. The call succeeded; the answer was "ask a human".
+    const { ports, calls } = recordingPipeline({
+      turnContext: { ...context, faqItems: [], priceItems: [] }
+    });
+    const record = await runTurn(event, ports);
+
+    expect(record.outcome).toBe("handoff");
+    const compose = calls.find((call) => call.role !== "utility");
+    expect(compose?.outcome).toBe("ok");
+    expect(compose?.deferredToHuman).toBe(true);
+  });
+
+  it("puts the calls in the audit row without any message text", async () => {
+    const { fake, ports } = recordingPipeline({ models: {} });
+    await runTurn(event, ports);
+
+    const audit = fake.database.rows("ai_execution_audit_events")[0];
+    const serialised = JSON.stringify(audit);
+    expect(serialised).toContain("modelCalls");
+    expect(serialised).toContain("skipped");
+    // The customer's words must never reach an audit table.
+    expect(serialised).not.toContain("consultation");
   });
 });
