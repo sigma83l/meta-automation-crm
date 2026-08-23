@@ -19,12 +19,30 @@ import { createTurnRuntime } from "@/src/modules/rcos/turn-runtime";
 import { runTurn, type TurnEvent } from "@/src/modules/rcos/turn-engine";
 import { inngest } from "./client";
 
+/**
+ * The safety net for events the webhook could not dispatch.
+ *
+ * Every-minute polling used to be the primary delivery path, which meant two
+ * things worth fixing: a reply waited up to a minute for a cron to notice it,
+ * and the polling itself cost several times more than processing the messages
+ * did - 86,400 runs a month against an empty table at zero traffic, before any
+ * customer existed.
+ *
+ * The webhook now sends accepted events as it stores them, so this only has to
+ * catch the ones where that send failed. Five minutes is chosen against what it
+ * is recovering from: a provider blip or a deploy restarting mid-request, where
+ * the difference between one minute and five is not worth 5x the runs.
+ *
+ * Deduplication is what makes both paths safe. Both send under the webhook
+ * event id, so an event this relay re-sends after a successful direct dispatch
+ * produces one execution, not two.
+ */
 export const relayMetaOutbox = inngest.createFunction(
   {
     id: "relay-meta-event-outbox",
     retries: 5,
     concurrency: { limit: 1 },
-    triggers: { cron: "* * * * *" }
+    triggers: { cron: "*/5 * * * *" }
   },
   async ({ step }) => {
     const rows = await step.run("claim-pending-outbox", async () => {
@@ -225,12 +243,20 @@ export const cleanupExpiredPrivateArtifacts = inngest.createFunction(
   }
 );
 
+/**
+ * The billing equivalent, slowed for the same reason.
+ *
+ * Left as a poller rather than given a direct-dispatch path: billing webhooks
+ * arrive at a fraction of the rate of message webhooks, so the latency saved
+ * would be real but rarely noticed, and the change is only worth making where
+ * a customer is waiting on the result.
+ */
 export const relayBillingOutbox = inngest.createFunction(
   {
     id: "relay-billing-outbox",
     retries: 5,
     concurrency: { limit: 1 },
-    triggers: { cron: "* * * * *" }
+    triggers: { cron: "*/5 * * * *" }
   },
   async ({ step }) => {
     const rows = await step.run("claim-pending-billing-outbox", async () => {

@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getServerEnvironment } from "@/src/lib/env";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { inngest } from "@/src/lib/inngest/client";
+import { dispatchAcceptedEvents } from "@/src/modules/integrations/meta/outbox-dispatch";
 import {
   SupabaseMetaWebhookRepository,
   ingestVerifiedMetaPayload
@@ -60,10 +62,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ accepted: false }, { status: 400 });
   }
   try {
+    const admin = await createSupabaseAdminClient();
     const result = await ingestVerifiedMetaPayload(
       payload,
-      new SupabaseMetaWebhookRepository(await createSupabaseAdminClient())
+      new SupabaseMetaWebhookRepository(admin)
     );
+
+    // Dispatched here rather than left for the relay. The event is durably
+    // stored either way; sending it now removes up to a minute of latency from
+    // every reply, and lets the relay run rarely instead of polling an empty
+    // table every minute. Anything that fails to send stays unemitted and the
+    // relay collects it.
+    // `in` rather than a flag: the invalid-payload branch returns a narrower
+    // object with no events, and that is what distinguishes the two.
+    if ("results" in result) {
+      await dispatchAcceptedEvents(admin, result.events, result.results, (event) =>
+        inngest.send(event)
+      );
+    }
+
     return NextResponse.json(
       { accepted: result.acknowledged, status: result.status },
       { status: result.acknowledged ? 200 : 400 }
