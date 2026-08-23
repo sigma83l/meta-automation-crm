@@ -176,11 +176,13 @@ describe("retrieval, citation and approval agree by construction", () => {
     expect(formatApprovedAmount(12000, "TRY")).toBe("120.00 TRY");
   });
 
-  it("passes approved times straight through", async () => {
+  it("keeps the workspace's own hours and adds the times inside them", async () => {
+    // No longer passed straight through. "09:00-17:00" is a business-hours
+    // entry, and a reply is entitled to state either boundary of it, so both
+    // are approved alongside the entry itself.
     const { ports: p } = ports();
-    expect((await p.retrieve(event, { intents: [], locale: "en" })).approvedTimes).toEqual([
-      "09:00-17:00"
-    ]);
+    const approved = (await p.retrieve(event, { intents: [], locale: "en" })).approvedTimes;
+    expect(approved).toEqual(expect.arrayContaining(["09:00-17:00", "09:00", "17:00"]));
   });
 
   it("loads the context once for the whole turn", async () => {

@@ -1,5 +1,5 @@
 import { appError, err, ok, type Result } from "@/src/lib/result";
-import { moneyTokens, timeTokens } from "./validator";
+import { approvedTimeTokens, moneyTokens } from "./validator";
 import type { AiProvider, AiReplyInput } from "@/src/modules/ai/contracts";
 import { buildModelRegistry, type ModelConfiguration } from "./model-registry";
 import {
@@ -226,9 +226,16 @@ export function createAiTurnPorts(
           ),
           ...context.faqItems.flatMap((item) => moneyTokens(item.answer))
         ],
+        // Deduplicated because an entry commonly expands to itself - "09:00"
+        // contains "09:00" - and the set is compared against, not counted, so a
+        // duplicate is noise that grows with every source added.
         approvedTimes: [
-          ...context.approvedTimes,
-          ...context.faqItems.flatMap((item) => timeTokens(item.answer))
+          ...new Set([
+            // Business hours expand too: a workspace whose hours say "Monday to
+            // Friday" approved the days between, wherever it wrote that.
+            ...context.approvedTimes.flatMap((entry) => [entry, ...approvedTimeTokens(entry)]),
+            ...context.faqItems.flatMap((item) => approvedTimeTokens(item.answer))
+          ])
         ]
       };
     },

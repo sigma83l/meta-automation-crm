@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  approvedTimeTokens,
   safeResolution,
   validateReply,
   type ValidationContext,
@@ -189,5 +190,60 @@ describe("a draft with no text", () => {
       action: "handoff",
       reason: "empty_draft"
     });
+  });
+});
+
+describe("weekdays", () => {
+  // Both directions of the same rule, and both were wrong: a claim about a
+  // closed day slipped through unseen, while a correct answer about an open one
+  // was blocked — and which of those happened depended on whether the model
+  // wrote the singular or the plural.
+  it("catches a plural weekday, so a closed day cannot slip through", () => {
+    const verdict = validateReply(
+      { text: "Yes, we are open on Saturdays too.", citedRefs: [] },
+      context({ approvedTimes: ["Monday", "Friday"] })
+    );
+    expect(failuresOf(verdict)).toContain("unverified_time");
+  });
+
+  it("accepts a plural weekday that is approved", () => {
+    const verdict = validateReply(
+      { text: "We are open on Tuesdays.", citedRefs: [] },
+      context({ approvedTimes: ["Tuesday"] })
+    );
+    expect(verdict).toEqual({ allowed: true });
+  });
+
+  it("accepts a singular weekday approved in the plural", () => {
+    const verdict = validateReply(
+      { text: "We are open on Tuesday.", citedRefs: [] },
+      context({ approvedTimes: ["Tuesdays"] })
+    );
+    expect(verdict).toEqual({ allowed: true });
+  });
+});
+
+describe("what an approved range authorises", () => {
+  it("expands the days inside a weekday range", () => {
+    expect(approvedTimeTokens("We are open Monday to Friday, 09:00 to 18:00.")).toEqual(
+      expect.arrayContaining(["monday", "tuesday", "wednesday", "thursday", "friday"])
+    );
+  });
+
+  it("does not expand a range of clock times", () => {
+    // "09:00 to 18:00" authorises the boundaries, not 14:30. A reply naming an
+    // interior time is stating something the business never said.
+    const approved = approvedTimeTokens("Open 09:00 to 18:00.");
+    expect(approved).not.toContain("14:30");
+  });
+
+  it("wraps a range that crosses the end of the week", () => {
+    expect(approvedTimeTokens("Open Friday to Monday.")).toEqual(
+      expect.arrayContaining(["friday", "saturday", "sunday", "monday"])
+    );
+  });
+
+  it("leaves a weekend day unapproved when the range excludes it", () => {
+    expect(approvedTimeTokens("Open Monday to Friday.")).not.toContain("saturday");
   });
 });

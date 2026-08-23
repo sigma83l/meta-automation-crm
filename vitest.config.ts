@@ -15,7 +15,10 @@ export default defineConfig({
     include: [
       "tests/unit/**/*.test.ts",
       "tests/integration/**/*.test.ts",
-      "tests/migrations/**/*.test.ts"
+      "tests/migrations/**/*.test.ts",
+      // Opt-in: skips itself unless a real model is configured. See
+      // tests/golden/ai-golden-set.test.ts.
+      "tests/golden/**/*.test.ts"
     ],
     // The migration tests boot PGlite — a full PostgreSQL compiled to WASM —
     // and replay every migration in the repository into it. That takes about

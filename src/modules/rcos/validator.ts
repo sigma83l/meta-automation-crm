@@ -57,15 +57,33 @@ export type ValidationVerdict =
   | Readonly<{ allowed: false; failures: readonly ValidationFailure[]; detail: readonly string[] }>;
 
 const MONEY = /(?:[$£€₺]\s?\d[\d.,]*|\b\d[\d.,]*\s?(?:tl|try|usd|eur|gbp)\b)/gi;
+// Weekdays carry an optional plural. Without it "we are open on Saturdays"
+// matched nothing at all, so a claim about a day the business is closed was
+// not merely unapproved - it was invisible to this check, and sent.
 const TIME =
-  /\b(?:\d{1,2}:\d{2}\s?(?:am|pm)?|\d{1,2}\s?(?:am|pm)|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
+  /\b(?:\d{1,2}:\d{2}\s?(?:am|pm)?|\d{1,2}\s?(?:am|pm)|tomorrow|today|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)\b/gi;
 const EMAIL = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/;
 const PHONE = /\+?\d[\d\s().-]{8,}\d/;
 const PRESSURE =
   /\b(?:act now|last chance|only \d+ left|hurry|limited time|don'?t miss out|expires? today)\b/i;
 
+const WEEKDAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday"
+] as const;
+
 function normalize(value: string): string {
-  return value.toLowerCase().replace(/[\s,]/g, "");
+  const folded = value.toLowerCase().replace(/[\s,]/g, "");
+  // "Tuesdays" and "Tuesday" are the same day. Folding here rather than
+  // approving both forms keeps the approved set a set of days rather than a
+  // set of spellings.
+  const singular = folded.replace(/s$/, "");
+  return (WEEKDAYS as readonly string[]).includes(singular) ? singular : folded;
 }
 
 /**
@@ -83,6 +101,39 @@ export function moneyTokens(text: string): readonly string[] {
 
 export function timeTokens(text: string): readonly string[] {
   return text.match(TIME) ?? [];
+}
+
+/**
+ * The times a piece of approved text authorises a reply to state.
+ *
+ * Deliberately more generous than `timeTokens`, and the asymmetry is the point.
+ * Reading a draft asks "what did this claim?", so it must be strict. Reading
+ * approved text asks "what did the business authorise?", and a business that
+ * wrote "Monday to Friday" authorised Tuesday - refusing to say so blocks the
+ * most ordinary answer there is, and blocks it only when the model happens to
+ * write the singular form, which makes the failure intermittent.
+ *
+ * Only ranges written between two weekday names expand. A range of clock times
+ * does not: "09:00 to 18:00" authorises those two boundaries, not 14:30, and a
+ * reply naming an interior time is stating something the business did not.
+ */
+export function approvedTimeTokens(text: string): readonly string[] {
+  const tokens = [...timeTokens(text)];
+  const lower = text.toLowerCase();
+  const dayRange =
+    /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\s*(?:-|–|—|to|through|until|till)\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b/g;
+
+  for (const match of lower.matchAll(dayRange)) {
+    const from = WEEKDAYS.indexOf(match[1] as (typeof WEEKDAYS)[number]);
+    const to = WEEKDAYS.indexOf(match[2] as (typeof WEEKDAYS)[number]);
+    if (from === -1 || to === -1) continue;
+    // Wraps across the end of the week, so "Friday to Monday" is four days
+    // rather than an empty range.
+    for (let step = 0; step <= (to - from + 7) % 7; step += 1) {
+      tokens.push(WEEKDAYS[(from + step) % 7]!);
+    }
+  }
+  return tokens;
 }
 
 /**
