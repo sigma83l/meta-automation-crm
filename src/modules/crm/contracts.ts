@@ -1,3 +1,5 @@
+import type { LifecycleStage } from "./revenue-state";
+
 export type CustomerSummary = Readonly<{
   id: string;
   displayName: string;
@@ -41,6 +43,43 @@ export type EvidenceInput = Readonly<{
 
 export type StoredEvidence = EvidenceInput & Readonly<{ id: string; recordedAt: string }>;
 
+/** A stage change, with the reason that authorised it. */
+export type TransitionInput = Readonly<{
+  customerId: string;
+  /** The stage the caller saw. A mismatch means somebody else moved it first. */
+  from: LifecycleStage;
+  to: LifecycleStage;
+  reasonCodes: readonly string[];
+  evidenceRef?: string | null;
+  /** A user id, or a system identifier for an automated move. */
+  actor: string;
+}>;
+
+export type StoredLifecycleEvent = Readonly<{
+  id: string;
+  customerId: string;
+  from: LifecycleStage | null;
+  to: LifecycleStage;
+  reasonCodes: readonly string[];
+  evidenceRef: string | null;
+  actor: string;
+  occurredAt: string;
+}>;
+
+/**
+ * Why this is a result and not an exception.
+ *
+ * `refused` and `stale` are both ordinary outcomes rather than faults. A
+ * refusal means the rules said no, which callers act on. `stale` means somebody
+ * moved the customer first - two operators on one record is normal, and the
+ * caller's move was decided against a stage that no longer holds. Throwing
+ * would make both indistinguishable from a database being down.
+ */
+export type TransitionResult =
+  | Readonly<{ outcome: "recorded"; event: StoredLifecycleEvent }>
+  | Readonly<{ outcome: "refused"; reason: string }>
+  | Readonly<{ outcome: "stale"; reason: string }>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -50,4 +89,8 @@ export interface CrmRepository {
   recordEvidence(input: EvidenceInput): Promise<StoredEvidence>;
   /** Every recorded signal for one customer, newest first. */
   evidenceFor(customerId: string): Promise<readonly StoredEvidence[]>;
+  /** Moves the stage and records why, or explains why it did not. */
+  transitionLifecycle(input: TransitionInput): Promise<TransitionResult>;
+  /** One customer's stage history, newest first. */
+  lifecycleFor(customerId: string): Promise<readonly StoredLifecycleEvent[]>;
 }

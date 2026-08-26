@@ -10,8 +10,12 @@ import type {
   CustomerInput,
   CustomerSummary,
   EvidenceInput,
-  StoredEvidence
+  StoredEvidence,
+  StoredLifecycleEvent,
+  TransitionInput,
+  TransitionResult
 } from "../contracts";
+import { authorizeLifecycleTransition, type LifecycleStage } from "../revenue-state";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -187,6 +191,78 @@ export class SupabaseCrmRepository implements CrmRepository {
     // row is the safe reading: it would otherwise contribute weight that nothing
     // can justify.
     return (data ?? []).filter((row) => row.evidence_ref).map(mapEvidence);
+  }
+
+  async transitionLifecycle(input: TransitionInput): Promise<TransitionResult> {
+    // Decided here, committed there. The rules are already implemented and
+    // tested as a pure function; what the database adds is that the stage and
+    // the reason for it cannot end up disagreeing.
+    const verdict = authorizeLifecycleTransition({
+      from: input.from,
+      to: input.to,
+      reasonCodes: input.reasonCodes,
+      ...(input.evidenceRef ? { evidenceRef: input.evidenceRef } : {}),
+      actor: input.actor
+    });
+    if (!verdict.allowed) return { outcome: "refused", reason: verdict.reason };
+
+    const { data, error } = await this.client.rpc("record_lifecycle_transition", {
+      p_workspace_id: this.workspace.id,
+      p_customer_id: input.customerId,
+      p_from_stage: input.from,
+      p_to_stage: input.to,
+      p_reason_codes: [...input.reasonCodes],
+      p_evidence_ref: input.evidenceRef ?? null,
+      p_actor: input.actor
+    });
+    if (error) throw new Error("LIFECYCLE_TRANSITION_FAILED");
+
+    const row = (Array.isArray(data) ? data[0] : data) as
+      { result?: string; event_id?: string } | null | undefined;
+    // A customer the caller cannot see and one that does not exist are the same
+    // answer on purpose: the function is workspace-scoped, so distinguishing
+    // them would confirm a row exists in a tenant the caller has no access to.
+    if (row?.result === "not_found") return { outcome: "refused", reason: "customer not found" };
+    if (row?.result === "stale") {
+      return { outcome: "stale", reason: "the stage changed since it was read" };
+    }
+    if (row?.result !== "recorded" || !row.event_id) {
+      throw new Error("LIFECYCLE_TRANSITION_FAILED");
+    }
+
+    return {
+      outcome: "recorded",
+      event: {
+        id: String(row.event_id),
+        customerId: input.customerId,
+        from: input.from,
+        to: input.to,
+        reasonCodes: input.reasonCodes,
+        evidenceRef: input.evidenceRef ?? null,
+        actor: input.actor,
+        occurredAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async lifecycleFor(customerId: string): Promise<readonly StoredLifecycleEvent[]> {
+    const { data, error } = await this.client
+      .from("lifecycle_events")
+      .select("id,customer_id,from_stage,to_stage,reason_codes,evidence_ref,actor,occurred_at")
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("occurred_at", { ascending: false });
+    if (error) throw new Error("LIFECYCLE_READ_FAILED");
+    return (data ?? []).map((row) => ({
+      id: String(row.id),
+      customerId: String(row.customer_id),
+      from: (row.from_stage as LifecycleStage | null) ?? null,
+      to: row.to_stage as LifecycleStage,
+      reasonCodes: (row.reason_codes as string[] | null) ?? [],
+      evidenceRef: (row.evidence_ref as string | null) ?? null,
+      actor: String(row.actor),
+      occurredAt: String(row.occurred_at)
+    }));
   }
 
   private async activity(customerId: string, activityType: string, summary: string) {
