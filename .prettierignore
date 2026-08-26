@@ -5,5 +5,10 @@ test-results
 coverage
 pnpm-lock.yaml
 
-# Vendored specification pack (upstream formatting preserved)
+# Vendored specification packs (upstream formatting preserved).
+# The Master Pack is byte-immutable by its own contract - its integrity
+# verifier checks SHA-256 against ORIGINAL_SHA256SUMS.txt, and reformatting
+# even line endings would fail that check and invalidate every nested pack.
 Rellooma_V1_Backend_Launch_MD_Pack/
+Rellooma_Master_Sequential_Execution_Pack_v1/
+Rellooma_Master_Pack_Complete_File_Category_Guide_EN.md

@@ -1,36 +1,208 @@
 # Staged Production Plan
 
-Run one stage at a time. Continue only after the prior report is accepted as
-`PASS`, or its only remaining item is explicitly `BLOCKED_EXTERNAL`.
+**Revised 2026-08-26** against `Rellooma_Master_Sequential_Execution_Pack_v1`.
+
+The previous plan (Prompts 0–11) is preserved at the bottom, because it records
+what was actually built and the numbered prompts are cited from several reports.
+It is no longer the forward plan. The Master Pack replaces it.
+
+## Governing sequence
+
+Six immutable packs, dependency-ordered. A pack advances only when it earns its
+own terminal token, hard-fails clear, P0/P1/material-P2 at zero, evidence
+complete, and Git = CI = Preview at one SHA.
+
+| #   | Pack                                              | Terminal token                                                                        |
+| --- | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | CRM Intelligence Engine                           | `READY_FOR_V19A_CONTINUATION_WITH_CRM_ENGINE_FROZEN`                                  |
+| 2   | Settings + Billing Sandbox + Knowledge + Commerce | `READY_FOR_V19A_CONTINUATION_WITH_SETTINGS_BILLING_KNOWLEDGE_FROZEN`                  |
+| 3   | AI Orchestration Engine                           | `READY_FOR_V19A_CONTINUATION_WITH_RELLOOMA_AI_ENGINE_FROZEN`                          |
+| 4   | Analyzer Intelligence                             | `READY_FOR_V19A_CONTINUATION_WITH_ANALYZER_FROZEN`                                    |
+| 5   | Final Product Code Quality + Full Sync            | `READY_FOR_V19A_FINAL_BACKEND_PUBLIC_LAUNCH_CONTINUATION_WITH_PRODUCT_QUALITY_FROZEN` |
+| 6   | v19A Pre-Legal Technical Production Finisher      | `READY_FOR_LEGAL_PROVIDER_LIVE_ACTIVATION_WITH_V19A_TECHNICAL_BASELINE`               |
+
+Master terminal:
+`READY_FOR_VERIFIED_LEGAL_PROVIDER_VALUES_AND_FINAL_LIVE_ACTIVATION_GATE`.
+
+Source integrity verified 2026-08-26: `scripts/verify_master_pack.py` reports
+6/6 packs matching `ORIGINAL_SHA256SUMS.txt`.
+
+## Three conflicts to settle before Pack 01 starts
+
+These are not blockers for planning, but two of them change what "execute the
+pack as written" means.
+
+**1. The pack names a repository this is not.** Every pack observes
+`Metric-One/rellooma-app` on branch `feat/rellooma-ui-production-sync` at
+`8e10687991a8bce5edeac72b883d11cccf1ef272`. This repository is
+`meta-automation-crm`; that SHA resolves to nothing here, and the nearest branch
+is `feat/rellooma-uiux-final-sync`.
+
+The _code_ the packs describe is unmistakably this code — `createBusinessProfileRuntime()`,
+the exact `BusinessProfile` field list, the six-field `PriceItem`, and
+`@e965/xlsx` / `file-type` / `fflate` / Zod all present at the stated versions.
+So the packs were authored against this codebase under a different remote name.
+
+The pack resolves this itself: current repository truth overrides stale
+historical assumption, and build-time SHAs are "resume hints unless the Pack
+explicitly proves they are still current authority". Proceed against this repo
+and this HEAD. **Owner decision needed only if a rename to `rellooma-app` is
+actually planned**, since that changes remotes, Vercel wiring and callback URLs.
+
+**2. Commercial values conflict with the prior pricing analysis.**
+`02_settings/authority/04_COMMERCIAL_CONTRACT.md` fixes Starter $49 / Growth $99
+/ Scale $199 monthly, with MAC + AI-reply + seat meters, capacity packs at $19,
+seats at $15, assisted launch at $199. Earlier analysis in this project
+recommended a TRY-denominated 799 / 1999 / 4499 structure for the Turkish
+market. These are different currencies and different ratios, and the catalogue
+can only hold one. **Owner decision.** The pack is canonical unless overridden.
+
+**3. Two packs now exist.** `Rellooma_V1_Backend_Launch_MD_Pack/` governed the
+Prompt 0–11 plan; this Master Pack governs from here. The older pack stays for
+reference — `CONFLICT_REGISTER.md` C-001…C-014 still cite it — but it is not the
+forward plan. Where they disagree, the Master Pack wins.
+
+## Where the current repository already sits
+
+Verified against the schema and routes on 2026-08-26, not from prior reports.
+
+**Substantially built and proven in production:** inbound Meta pipeline end to
+end (signature → normalise → ingest → direct dispatch → projection → 12-step turn
+→ validator → gated send), workspace isolation and RLS, CRM/inbox/exports,
+business profile and knowledge, five automation recipes, billing seam with PayTR
+and the Paddle catalogue, analytics taxonomy, email/support seam, en/tr/fa with
+RTL, and a live-model golden set.
+
+**Tables the packs require that already exist:** `contact_facts`,
+`opportunities`, `qualification_evidence`, `lifecycle_events`, `tasks_followups`,
+`custom_field_definitions`, `agent_runs`, `billing_cycles`, `usage_ledger`,
+`support_tickets`.
+
+**Required and absent:** `appointments`, `conversion_events`,
+`attribution_touchpoints`, `crm_score_configs`, `crm_score_snapshots`,
+`crm_next_action_projection`, `crm_saved_views`, `custom_field_values`,
+`knowledge_sources`, `entitlements`, `deletion_ledger`, `action_logs`.
+
+**Routes absent:** Studio, Usage Center, Catalog, Knowledge.
+
+## Pack-by-pack: what is new work
+
+### Pack 01 — CRM Intelligence Engine
+
+Canonical customer memory, explainable revenue state, evidence-backed next
+action. Chain: `Conversation → Memory → Decision → Action → Outcome`.
+
+New: qualification score engine with versioned configs and snapshots; attention
+/priority engine; next-action projection; saved views; custom field _values_
+(definitions exist); timeline event model; the AI CRM write engine.
+
+**Start here — `contact_facts` is already wired-shaped and unused.** Its columns
+match `memory-policy.ts`'s `StoredFact` exactly, including all four confidence
+levels, and no TypeScript reads or writes it. `runTurn` currently counts memory
+writes and stores none. This is the smallest change with the largest effect on
+the pack's core thesis, and a correction: this plan previously recorded the table
+as absent, which was wrong — it landed in `20260815150000_crm_revenue_state.sql`
+and `REPO_BASELINE.md`'s "genuinely absent" list is stale.
+
+### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
+
+Canonical business/catalog/knowledge/usage/seat/billing truth.
+
+New: a products-and-services catalog (the pack states plainly that the current
+six-field `PriceItem` is too small); catalog import from Excel and Markdown;
+knowledge sources including website-URL and document ingestion; Usage Center;
+plan and billing surfaces; team seats. Commercial values must live in one
+versioned server-owned registry, never scattered across UI code.
+
+Billing Live stays `WAITING_EXTERNAL`.
+
+### Pack 03 — AI Orchestration Engine
+
+Two customer-facing choices: **Rellooma AI** (managed, provider-neutral, router
+picks the model — the customer never names one) and **Use my provider** (BYOK
+across OpenAI / Anthropic / Gemini).
+
+The rule with teeth: **BYOK traffic must not silently fall back to a
+Rellooma-managed provider**, because that changes both the data and the
+commercial expectation. Default disabled; a future explicit owner setting may
+permit it.
+
+Already aligned: internal classification/extraction/routing calls never
+increment the customer-facing meter — `usage-meters.ts` implements exactly this.
+
+New: AI Control Center, AI usage experience, the managed routing layer.
+Live send stays false.
+
+### Pack 04 — Analyzer Intelligence
+
+Three workspaces: Business, Customer, Conversation/AI-Operations. Every metric
+must carry definition, time anchor, workspace scope, freshness, derivation,
+sample size, drilldown and known limitation. No invented forecast, benchmark,
+revenue, causality or psychology.
+
+The current `/analytics` page is a small subset of this.
+
+### Pack 05 — Final Product Code Quality + Full Sync
+
+Cross-domain reconciliation: every production-relevant file inventoried, every
+user-facing route and state reviewed, every cross-domain contract reconciled,
+no P0/P1/material P2, current visual/a11y/i18n/performance/security evidence,
+and Git = CI = Preview at one SHA. A numeric score cannot override a hard fail.
+
+### Pack 06 — v19A Pre-Legal Technical Production Finisher
+
+Broad pre-legal closure against the synchronised product: eight-step business
+setup, seat policy, subscription/usage policy, AI provider routing policy, CRM
+customisation model, an SEO/content intelligence bridge, business knowledge
+profile model, and Studio information architecture. Plus the technical baseline —
+observability, backup/restore, capacity, and a 1,000-user proof.
+
+Ends technically production-shaped and deliberately not promoted.
+
+## External gates, unchanged by this revision
+
+```
+LIVE_SEND=false
+META_LIVE=WAITING_EXTERNAL
+BILLING_LIVE=WAITING_EXTERNAL
+PRODUCTION_PROMOTED=false
+PUBLIC_DNS_CUTOVER=NOT_YET
+LEGAL=WAITING
+OWNER_LIVE_APPROVAL=WAITING
+```
+
+Currently open and owner-only: the Meta webhook signature mismatch (Meta signs
+with a key that is not the dashboard App Secret — bug report filed), a Paddle
+account, the Meta pilot allowlist, and human UAT.
+
+## Superseded plan, retained for citation
+
+The Prompt 0–11 sequence that governed until 2026-08-26. Prompts 0–9 are
+implemented; Prompt 10 was the last active stage; Prompt 11 is replaced by the
+Master Pack's own live-activation gate.
 
 1. **Prompt 0 — Foundation:** independent repo, donor audit, contracts, sandbox,
    tests, CI, and local checkpoint.
-2. **Prompt 1 — Identity and isolation (implemented):** Supabase auth, atomic
-   workspace creation, RLS, private Storage, and cross-tenant denial tests.
-3. **Prompt 2 — CRM and export (implemented):** customers, conversations,
-   private media, Excel, and complete ZIP.
-4. **Prompt 3 — Business knowledge and AI (implemented):** structured knowledge,
-   paid default, encrypted BYOK, privacy gates.
-5. **Prompt 4 — Meta connections (implemented locally):** OAuth/embedded signup
-   contracts, verified webhooks, deduplication, and complete sandbox behavior.
-6. **Prompt 5 — Automation engine (implemented):** durable state machine,
-   policy-before-send, idempotency, retries, and three recipes.
-7. **Prompt 6 — Owner experience (implemented):** resumable onboarding,
-   seven-step recipe builder, responsive owner panel, recovery states,
-   accessibility, RTL readiness, and full E2E journeys.
-8. **Prompt 7 — Release candidate (implemented locally):** security, load,
-   reliability, dependency hardening, and release evidence with zero unresolved
-   Critical or High findings.
-9. **Prompt 8R — Autonomous production completion (implemented locally):** recover the RC,
-   close every independent production gap, add two policy-safe recipes, shared
-   abuse controls, roles, CRM import, durable handlers, operations/load
-   artifacts, and a full local QA checkpoint. Then stop once with one owner
-   access packet if GitHub, commercial Vercel, Supabase, Inngest, Meta, DNS or
-   legal gates remain.
-10. **Prompt 10 — V1/Signal Mirror (active):** preserve Supabase/security,
-    complete the eight-stage setup, en/tr/fa, RTL, Light/Dark/System, V1 route
-    set, provider contracts, private GitHub/CI and all independent QA. Stop at
-    one real-value packet.
-11. **Hosted staging and production (owner-gated):** provision only the exact
-    approved resources, run hosted security/1,000-user/backup/live-pilot gates,
-    obtain explicit production approval, deploy, smoke test and hand off.
+2. **Prompt 1 — Identity and isolation:** Supabase auth, atomic workspace
+   creation, RLS, private Storage, and cross-tenant denial tests.
+3. **Prompt 2 — CRM and export:** customers, conversations, private media,
+   Excel, and complete ZIP.
+4. **Prompt 3 — Business knowledge and AI:** structured knowledge, paid default,
+   encrypted BYOK, privacy gates.
+5. **Prompt 4 — Meta connections:** OAuth/embedded signup contracts, verified
+   webhooks, deduplication, and complete sandbox behavior.
+6. **Prompt 5 — Automation engine:** durable state machine, policy-before-send,
+   idempotency, retries, and three recipes.
+7. **Prompt 6 — Owner experience:** resumable onboarding, seven-step recipe
+   builder, responsive owner panel, recovery states, accessibility, RTL
+   readiness, and full E2E journeys.
+8. **Prompt 7 — Release candidate:** security, load, reliability, dependency
+   hardening, and release evidence.
+9. **Prompt 8R — Autonomous production completion:** recovered RC, independent
+   production gaps, two policy-safe recipes, shared abuse controls, roles, CRM
+   import, durable handlers, operations/load artifacts.
+10. **Prompt 10 — V1/Signal Mirror:** Supabase/security preserved, eight-stage
+    setup, en/tr/fa, RTL, Light/Dark/System, V1 route set, provider contracts,
+    private GitHub/CI and independent QA.
+11. **Prompt 11 — Hosted staging and production (owner-gated):** superseded by
+    the Master Pack sequence above.
