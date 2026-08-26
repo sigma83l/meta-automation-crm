@@ -78,10 +78,19 @@ RTL, and a live-model golden set.
 `custom_field_definitions`, `agent_runs`, `billing_cycles`, `usage_ledger`,
 `support_tickets`.
 
+**Present but unwired — no TypeScript reads or writes them:** `opportunities`,
+`qualification_evidence`, `lifecycle_events`, `tasks_followups`,
+`custom_field_definitions`, `agent_runs`, `campaign_sources`. The pure domain
+logic for the first four exists and is tested (`revenue-state.ts`,
+`followup-policy.ts`, `handoff-packet.ts`) and is called by nothing but its own
+tests. This, not the data model, is Pack 01's real gap.
+
 **Required and absent:** `appointments`, `conversion_events`,
 `attribution_touchpoints`, `crm_score_configs`, `crm_score_snapshots`,
-`crm_next_action_projection`, `crm_saved_views`, `custom_field_values`,
-`knowledge_sources`, `entitlements`, `deletion_ledger`, `action_logs`.
+`crm_next_action_projection`, `crm_saved_views`, `knowledge_sources`,
+`entitlements`, `deletion_ledger`, `action_logs`. Corrected 2026-08-26:
+`custom_field_values` was on this list and exists as
+`customer_custom_field_values`.
 
 **Routes absent:** Studio, Usage Center, Catalog, Knowledge.
 
@@ -111,9 +120,19 @@ plan and `REPO_BASELINE.md`, and had in fact landed in
 `20260815150000_crm_revenue_state.sql`. The baseline's drift section now says so,
 along with the four other tables that list gets wrong.
 
-**Next in this pack:** the qualification score engine (`crm_score_configs`,
-`crm_score_snapshots`) — versioned configs and snapshots are what make a score
-explainable rather than a number, and every other item here reads from one.
+**The rest of the pack is planned in `docs/master-run/PACK_01_PLAN.md`**, written
+against the pack's own authority, backend, product and test layers after
+verifying its integrity (6/6 SHA match) and re-deriving the repository position
+from the schema. Eight steps, backend first. Next is wiring the four tables that
+already exist, then the qualification score engine — versioned configs and
+immutable snapshots are what make a score explainable rather than a number, and
+every later step reads from one.
+
+One contract conflict recorded there and settled: the repo's `LEAD_STATUSES`
+and the pack's `CRM_LEAD_STATUS_V1` disagree. The pack's set wins — it has
+`needs_reply` and `human_review`, which are what an operator queue actually
+sorts by, and it keeps `lost` in the lifecycle where it belongs instead of in
+both places.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
