@@ -1,3 +1,4 @@
+import type { StopReason, EligibilityVerdict } from "./followup-policy";
 import type { LifecycleStage } from "./revenue-state";
 
 export type CustomerSummary = Readonly<{
@@ -80,6 +81,39 @@ export type TransitionResult =
   | Readonly<{ outcome: "refused"; reason: string }>
   | Readonly<{ outcome: "stale"; reason: string }>;
 
+export const FOLLOWUP_OWNERS = ["human", "automation", "ai_suggestion_accepted", "system"] as const;
+export type FollowUpOwner = (typeof FOLLOWUP_OWNERS)[number];
+
+export type FollowUpInput = Readonly<{
+  customerId: string;
+  stopReason: StopReason;
+  /** What this follow-up is for. Defaults to the reason's own objective. */
+  objective?: string;
+  /** What would make it unnecessary. Defaults to the reason's own condition. */
+  cancelCondition?: string;
+  dueAt: string;
+  ownerType: FollowUpOwner;
+  /** Required for a human owner, forbidden for every other kind. */
+  ownerId?: string | null;
+  messageVersion?: string;
+}>;
+
+export type StoredFollowUp = Readonly<{
+  id: string;
+  customerId: string;
+  stopReason: StopReason;
+  objective: string;
+  cancelCondition: string;
+  eligibilityState: "eligible" | "blocked" | "cancelled" | "completed";
+  messageVersion: string;
+  dueAt: string;
+  attempts: number;
+  ownerType: FollowUpOwner;
+  ownerId: string | null;
+  lastResult: string | null;
+  nextEligibleAt: string | null;
+}>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -93,4 +127,21 @@ export interface CrmRepository {
   transitionLifecycle(input: TransitionInput): Promise<TransitionResult>;
   /** One customer's stage history, newest first. */
   lifecycleFor(customerId: string): Promise<readonly StoredLifecycleEvent[]>;
+  /** Queues a follow-up. Rejects one that cannot say what it is for. */
+  scheduleFollowUp(input: FollowUpInput): Promise<StoredFollowUp>;
+  /** Eligible follow-ups due at `now` and not deferred past it. */
+  dueFollowUps(now: string): Promise<readonly StoredFollowUp[]>;
+  /**
+   * Applies an execution-time verdict.
+   *
+   * A terminal refusal cancels; a non-terminal one defers, because the
+   * condition that blocked it can clear and the follow-up is still wanted.
+   */
+  settleFollowUp(
+    followUpId: string,
+    verdict: EligibilityVerdict,
+    deferUntil?: string
+  ): Promise<StoredFollowUp>;
+  /** Records an attempt and what came of it. */
+  recordFollowUpAttempt(followUpId: string, result: string): Promise<StoredFollowUp>;
 }

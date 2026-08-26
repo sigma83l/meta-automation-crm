@@ -93,10 +93,22 @@ function parseTerm(term: string): Comparison {
   const first = term.indexOf(".");
   const second = term.indexOf(".", first + 1);
   if (first < 0 || second < 0) throw new Error(`Unparseable PostgREST filter term "${term}".`);
+  const op = term.slice(first + 1, second);
+  const raw = term.slice(second + 1);
   return {
     column: term.slice(0, first),
-    op: term.slice(first + 1, second),
-    value: term.slice(second + 1)
+    op,
+    // Inside `.or(...)` every term arrives as text, so `is.null` yields the
+    // four-character string rather than the value. PostgREST reads these three
+    // as literals for `is` only - `eq.null` really does compare against the
+    // text - and without the distinction an `is.null` term silently matches
+    // nothing, which reads as an empty result rather than as a broken filter.
+    value:
+      op === "is" && (raw === "null" || raw === "true" || raw === "false")
+        ? raw === "null"
+          ? null
+          : raw === "true"
+        : raw
   };
 }
 

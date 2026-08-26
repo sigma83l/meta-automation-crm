@@ -11,10 +11,20 @@ import type {
   CustomerSummary,
   EvidenceInput,
   StoredEvidence,
+  FollowUpInput,
+  FollowUpOwner,
+  StoredFollowUp,
   StoredLifecycleEvent,
   TransitionInput,
   TransitionResult
 } from "../contracts";
+import { FOLLOWUP_OWNERS } from "../contracts";
+import {
+  STOP_REASONS,
+  defaultCancelCondition,
+  defaultObjective,
+  type EligibilityVerdict
+} from "../followup-policy";
 import { authorizeLifecycleTransition, type LifecycleStage } from "../revenue-state";
 
 const inputSchema = z.object({
@@ -29,6 +39,29 @@ const inputSchema = z.object({
 // `evidenceRef` is min(1) where the column is merely nullable: the column
 // predates the rule that every non-zero contribution names its source, and this
 // is the boundary that now enforces it.
+// Objective and cancelCondition are optional here and NOT NULL in the table.
+// That is not a loosening: `defaultObjective` supplies a specific next step for
+// every reason, so the column is always filled. What the caller cannot do is
+// pass an empty one - `.min(1)` refuses the blank string that would satisfy the
+// type and turn the row back into a timer.
+const followUpSchema = z
+  .object({
+    customerId: z.string().uuid(),
+    stopReason: z.enum(STOP_REASONS),
+    objective: z.string().trim().min(1).max(200).optional(),
+    cancelCondition: z.string().trim().min(1).max(200).optional(),
+    dueAt: z.string().datetime(),
+    ownerType: z.enum(FOLLOWUP_OWNERS),
+    ownerId: z.string().uuid().nullable().optional(),
+    messageVersion: z.string().trim().min(1).max(40).optional()
+  })
+  // Mirrors the table's owner-identity constraint so the caller gets a usable
+  // error rather than a Postgres one, and so an automation cannot be recorded
+  // as a person.
+  .refine((input) => (input.ownerType === "human") === Boolean(input.ownerId), {
+    message: "a human owner needs an owner id, and only a human owner may have one"
+  });
+
 const evidenceSchema = z.object({
   customerId: z.string().uuid(),
   signal: z.string().trim().min(1).max(80),
@@ -265,6 +298,93 @@ export class SupabaseCrmRepository implements CrmRepository {
     }));
   }
 
+  async scheduleFollowUp(raw: FollowUpInput): Promise<StoredFollowUp> {
+    const input = followUpSchema.parse(raw);
+    const { data, error } = await this.client
+      .from("tasks_followups")
+      .insert({
+        workspace_id: this.workspace.id,
+        customer_id: input.customerId,
+        stop_reason: input.stopReason,
+        objective: input.objective ?? defaultObjective(input.stopReason),
+        cancel_condition: input.cancelCondition ?? defaultCancelCondition(input.stopReason),
+        due_at: input.dueAt,
+        owner_type: input.ownerType,
+        owner_id: input.ownerId ?? null,
+        message_version: input.messageVersion ?? "v1"
+      })
+      .select(FOLLOWUP_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("FOLLOWUP_WRITE_FAILED");
+    return mapFollowUp(data);
+  }
+
+  async dueFollowUps(now: string): Promise<readonly StoredFollowUp[]> {
+    const { data, error } = await this.client
+      .from("tasks_followups")
+      .select(FOLLOWUP_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("eligibility_state", "eligible")
+      .lte("due_at", now)
+      // A deferred row is still eligible - the condition that blocked it can
+      // clear - but it is not due until its deferral passes. `or` rather than a
+      // plain comparison because a row that was never deferred has none.
+      .or(`next_eligible_at.is.null,next_eligible_at.lte.${now}`)
+      .order("due_at", { ascending: true });
+    if (error) throw new Error("FOLLOWUP_READ_FAILED");
+    return (data ?? []).map(mapFollowUp);
+  }
+
+  async settleFollowUp(
+    followUpId: string,
+    verdict: EligibilityVerdict,
+    deferUntil?: string
+  ): Promise<StoredFollowUp> {
+    // Eligible stays eligible: this is the execution-time check saying go
+    // ahead, not a state change.
+    const patch = verdict.eligible
+      ? { eligibility_state: "eligible" as const }
+      : verdict.terminal
+        ? { eligibility_state: "cancelled" as const, last_result: verdict.reason }
+        : {
+            // Not terminal. The follow-up is still wanted and the blocker can
+            // clear, so it keeps its eligible state and is pushed out instead.
+            eligibility_state: "eligible" as const,
+            last_result: verdict.reason,
+            ...(deferUntil ? { next_eligible_at: deferUntil } : {})
+          };
+    return this.patchFollowUp(followUpId, patch);
+  }
+
+  async recordFollowUpAttempt(followUpId: string, result: string): Promise<StoredFollowUp> {
+    const current = await this.client
+      .from("tasks_followups")
+      .select("attempts")
+      .eq("workspace_id", this.workspace.id)
+      .eq("id", followUpId)
+      .maybeSingle();
+    if (current.error || !current.data) throw new Error("FOLLOWUP_NOT_FOUND");
+    return this.patchFollowUp(followUpId, {
+      attempts: Number(current.data.attempts ?? 0) + 1,
+      last_result: result.slice(0, 200)
+    });
+  }
+
+  private async patchFollowUp(
+    followUpId: string,
+    patch: Record<string, unknown>
+  ): Promise<StoredFollowUp> {
+    const { data, error } = await this.client
+      .from("tasks_followups")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("workspace_id", this.workspace.id)
+      .eq("id", followUpId)
+      .select(FOLLOWUP_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("FOLLOWUP_NOT_FOUND");
+    return mapFollowUp(data);
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -284,6 +404,29 @@ export class SupabaseCrmRepository implements CrmRepository {
     });
     if (error) throw error;
   }
+}
+
+// One literal rather than a concatenation: supabase-js infers the row type from
+// the select string, and `"a" + "b"` widens to `string`, which loses it.
+const FOLLOWUP_COLUMNS =
+  "id,customer_id,stop_reason,objective,cancel_condition,eligibility_state,message_version,due_at,attempts,owner_type,owner_id,last_result,next_eligible_at" as const;
+
+function mapFollowUp(row: Record<string, unknown>): StoredFollowUp {
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    stopReason: row.stop_reason as StoredFollowUp["stopReason"],
+    objective: String(row.objective),
+    cancelCondition: String(row.cancel_condition),
+    eligibilityState: row.eligibility_state as StoredFollowUp["eligibilityState"],
+    messageVersion: String(row.message_version),
+    dueAt: String(row.due_at),
+    attempts: Number(row.attempts ?? 0),
+    ownerType: row.owner_type as FollowUpOwner,
+    ownerId: (row.owner_id as string | null) ?? null,
+    lastResult: (row.last_result as string | null) ?? null,
+    nextEligibleAt: (row.next_eligible_at as string | null) ?? null
+  };
 }
 
 function mapEvidence(row: Record<string, unknown>): StoredEvidence {
