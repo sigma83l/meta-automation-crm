@@ -88,6 +88,17 @@ export type TurnPorts = Readonly<{
   executeTool(request: ToolRequest): Promise<ToolOutcome>;
   /** Step 9. */
   compose(event: TurnEvent, decision: TurnDecision): Promise<ComposedReply>;
+  /**
+   * Step 10, continued. Stores the writes the memory policy accepted and
+   * returns how many are durable.
+   *
+   * Returns a count rather than throwing because remembering is not what the
+   * turn is for: a customer who gets no reply because a fact could not be
+   * filed is worse off than one whose fact was not filed. The count is how the
+   * engine tells the difference, so a port that cannot store must report zero
+   * rather than succeed quietly.
+   */
+  persistFacts(event: TurnEvent, facts: readonly ProposedFact[]): Promise<number>;
   /** Step 11. Must persist before anything is sent. */
   commit(record: TurnRecord): Promise<void>;
   /** Step 11, continued. */
@@ -258,13 +269,26 @@ export async function runTurn(event: TurnEvent, ports: TurnPorts): Promise<TurnR
     toolExecuted: Boolean(toolOutcome)
   };
 
+  // Before the commit, and before the validator's verdict is acted on: what the
+  // customer told us is true whether or not the reply we drew from it passed.
+  // A crash between here and the commit re-runs the whole turn, which proposes
+  // the same facts against the same stored values and stores them again. The
+  // other order cannot be repaired — the record would claim a fact that exists
+  // nowhere, and nothing later can tell that from a fact since deleted.
+  const persisted =
+    memory.accepted.length === 0 ? 0 : await ports.persistFacts(event, memory.accepted);
+  // The counts say what the policy accepted; this says whether it survived. A
+  // turn that reports memory it does not have is the failure worth naming.
+  const withMemoryNote = (codes: readonly string[]): readonly string[] =>
+    persisted < memory.accepted.length ? [...codes, "memory_write_failed"] : codes;
+
   if (!verdict.allowed) {
     const resolution = safeResolution(verdict.failures);
     const record: TurnRecord = {
       ...base,
       ...counts,
       outcome: resolution.action === "handoff" ? "handoff" : "safe_acknowledgement",
-      reasonCodes: verdict.failures
+      reasonCodes: withMemoryNote(verdict.failures)
     };
     // Still committed: a refused reply is part of the conversation's history
     // and the reason has to survive for whoever picks the handoff up.
@@ -276,7 +300,7 @@ export async function runTurn(event: TurnEvent, ports: TurnPorts): Promise<TurnR
     ...base,
     ...counts,
     outcome: "sent",
-    reasonCodes: decision.reasonCodes
+    reasonCodes: withMemoryNote(decision.reasonCodes)
   };
 
   // Step 11: commit first, then send exactly once. The other order can produce

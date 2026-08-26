@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFakeSupabase, type FakeRow } from "@/tests/fixtures/fake-supabase";
+import type { ProposedFact } from "@/src/modules/rcos/memory-policy";
 import {
   createDraftRegistry,
   createSupabaseTurnPorts,
@@ -65,6 +67,7 @@ function harness(
     connectionMode: "sandbox" | "live";
     escalationKeywords: readonly string[];
     lowConfidenceThreshold: number;
+    admin: SupabaseClient;
   }> = {}
 ) {
   const fake = createFakeSupabase({
@@ -80,7 +83,7 @@ function harness(
   if (over.draft) drafts.record(event.eventId, over.draft);
 
   const ports = createSupabaseTurnPorts({
-    admin: fake.client,
+    admin: over.admin ?? fake.client,
     subject: {
       customerId: CUSTOMER,
       recipientRef: "905551112233",
@@ -349,5 +352,153 @@ describe("tools", () => {
     await expect(
       ports.executeTool({ actionName: "book", actionClass: "business_transaction" })
     ).rejects.toThrow("NO_TOOLS_REGISTERED");
+  });
+});
+
+describe("memory hydration", () => {
+  const fact = (over: Partial<FakeRow> = {}): FakeRow => ({
+    workspace_id: WORKSPACE,
+    customer_id: CUSTOMER,
+    fact_key: "preferred_time",
+    fact_value: "mornings",
+    confidence: "confirmed",
+    source_ref: "msg-1",
+    recorded_at: "2026-08-20T10:00:00.000Z",
+    valid_until: null,
+    ...over
+  });
+
+  it("reads stored facts for this customer", async () => {
+    // The table matched StoredFact column for column and nothing read it, so
+    // the engine counted memory writes and hydrated nothing.
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        contact_facts: [fact()]
+      }
+    });
+    const { facts } = await ports.hydrate(event);
+    expect(facts).toEqual([
+      {
+        key: "preferred_time",
+        value: "mornings",
+        confidence: "confirmed",
+        sourceRef: "msg-1",
+        recordedAt: "2026-08-20T10:00:00.000Z",
+        validUntil: null
+      }
+    ]);
+  });
+
+  it("does not read another workspace's facts", async () => {
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        contact_facts: [fact({ workspace_id: "someone-else" })]
+      }
+    });
+    expect((await ports.hydrate(event)).facts).toEqual([]);
+  });
+
+  it("does not read another customer's facts", async () => {
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        contact_facts: [fact({ customer_id: "another-customer" })]
+      }
+    });
+    expect((await ports.hydrate(event)).facts).toEqual([]);
+  });
+
+  it("returns nothing rather than failing the turn when the read errors", async () => {
+    // The customer's message is stored either way. A turn without memory beats
+    // no turn at all.
+    const { ports } = harness({
+      tables: { conversations: [openConversation], workspace_subscriptions: [activeTrial] }
+    });
+    expect((await ports.hydrate(event)).facts).toEqual([]);
+  });
+});
+
+describe("persisting accepted facts", () => {
+  const proposed = (over: Partial<ProposedFact> = {}): ProposedFact => ({
+    key: "preferred_time",
+    value: "mornings",
+    confidence: "confirmed",
+    sourceRef: "msg-1",
+    recordedAt: "2026-08-20T10:00:00.000Z",
+    ...over
+  });
+
+  it("stores a fact against this workspace and customer", async () => {
+    const { fake, ports } = harness();
+    expect(await ports.persistFacts(event, [proposed()])).toBe(1);
+    expect(fake.database.rows("contact_facts")).toEqual([
+      expect.objectContaining({
+        workspace_id: WORKSPACE,
+        customer_id: CUSTOMER,
+        fact_key: "preferred_time",
+        fact_value: "mornings",
+        confidence: "confirmed",
+        source_ref: "msg-1",
+        recorded_at: "2026-08-20T10:00:00.000Z",
+        valid_until: null
+      })
+    ]);
+  });
+
+  it("what it stores is what the next turn hydrates", async () => {
+    // The two halves are only useful if they agree on the column mapping, and
+    // a round trip is the one assertion that fails when they drift apart.
+    const { ports } = harness();
+    const fact = proposed({ validUntil: "2026-12-01T00:00:00.000Z" });
+    await ports.persistFacts(event, [fact]);
+    expect((await ports.hydrate(event)).facts).toEqual([fact]);
+  });
+
+  it("replaces the value for a key rather than adding a second row", async () => {
+    // One row per key per customer is the table's own constraint; a conflict
+    // target that missed it would give a customer two budgets.
+    const { fake, ports } = harness();
+    await ports.persistFacts(event, [proposed({ value: "mornings" })]);
+    await ports.persistFacts(event, [proposed({ value: "evenings" })]);
+    const rows = fake.database.rows("contact_facts");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ fact_value: "evenings" });
+  });
+
+  it("keeps another customer's fact under the same key", async () => {
+    const { fake, ports } = harness();
+    await ports.persistFacts(event, [proposed()]);
+    fake.database.rows("contact_facts").push({
+      workspace_id: WORKSPACE,
+      customer_id: "another-customer",
+      fact_key: "preferred_time",
+      fact_value: "evenings"
+    });
+    await ports.persistFacts(event, [proposed({ value: "afternoons" })]);
+    expect(fake.database.rows("contact_facts")).toHaveLength(2);
+  });
+
+  it("writes nothing when there is nothing to write", async () => {
+    const { fake, ports } = harness();
+    expect(await ports.persistFacts(event, [])).toBe(0);
+    expect(fake.database.rows("contact_facts")).toEqual([]);
+  });
+
+  it("reports zero rather than throwing when the write fails", async () => {
+    // The engine turns a short count into `memory_write_failed` on the turn
+    // record. Throwing would cost the customer a reply over a fact the next
+    // message can re-observe.
+    const failing = {
+      from: () => ({
+        upsert: async () => ({ data: null, error: { code: "42501", message: "denied" } })
+      })
+    } as unknown as SupabaseClient;
+    const { ports } = harness({ admin: failing });
+    expect(await ports.persistFacts(event, [proposed()])).toBe(0);
   });
 });

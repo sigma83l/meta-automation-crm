@@ -122,14 +122,33 @@ export function createSupabaseTurnPorts(
       return data === null;
     },
 
-    async hydrate() {
-      // Deliberately empty, and it should stay visibly so until there is
-      // somewhere to read from. There is no contact-facts table in this schema
-      // (C-007 lists it as genuinely absent), so the engine's memory step has
-      // nothing to hydrate and nothing to write back to. Synthesising facts
-      // from the conversation here would put unreviewed model output into the
-      // one place the memory policy exists to keep honest.
-      const facts: readonly StoredFact[] = [];
+    async hydrate(event) {
+      // `contact_facts` matches StoredFact column for column, including all
+      // four confidence levels, and until now nothing in TypeScript read or
+      // wrote it - so the engine counted memory writes it then discarded. An
+      // earlier comment here claimed the table did not exist, on the strength
+      // of REPO_BASELINE.md's "genuinely absent" list; the table landed in
+      // 20260815150000_crm_revenue_state.sql and that list is stale.
+      //
+      // `persistFacts` is the other half: what the memory policy accepts this
+      // turn is what the next turn reads back here.
+      const { data, error } = await admin
+        .from("contact_facts")
+        .select("fact_key,fact_value,confidence,source_ref,recorded_at,valid_until")
+        .eq("workspace_id", event.workspaceId)
+        .eq("customer_id", subject.customerId);
+      // A turn without memory is worse than a turn with it, but far better than
+      // no turn at all: the customer's message is already stored either way.
+      if (error || !data) return { facts: [] as readonly StoredFact[] };
+
+      const facts: readonly StoredFact[] = data.map((row) => ({
+        key: String(row.fact_key),
+        value: String(row.fact_value),
+        confidence: row.confidence as StoredFact["confidence"],
+        sourceRef: String(row.source_ref),
+        recordedAt: String(row.recorded_at),
+        validUntil: (row.valid_until as string | null) ?? null
+      }));
       return { facts };
     },
 
@@ -220,6 +239,36 @@ export function createSupabaseTurnPorts(
       // throws rather than returning a benign result so that adding an action
       // without adding an implementation fails loudly.
       throw new Error("NO_TOOLS_REGISTERED");
+    },
+
+    async persistFacts(event, facts) {
+      if (facts.length === 0) return 0;
+
+      // The table holds one row per key per customer, so an accepted write is
+      // an upsert on that key and history lives in the audit trail. The
+      // conflict target has to name the unique constraint exactly: get it
+      // wrong and every turn inserts a second row for a key that is supposed
+      // to have one, which is how a customer ends up with two budgets.
+      const { error } = await admin.from("contact_facts").upsert(
+        facts.map((fact) => ({
+          workspace_id: event.workspaceId,
+          customer_id: subject.customerId,
+          fact_key: fact.key,
+          fact_value: fact.value,
+          confidence: fact.confidence,
+          source_ref: fact.sourceRef,
+          recorded_at: fact.recordedAt,
+          valid_until: fact.validUntil ?? null,
+          updated_at: new Date().toISOString()
+        })),
+        { onConflict: "workspace_id,customer_id,fact_key" }
+      );
+      // Reported, not thrown. The engine turns a short count into a
+      // `memory_write_failed` reason code on the turn record, which is visible
+      // to an operator; throwing here would cost the customer their reply for
+      // a fact that could be re-observed on the next message anyway.
+      if (error) return 0;
+      return facts.length;
     },
 
     async commit(record: TurnRecord) {

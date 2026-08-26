@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ProposedFact } from "@/src/modules/rcos/memory-policy";
 import {
   DECISION_PRIORITIES,
   highestPriority,
@@ -37,6 +38,7 @@ const reply = (over: Partial<ComposedReply> = {}): ComposedReply => ({
 /** Records which steps ran, so ordering can be asserted rather than assumed. */
 function ports(over: Partial<TurnPorts> = {}) {
   const calls: string[] = [];
+  const filed: ProposedFact[] = [];
   const sent: string[] = [];
   const committed: TurnRecord[] = [];
   const observed: TurnRecord[] = [];
@@ -77,6 +79,11 @@ function ports(over: Partial<TurnPorts> = {}) {
       calls.push("compose");
       return reply();
     },
+    async persistFacts(_event, facts) {
+      calls.push("persistFacts");
+      filed.push(...facts);
+      return facts.length;
+    },
     async commit(record) {
       calls.push("commit");
       committed.push(record);
@@ -94,7 +101,7 @@ function ports(over: Partial<TurnPorts> = {}) {
     },
     ...over
   };
-  return { ports: base, calls, sent, committed, observed };
+  return { ports: base, calls, filed, sent, committed, observed };
 }
 
 describe("the happy path", () => {
@@ -263,6 +270,20 @@ describe("validation blocks the send", () => {
 });
 
 describe("memory writes are filtered by policy", () => {
+  const budget: ProposedFact = {
+    key: "budget",
+    value: "1",
+    confidence: "inferred",
+    sourceRef: "msg-2",
+    recordedAt: "2026-08-10T00:00:00.000Z"
+  };
+  const service: ProposedFact = {
+    ...budget,
+    key: "service",
+    value: "cut",
+    confidence: "confirmed"
+  };
+
   it("keeps the strong write and counts the refusal", async () => {
     const harness = ports({
       async hydrate() {
@@ -303,6 +324,92 @@ describe("memory writes are filtered by policy", () => {
     const record = await runTurn(event, harness.ports);
     expect(record.acceptedMemoryWrites).toBe(1);
     expect(record.refusedMemoryWrites).toBe(1);
+  });
+
+  it("files only what the policy accepted", async () => {
+    // The refused write must not reach storage by another route: the policy is
+    // the only thing standing between a guess and the customer record.
+    const harness = ports({
+      async hydrate() {
+        return {
+          facts: [
+            {
+              key: "budget",
+              value: "5000",
+              confidence: "confirmed",
+              sourceRef: "msg-1",
+              recordedAt: "2026-08-09T00:00:00.000Z"
+            }
+          ]
+        };
+      },
+      async decide() {
+        return decision({ memoryWrites: [budget, service] });
+      }
+    });
+    await runTurn(event, harness.ports);
+    expect(harness.filed.map((fact) => fact.key)).toEqual(["service"]);
+  });
+
+  it("files nothing when the turn proposed nothing", async () => {
+    const harness = ports();
+    await runTurn(event, harness.ports);
+    expect(harness.calls).not.toContain("persistFacts");
+  });
+
+  it("files before committing", async () => {
+    // A crash between the two re-runs the turn and re-files the same facts.
+    // The other order leaves a record claiming a fact that exists nowhere.
+    const harness = ports({
+      async decide() {
+        return decision({ memoryWrites: [service] });
+      }
+    });
+    await runTurn(event, harness.ports);
+    expect(harness.calls.indexOf("persistFacts")).toBeLessThan(harness.calls.indexOf("commit"));
+  });
+
+  it("says so on the record when a fact could not be filed", async () => {
+    const harness = ports({
+      async decide() {
+        return decision({ memoryWrites: [service] });
+      },
+      async persistFacts() {
+        return 0;
+      }
+    });
+    const record = await runTurn(event, harness.ports);
+    // Still sent: the reply is what the customer is waiting for. But a turn
+    // reporting memory it does not have is the discrepancy an operator needs.
+    expect(record.outcome).toBe("sent");
+    expect(record.reasonCodes).toContain("memory_write_failed");
+  });
+
+  it("says so on a refused turn too", async () => {
+    const harness = ports({
+      async compose() {
+        return reply({ text: "Only 99 TL!", citedRefs: [] });
+      },
+      async decide() {
+        return decision({ memoryWrites: [service] });
+      },
+      async persistFacts() {
+        return 0;
+      }
+    });
+    const record = await runTurn(event, harness.ports);
+    expect(record.outcome).not.toBe("sent");
+    expect(record.reasonCodes).toContain("memory_write_failed");
+  });
+
+  it("stays quiet when every accepted fact was filed", async () => {
+    const harness = ports({
+      async decide() {
+        return decision({ memoryWrites: [service] });
+      }
+    });
+    const record = await runTurn(event, harness.ports);
+    expect(record.reasonCodes).not.toContain("memory_write_failed");
   });
 });
 

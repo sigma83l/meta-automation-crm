@@ -145,8 +145,25 @@ delivery states.
 `messages` and `runTurn` had no production caller; both are now driven by
 `processVerifiedMetaEvent`. Outbound sending remains gated with no adapter.
 
+**The "genuinely absent" list was wrong about five tables.** `contact_facts`,
+`opportunities`, `qualification_evidence`, `lifecycle_events` and
+`tasks_followups` were recorded above as requiring new objects. They arrived in
+`20260815150000_crm_revenue_state.sql`, which the P0 snapshot predates.
+`billing_cycles`, `usage_ledger` and `support_tickets` from the same list also
+exist now. Still absent and still required: `appointments`, `agent_snapshots`,
+`conversation_summaries`, `knowledge_sources`, `conversion_events`,
+`entitlements` and `deletion_ledger`.
+
+**Customer memory is wired end to end — recorded 2026-08-26.** `contact_facts`
+existed but nothing in TypeScript touched it: `runTurn` applied the memory
+policy, counted what it accepted, and discarded every accepted write. The turn
+ports now hydrate from the table and persist what the policy accepts, through a
+`persistFacts` port that reports a count rather than throwing, so a storage
+failure costs the turn its memory and not the customer their reply. A short
+count becomes `memory_write_failed` on the turn record.
+
 **Counts.** 22 pages, 33 API route handlers, 21 migrations. Tests: 56 unit, 7
-integration, 8 E2E and 10 migration-execution files, running 885 passed / 23
+integration, 8 E2E and 10 migration-execution files, running 928 passed / 31
 skipped.
 
 **Still accurate:** repository and remotes, branch, the Vercel project ref, the

@@ -96,13 +96,24 @@ New: qualification score engine with versioned configs and snapshots; attention
 /priority engine; next-action projection; saved views; custom field _values_
 (definitions exist); timeline event model; the AI CRM write engine.
 
-**Start here — `contact_facts` is already wired-shaped and unused.** Its columns
-match `memory-policy.ts`'s `StoredFact` exactly, including all four confidence
-levels, and no TypeScript reads or writes it. `runTurn` currently counts memory
-writes and stores none. This is the smallest change with the largest effect on
-the pack's core thesis, and a correction: this plan previously recorded the table
-as absent, which was wrong — it landed in `20260815150000_crm_revenue_state.sql`
-and `REPO_BASELINE.md`'s "genuinely absent" list is stale.
+**Done — customer memory now persists.** `contact_facts` was already shaped for
+`memory-policy.ts`'s `StoredFact`, column for column and confidence for
+confidence, and nothing in TypeScript touched it: `runTurn` applied the policy,
+counted the writes it accepted, and discarded them. The turn ports now hydrate
+from the table, and a `persistFacts` port stores what the policy accepts, before
+the commit so a crash re-runs the turn rather than leaving a record claiming a
+fact that exists nowhere. It reports a count instead of throwing — a storage
+failure costs the turn its memory, not the customer their reply — and a short
+count becomes `memory_write_failed` on the turn record.
+
+This also corrected a stale claim: the table was recorded as absent in both this
+plan and `REPO_BASELINE.md`, and had in fact landed in
+`20260815150000_crm_revenue_state.sql`. The baseline's drift section now says so,
+along with the four other tables that list gets wrong.
+
+**Next in this pack:** the qualification score engine (`crm_score_configs`,
+`crm_score_snapshots`) — versioned configs and snapshots are what make a score
+explainable rather than a number, and every other item here reads from one.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
