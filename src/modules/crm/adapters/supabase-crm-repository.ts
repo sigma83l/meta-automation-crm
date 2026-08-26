@@ -4,13 +4,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
-import type { CrmRepository, CustomerFilters, CustomerInput, CustomerSummary } from "../contracts";
+import type {
+  CrmRepository,
+  CustomerFilters,
+  CustomerInput,
+  CustomerSummary,
+  EvidenceInput,
+  StoredEvidence
+} from "../contracts";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
   companyName: z.string().trim().min(1).max(120).nullable().optional(),
   email: z.string().trim().email().max(254).optional(),
   phone: z.string().trim().min(3).max(40).optional()
+});
+
+// Bounds mirror the table's own check constraints, so a bad weight is refused
+// before a round trip rather than as a Postgres error the caller has to parse.
+// `evidenceRef` is min(1) where the column is merely nullable: the column
+// predates the rule that every non-zero contribution names its source, and this
+// is the boundary that now enforces it.
+const evidenceSchema = z.object({
+  customerId: z.string().uuid(),
+  signal: z.string().trim().min(1).max(80),
+  weight: z.number().int().min(-100).max(100),
+  confidence: z.enum(["inferred", "high_confidence", "confirmed", "human_verified"]),
+  evidenceRef: z.string().trim().min(1).max(200)
 });
 
 export class SupabaseCrmRepository implements CrmRepository {
@@ -132,6 +152,43 @@ export class SupabaseCrmRepository implements CrmRepository {
     });
   }
 
+  async recordEvidence(raw: EvidenceInput): Promise<StoredEvidence> {
+    const input = evidenceSchema.parse(raw);
+    const { data, error } = await this.client
+      .from("qualification_evidence")
+      .insert({
+        workspace_id: this.workspace.id,
+        customer_id: input.customerId,
+        signal: input.signal,
+        weight: input.weight,
+        confidence: input.confidence,
+        evidence_ref: input.evidenceRef
+      })
+      .select("id,customer_id,signal,weight,confidence,evidence_ref,recorded_at")
+      .single();
+    // Thrown, not swallowed. Evidence is what a score is answerable for, so a
+    // score computed over evidence that silently failed to store would be a
+    // number nobody could reconstruct - the exact failure the table exists to
+    // prevent.
+    if (error || !data) throw new Error("EVIDENCE_WRITE_FAILED");
+    return mapEvidence(data);
+  }
+
+  async evidenceFor(customerId: string): Promise<readonly StoredEvidence[]> {
+    const { data, error } = await this.client
+      .from("qualification_evidence")
+      .select("id,customer_id,signal,weight,confidence,evidence_ref,recorded_at")
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("recorded_at", { ascending: false });
+    if (error) throw new Error("EVIDENCE_READ_FAILED");
+    // A row with no evidence_ref cannot have come from recordEvidence, but the
+    // column is nullable and this table is older than that rule. Dropping such a
+    // row is the safe reading: it would otherwise contribute weight that nothing
+    // can justify.
+    return (data ?? []).filter((row) => row.evidence_ref).map(mapEvidence);
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -151,6 +208,18 @@ export class SupabaseCrmRepository implements CrmRepository {
     });
     if (error) throw error;
   }
+}
+
+function mapEvidence(row: Record<string, unknown>): StoredEvidence {
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    signal: String(row.signal),
+    weight: Number(row.weight),
+    confidence: row.confidence as StoredEvidence["confidence"],
+    evidenceRef: String(row.evidence_ref),
+    recordedAt: String(row.recorded_at)
+  };
 }
 
 function mapCustomer(row: Record<string, unknown>): CustomerSummary {
