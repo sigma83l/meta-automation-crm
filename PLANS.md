@@ -139,9 +139,23 @@ Two of those gates went in ahead of where the plan filed them. The custom field
 leaves exactly the hole the rest of step 1 was closing, and doing it later means
 opening the same seam twice.
 
-Next is step 2, the qualification score engine — versioned configs and immutable
-snapshots are what make a score explainable rather than a number, and every
-later step reads from one.
+**Done — step 2, the qualification score engine.** `crm_score_configs` and
+`crm_score_snapshots` are both append-only, which is the whole design: an
+editable config version makes every snapshot citing it misreport how it was
+computed, and an editable snapshot destroys the history rather than correcting
+it. Evidence gained a `component`, because `signal` is the workspace's own
+vocabulary and the eight scored areas are fixed by the contract. Determinism is
+integer arithmetic rather than a rounding at the end, so a score does not depend
+on the order rows come back in.
+
+This also removed `scoreFromEvidence` from `revenue-state.ts`. It returned a
+bare number with no components, version or evidence requirement, and keeping it
+beside the new engine would have left two scorers and an invitation to call the
+one that cannot explain itself.
+
+Next is step 3, attention priority — deliberately not persisted and deliberately
+not a number, and the thing most often conflated with the score just built. One
+asks how good this lead is; the other asks what to do next.
 
 One contract conflict recorded there and settled: the repo's `LEAD_STATUSES`
 and the pack's `CRM_LEAD_STATUS_V1` disagree. The pack's set wins — it has
