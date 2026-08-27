@@ -27,12 +27,26 @@ export const LIFECYCLE_STAGES = [
 
 export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
 
+/**
+ * What this conversation is waiting on right now, from `CRM_LEAD_STATUS_V1`.
+ *
+ * `needs_reply` and `human_review` are the two an operator queue is actually
+ * sorted by - somebody is waiting on us, and somebody asked for a person - and
+ * the repository's original set could express neither.
+ *
+ * `lost` is deliberately not here. It is a lifecycle terminal and
+ * LIFECYCLE_STAGES carries it; having it in both places invites exactly the
+ * conflation this file opens by warning against. `closed` means the
+ * conversation is finished, whatever became of the relationship.
+ */
 export const LEAD_STATUSES = [
+  "needs_reply",
   "awaiting_customer",
-  "follow_up",
+  "follow_up_due",
+  "human_review",
   "booked",
   "payment_pending",
-  "lost"
+  "closed"
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
