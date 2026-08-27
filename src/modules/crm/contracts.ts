@@ -6,6 +6,12 @@ import type {
   FieldWriter
 } from "./custom-field-policy";
 import type { OpportunityStage, OutcomeSource } from "./opportunity-outcome";
+import type {
+  EvidenceComponent,
+  ScoreConfig,
+  ScoreDriver,
+  ScoreBlocker
+} from "./qualification-score";
 import type { LifecycleStage } from "./revenue-state";
 
 export type CustomerSummary = Readonly<{
@@ -42,14 +48,24 @@ export type EvidenceInput = Readonly<{
   customerId: string;
   /** What was observed, from the workspace's signal vocabulary. */
   signal: string;
+  /**
+   * Which part of the score this is about. Required, where the column is
+   * nullable: the column has to tolerate rows written before the score engine
+   * existed, and a new one that cannot say what it is about would contribute
+   * nothing anyway.
+   */
+  component: EvidenceComponent;
   /** -100..100. Negative weights are disqualifiers. */
   weight: number;
   confidence: "inferred" | "high_confidence" | "confirmed" | "human_verified";
   /** Message, note or actor this came from. Never empty. */
   evidenceRef: string;
+  /** When this stops being true, if it ever does. */
+  expiresAt?: string | null;
 }>;
 
-export type StoredEvidence = EvidenceInput & Readonly<{ id: string; recordedAt: string }>;
+export type StoredEvidence = EvidenceInput &
+  Readonly<{ id: string; recordedAt: string; expiresAt: string | null }>;
 
 /** A stage change, with the reason that authorised it. */
 export type TransitionInput = Readonly<{
@@ -200,6 +216,37 @@ export type FieldWriteResult =
   | Readonly<{ outcome: "suggested"; reason: string }>
   | Readonly<{ outcome: "refused"; reason: string }>;
 
+export type ScoreConfigInput = Readonly<{
+  version: string;
+  components: ScoreConfig["components"];
+  disqualifierMin?: number;
+}>;
+
+export type StoredScoreConfig = ScoreConfig & Readonly<{ id: string; createdAt: string }>;
+
+export type StoredScoreSnapshot = Readonly<{
+  id: string;
+  customerId: string;
+  score: number;
+  components: ScoreConfig["components"];
+  disqualifierPenalty: number;
+  confidence: number;
+  topDrivers: readonly ScoreDriver[];
+  topBlockers: readonly ScoreBlocker[];
+  configVersion: string;
+  evidenceRefs: readonly string[];
+  reasonCodes: readonly string[];
+  /** Null only on a contact's first snapshot. */
+  previousScore: number | null;
+  overrideBy: string | null;
+  overrideReason: string | null;
+  calculatedAt: string;
+}>;
+
+export type ScoreConfigResult =
+  | Readonly<{ outcome: "stored"; config: StoredScoreConfig }>
+  | Readonly<{ outcome: "refused"; reason: string }>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -244,4 +291,19 @@ export interface CrmRepository {
   setCustomFieldValue(input: FieldValueInput): Promise<FieldWriteResult>;
   /** One customer's field values. */
   customFieldValuesFor(customerId: string): Promise<readonly StoredFieldValue[]>;
+  /** Stores a new score config version, or says why the weights are unusable. */
+  saveScoreConfig(input: ScoreConfigInput): Promise<ScoreConfigResult>;
+  /** The config a score would be computed against right now. */
+  activeScoreConfig(): Promise<ScoreConfig>;
+  /** Recomputes one customer's score from current evidence and stores a snapshot. */
+  rescoreCustomer(customerId: string, now?: Date): Promise<StoredScoreSnapshot>;
+  /** The most recent snapshot, or null if this customer has never been scored. */
+  latestScore(customerId: string): Promise<StoredScoreSnapshot | null>;
+  /** Replaces the computed score with a person's judgement, on the record. */
+  overrideScore(
+    customerId: string,
+    score: number,
+    reason: string,
+    now?: Date
+  ): Promise<StoredScoreSnapshot>;
 }

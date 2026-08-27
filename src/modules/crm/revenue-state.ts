@@ -85,35 +85,14 @@ export function isForwardTransition(from: LifecycleStage, to: LifecycleStage): b
   return stageIndex(to) > stageIndex(from);
 }
 
-export type QualificationSignal = Readonly<{
-  signal: string;
-  weight: number;
-  confidence: "inferred" | "high_confidence" | "confirmed" | "human_verified";
-  evidenceRef?: string;
-}>;
-
-/**
- * Turns evidence into a score.
- *
- * Weights are discounted by confidence, so an inference cannot carry the same
- * force as something the customer stated. A score with no evidence is zero
- * rather than a neutral middle, because "we know nothing" and "we assessed them
- * as average" are different claims and only one of them is true.
- */
-export function scoreFromEvidence(signals: readonly QualificationSignal[]): number {
-  if (!signals.length) return 0;
-  const discount: Record<QualificationSignal["confidence"], number> = {
-    inferred: 0.4,
-    high_confidence: 0.7,
-    confirmed: 1,
-    human_verified: 1
-  };
-  const total = signals.reduce(
-    (sum, signal) => sum + signal.weight * discount[signal.confidence],
-    0
-  );
-  return Math.max(0, Math.min(100, Math.round(total)));
-}
+// Scoring used to live here, as `scoreFromEvidence` over a `QualificationSignal`
+// that made its evidence reference optional. It produced a bare number: no
+// components, no config version, no record of what it rested on, and no way to
+// refuse a weight that named no source. It has moved to qualification-score.ts,
+// which answers the two questions a score is actually asked - why is it this
+// number, and why did it change - and it is not kept here alongside it, because
+// two scorers in one module is an invitation to call the one that cannot
+// explain itself.
 
 export type QualificationDepth = "first_contact" | "consideration" | "ready" | "high_value";
 

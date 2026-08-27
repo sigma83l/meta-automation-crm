@@ -6,7 +6,6 @@ import {
   isForwardTransition,
   mayAsk,
   permittedQuestions,
-  scoreFromEvidence,
   type LifecycleTransition,
   type QualificationDepth
 } from "@/src/modules/crm/revenue-state";
@@ -92,51 +91,6 @@ describe("lifecycle transitions need a reason", () => {
   it("reports direction without judging it", () => {
     expect(isForwardTransition("new", "qualified")).toBe(true);
     expect(isForwardTransition("customer", "engaged")).toBe(false);
-  });
-});
-
-describe("qualification score", () => {
-  it("is zero with no evidence at all", () => {
-    // "We know nothing" and "we assessed them as average" are different claims
-    // and only one is true.
-    expect(scoreFromEvidence([])).toBe(0);
-  });
-
-  it("discounts an inference against a stated fact", () => {
-    const inferred = scoreFromEvidence([
-      { signal: "budget_fit", weight: 50, confidence: "inferred" }
-    ]);
-    const confirmed = scoreFromEvidence([
-      { signal: "budget_fit", weight: 50, confidence: "confirmed" }
-    ]);
-    expect(inferred).toBeLessThan(confirmed);
-  });
-
-  it("treats a human verification as fully weighted", () => {
-    expect(
-      scoreFromEvidence([{ signal: "budget_fit", weight: 40, confidence: "human_verified" }])
-    ).toBe(40);
-  });
-
-  it("lets negative evidence pull a score down", () => {
-    expect(
-      scoreFromEvidence([
-        { signal: "budget_fit", weight: 60, confidence: "confirmed" },
-        { signal: "out_of_area", weight: -30, confidence: "confirmed" }
-      ])
-    ).toBe(30);
-  });
-
-  it("stays inside nought to a hundred", () => {
-    expect(
-      scoreFromEvidence([
-        { signal: "everything", weight: 100, confidence: "confirmed" },
-        { signal: "more", weight: 100, confidence: "confirmed" }
-      ])
-    ).toBe(100);
-    expect(
-      scoreFromEvidence([{ signal: "terrible_fit", weight: -100, confidence: "confirmed" }])
-    ).toBe(0);
   });
 });
 

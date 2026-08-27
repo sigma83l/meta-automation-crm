@@ -28,6 +28,7 @@ const workspace: TrustedWorkspace = {
 const evidence = (over: Partial<EvidenceInput> = {}): EvidenceInput => ({
   customerId: CUSTOMER,
   signal: "stated_budget",
+  component: "financial_fit",
   weight: 20,
   confidence: "confirmed",
   evidenceRef: "msg-1",
@@ -106,10 +107,12 @@ describe("reading evidence", () => {
     workspace_id: WORKSPACE,
     customer_id: CUSTOMER,
     signal: "stated_budget",
+    component: "financial_fit",
     weight: 20,
     confidence: "confirmed",
     evidence_ref: "msg-1",
     recorded_at: "2026-08-20T10:00:00.000Z",
+    expires_at: null,
     ...over
   });
 
@@ -120,10 +123,12 @@ describe("reading evidence", () => {
         id: "e1",
         customerId: CUSTOMER,
         signal: "stated_budget",
+        component: "financial_fit",
         weight: 20,
         confidence: "confirmed",
         evidenceRef: "msg-1",
-        recordedAt: "2026-08-20T10:00:00.000Z"
+        recordedAt: "2026-08-20T10:00:00.000Z",
+        expiresAt: null
       }
     ]);
   });
@@ -142,6 +147,14 @@ describe("reading evidence", () => {
     // The constraint prevents new ones; this is what protects a score from any
     // row that predates it.
     const { repository } = harness([row({ id: "e4", evidence_ref: null })]);
+    expect(await repository.evidenceFor(CUSTOMER)).toEqual([]);
+  });
+
+  it("drops a row that names no component", async () => {
+    // Same protection, for the rows written before the score engine gave
+    // evidence somewhere to belong. Guessing a component would be inventing
+    // what the observation was about.
+    const { repository } = harness([row({ id: "e5", component: null })]);
     expect(await repository.evidenceFor(CUSTOMER)).toEqual([]);
   });
 });

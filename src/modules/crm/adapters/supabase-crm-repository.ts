@@ -3,7 +3,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
+import {
+  assertWorkspaceManager,
+  type TrustedWorkspace
+} from "@/src/modules/workspaces/server/resolve-workspace";
 import type {
   CrmRepository,
   CustomerFilters,
@@ -23,6 +26,10 @@ import type {
   OutcomeResult,
   StoredOpportunity,
   StoredFollowUp,
+  ScoreConfigInput,
+  ScoreConfigResult,
+  StoredScoreConfig,
+  StoredScoreSnapshot,
   StoredLifecycleEvent,
   TransitionInput,
   TransitionResult
@@ -51,6 +58,18 @@ import {
   type OpportunityStage,
   type OutcomeSource
 } from "../opportunity-outcome";
+import {
+  DEFAULT_SCORE_CONFIG,
+  EVIDENCE_COMPONENTS,
+  SCORE_COMPONENTS,
+  computeScore,
+  validateScoreConfig,
+  type EvidenceComponent,
+  type ScoreBlocker,
+  type ScoreConfig,
+  type ScoreDriver,
+  type ScoredEvidence
+} from "../qualification-score";
 import { authorizeLifecycleTransition, type LifecycleStage } from "../revenue-state";
 
 const inputSchema = z.object({
@@ -129,9 +148,17 @@ const fieldValueSchema = z.object({
 const evidenceSchema = z.object({
   customerId: z.string().uuid(),
   signal: z.string().trim().min(1).max(80),
+  component: z.enum(EVIDENCE_COMPONENTS),
   weight: z.number().int().min(-100).max(100),
   confidence: z.enum(["inferred", "high_confidence", "confirmed", "human_verified"]),
-  evidenceRef: z.string().trim().min(1).max(200)
+  evidenceRef: z.string().trim().min(1).max(200),
+  expiresAt: z.string().datetime().nullable().optional()
+});
+
+const scoreConfigSchema = z.object({
+  version: z.string().trim().min(1).max(60),
+  components: z.record(z.enum(SCORE_COMPONENTS), z.number().int().min(0).max(100)),
+  disqualifierMin: z.number().int().min(-100).max(0).optional()
 });
 
 export class SupabaseCrmRepository implements CrmRepository {
@@ -262,10 +289,12 @@ export class SupabaseCrmRepository implements CrmRepository {
         customer_id: input.customerId,
         signal: input.signal,
         weight: input.weight,
+        component: input.component,
         confidence: input.confidence,
-        evidence_ref: input.evidenceRef
+        evidence_ref: input.evidenceRef,
+        expires_at: input.expiresAt ?? null
       })
-      .select("id,customer_id,signal,weight,confidence,evidence_ref,recorded_at")
+      .select(EVIDENCE_COLUMNS)
       .single();
     // Thrown, not swallowed. Evidence is what a score is answerable for, so a
     // score computed over evidence that silently failed to store would be a
@@ -278,16 +307,16 @@ export class SupabaseCrmRepository implements CrmRepository {
   async evidenceFor(customerId: string): Promise<readonly StoredEvidence[]> {
     const { data, error } = await this.client
       .from("qualification_evidence")
-      .select("id,customer_id,signal,weight,confidence,evidence_ref,recorded_at")
+      .select(EVIDENCE_COLUMNS)
       .eq("workspace_id", this.workspace.id)
       .eq("customer_id", customerId)
       .order("recorded_at", { ascending: false });
     if (error) throw new Error("EVIDENCE_READ_FAILED");
-    // A row with no evidence_ref cannot have come from recordEvidence, but the
-    // column is nullable and this table is older than that rule. Dropping such a
-    // row is the safe reading: it would otherwise contribute weight that nothing
-    // can justify.
-    return (data ?? []).filter((row) => row.evidence_ref).map(mapEvidence);
+    // A row missing either column cannot have come from recordEvidence, but
+    // both are nullable and this table is older than the rules requiring them.
+    // Dropping such a row is the safe reading: it would otherwise contribute
+    // weight that nothing can justify, or land in a component nobody chose.
+    return (data ?? []).filter((row) => row.evidence_ref && row.component).map(mapEvidence);
   }
 
   async transitionLifecycle(input: TransitionInput): Promise<TransitionResult> {
@@ -618,6 +647,160 @@ export class SupabaseCrmRepository implements CrmRepository {
     );
   }
 
+  async saveScoreConfig(raw: ScoreConfigInput): Promise<ScoreConfigResult> {
+    const input = scoreConfigSchema.parse(raw);
+    const candidate: ScoreConfig = {
+      version: input.version,
+      components: input.components as ScoreConfig["components"],
+      disqualifierMin: input.disqualifierMin ?? DEFAULT_SCORE_CONFIG.disqualifierMin
+    };
+    // Refused rather than thrown: unusable weights are an operator mistake with
+    // a correction, not a fault. The message names the total so the person who
+    // typed it can see what is wrong.
+    const verdict = validateScoreConfig(candidate);
+    if (!verdict.valid) return { outcome: "refused", reason: verdict.reason };
+
+    const { data, error } = await this.client
+      .from("crm_score_configs")
+      .insert({
+        workspace_id: this.workspace.id,
+        version: candidate.version,
+        components: candidate.components,
+        disqualifier_min: candidate.disqualifierMin,
+        created_by: this.workspace.userId
+      })
+      .select(SCORE_CONFIG_COLUMNS)
+      .single();
+    // A duplicate version is the common failure and the table refuses it, which
+    // is the point: a version names one set of weights permanently.
+    if (error || !data)
+      return { outcome: "refused", reason: `${candidate.version} already exists` };
+    return { outcome: "stored", config: mapScoreConfig(data) };
+  }
+
+  async activeScoreConfig(): Promise<ScoreConfig> {
+    const { data, error } = await this.client
+      .from("crm_score_configs")
+      .select(SCORE_CONFIG_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error("SCORE_CONFIG_READ_FAILED");
+    // A workspace that has never customised its weights scores against the
+    // pack's V1 defaults. Falling back to them by name means an early snapshot
+    // still cites a version that says exactly how it was computed.
+    if (!data) return DEFAULT_SCORE_CONFIG;
+    const stored = mapScoreConfig(data);
+    return {
+      version: stored.version,
+      components: stored.components,
+      disqualifierMin: stored.disqualifierMin
+    };
+  }
+
+  async rescoreCustomer(customerId: string, now: Date = new Date()): Promise<StoredScoreSnapshot> {
+    const [config, evidence] = await Promise.all([
+      this.activeScoreConfig(),
+      this.evidenceFor(customerId)
+    ]);
+    const computed = computeScore(evidence.map(toScoredEvidence), config, now);
+    return this.writeSnapshot(customerId, computed.score, computed, null, null);
+  }
+
+  async latestScore(customerId: string): Promise<StoredScoreSnapshot | null> {
+    const { data, error } = await this.client
+      .from("crm_score_snapshots")
+      .select(SNAPSHOT_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("calculated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error("SCORE_SNAPSHOT_READ_FAILED");
+    return data ? mapSnapshot(data) : null;
+  }
+
+  async overrideScore(
+    customerId: string,
+    score: number,
+    reason: string,
+    now: Date = new Date()
+  ): Promise<StoredScoreSnapshot> {
+    // Overriding is overruling the evidence, which is the one escape hatch from
+    // the discipline this whole engine exists to impose. Manager rather than
+    // operator for that reason, and it throws rather than refusing because a
+    // viewer reaching this line is a bug in the caller, not a bad input.
+    assertWorkspaceManager(this.workspace);
+    const trimmed = reason.trim();
+    if (!trimmed) throw new Error("SCORE_OVERRIDE_REASON_REQUIRED");
+    if (!Number.isInteger(score) || score < 0 || score > 100) {
+      throw new Error("SCORE_OVERRIDE_OUT_OF_RANGE");
+    }
+
+    const [config, evidence] = await Promise.all([
+      this.activeScoreConfig(),
+      this.evidenceFor(customerId)
+    ]);
+    // The components stay as the evidence computed them while the total is the
+    // person's. Keeping both is the point: the snapshot shows the gap between
+    // what the evidence supported and what somebody decided, which is exactly
+    // what a reviewer needs and what overwriting the components would hide.
+    const computed = computeScore(evidence.map(toScoredEvidence), config, now);
+    return this.writeSnapshot(
+      customerId,
+      score,
+      { ...computed, reasonCodes: [...computed.reasonCodes, "override"] },
+      this.workspace.userId,
+      trimmed
+    );
+  }
+
+  private async writeSnapshot(
+    customerId: string,
+    score: number,
+    computed: ReturnType<typeof computeScore>,
+    overrideBy: string | null,
+    overrideReason: string | null
+  ): Promise<StoredScoreSnapshot> {
+    const { data, error } = await this.client.rpc("record_score_snapshot", {
+      p_workspace_id: this.workspace.id,
+      p_customer_id: customerId,
+      p_score: score,
+      p_components: computed.components,
+      p_disqualifier_penalty: computed.disqualifierPenalty,
+      p_confidence: computed.confidence,
+      p_top_drivers: computed.topDrivers,
+      p_top_blockers: computed.topBlockers,
+      p_config_version: computed.configVersion,
+      p_evidence_refs: [...computed.evidenceRefs],
+      p_reason_codes: [...computed.reasonCodes],
+      p_override_by: overrideBy,
+      p_override_reason: overrideReason
+    });
+    if (error) throw new Error("SCORE_SNAPSHOT_WRITE_FAILED");
+    const returned = (Array.isArray(data) ? data[0] : data) as
+      { snapshot_id: string; previous_score: number | null } | undefined;
+    if (!returned) throw new Error("SCORE_SNAPSHOT_WRITE_FAILED");
+    return {
+      id: String(returned.snapshot_id),
+      customerId,
+      score,
+      components: computed.components,
+      disqualifierPenalty: computed.disqualifierPenalty,
+      confidence: computed.confidence,
+      topDrivers: computed.topDrivers,
+      topBlockers: computed.topBlockers,
+      configVersion: computed.configVersion,
+      evidenceRefs: computed.evidenceRefs,
+      reasonCodes: computed.reasonCodes,
+      previousScore: returned.previous_score === null ? null : Number(returned.previous_score),
+      overrideBy,
+      overrideReason,
+      calculatedAt: new Date().toISOString()
+    };
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -707,15 +890,66 @@ function mapFollowUp(row: Record<string, unknown>): StoredFollowUp {
   };
 }
 
+/** Only the fields the scorer reads. Signal and id are the workspace's, not its. */
+function toScoredEvidence(evidence: StoredEvidence): ScoredEvidence {
+  return {
+    component: evidence.component,
+    weight: evidence.weight,
+    confidence: evidence.confidence,
+    evidenceRef: evidence.evidenceRef,
+    expiresAt: evidence.expiresAt
+  };
+}
+
+const EVIDENCE_COLUMNS =
+  "id,customer_id,signal,component,weight,confidence,evidence_ref,recorded_at,expires_at" as const;
+
 function mapEvidence(row: Record<string, unknown>): StoredEvidence {
   return {
     id: String(row.id),
     customerId: String(row.customer_id),
     signal: String(row.signal),
+    component: row.component as EvidenceComponent,
     weight: Number(row.weight),
     confidence: row.confidence as StoredEvidence["confidence"],
     evidenceRef: String(row.evidence_ref),
-    recordedAt: String(row.recorded_at)
+    recordedAt: String(row.recorded_at),
+    expiresAt: (row.expires_at as string | null) ?? null
+  };
+}
+
+const SCORE_CONFIG_COLUMNS = "id,version,components,disqualifier_min,created_at" as const;
+
+const SNAPSHOT_COLUMNS =
+  "id,customer_id,score,components,disqualifier_penalty,confidence,top_drivers,top_blockers,config_version,evidence_refs,reason_codes,previous_score,override_by,override_reason,calculated_at" as const;
+
+function mapScoreConfig(row: Record<string, unknown>): StoredScoreConfig {
+  return {
+    id: String(row.id),
+    version: String(row.version),
+    components: row.components as ScoreConfig["components"],
+    disqualifierMin: Number(row.disqualifier_min),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapSnapshot(row: Record<string, unknown>): StoredScoreSnapshot {
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    score: Number(row.score),
+    components: row.components as ScoreConfig["components"],
+    disqualifierPenalty: Number(row.disqualifier_penalty),
+    confidence: Number(row.confidence),
+    topDrivers: (row.top_drivers ?? []) as readonly ScoreDriver[],
+    topBlockers: (row.top_blockers ?? []) as readonly ScoreBlocker[],
+    configVersion: String(row.config_version),
+    evidenceRefs: (row.evidence_refs ?? []) as readonly string[],
+    reasonCodes: (row.reason_codes ?? []) as readonly string[],
+    previousScore: row.previous_score === null ? null : Number(row.previous_score),
+    overrideBy: (row.override_by as string | null) ?? null,
+    overrideReason: (row.override_reason as string | null) ?? null,
+    calculatedAt: String(row.calculated_at)
   };
 }
 
