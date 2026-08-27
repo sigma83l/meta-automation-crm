@@ -153,9 +153,25 @@ bare number with no components, version or evidence requirement, and keeping it
 beside the new engine would have left two scorers and an invitation to call the
 one that cannot explain itself.
 
-Next is step 3, attention priority — deliberately not persisted and deliberately
-not a number, and the thing most often conflated with the score just built. One
-asks how good this lead is; the other asks what to do next.
+**Done — step 3, attention priority**, and the lead status vocabulary it needed.
+`LEAD_STATUSES` now matches the pack: `needs_reply` and `human_review` added,
+`follow_up` renamed to `follow_up_due`, `lost` dropped because the lifecycle
+already carries it.
+
+Priority is `Critical | High | Normal | Low` plus reason chips and no 0-100
+number. The combination rule is where that could have been quietly broken —
+weighting signals and thresholding the sum would rebuild the forbidden number
+behind four labels — so the priority is the highest level any single signal
+argues for, lowered to the strictest cap in force. Penalties cap rather than
+subtract. An explicit request for a person is the one thing never capped, since
+every penalty is a reason not to _send_ and that is a request to _look_.
+
+Nothing is persisted; `attentionFor` computes on read. That also keeps it from
+landing as another pure module with no caller.
+
+Next is step 4, the next-action projection and the read model — where the index
+stops being a `limit(250)` and becomes a server-owned projection with cursor
+pagination.
 
 One contract conflict recorded there and settled: the repo's `LEAD_STATUSES`
 and the pack's `CRM_LEAD_STATUS_V1` disagree. The pack's set wins — it has
