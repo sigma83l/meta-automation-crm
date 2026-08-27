@@ -123,10 +123,25 @@ along with the four other tables that list gets wrong.
 **The rest of the pack is planned in `docs/master-run/PACK_01_PLAN.md`**, written
 against the pack's own authority, backend, product and test layers after
 verifying its integrity (6/6 SHA match) and re-deriving the repository position
-from the schema. Eight steps, backend first. Next is wiring the four tables that
-already exist, then the qualification score engine — versioned configs and
-immutable snapshots are what make a score explainable rather than a number, and
-every later step reads from one.
+from the schema. Eight steps, backend first.
+
+**Done — step 1, the tables that already existed are wired.**
+`qualification_evidence`, `lifecycle_events`, `tasks_followups`, `opportunities`
+and the custom field pair each had a schema and no writer. Each now has one, and
+in every case the writer arrived with the rule that makes the stored row
+trustworthy rather than after it: a transition names its reason and actor, a
+follow-up names an owner and can defer, a win names who declared it and what it
+rests on, and a custom field value has to be the type its definition declares
+and to come from a writer that field permits.
+
+Two of those gates went in ahead of where the plan filed them. The custom field
+`ai_write` permission was step 8's; it is here because adding a writer without it
+leaves exactly the hole the rest of step 1 was closing, and doing it later means
+opening the same seam twice.
+
+Next is step 2, the qualification score engine — versioned configs and immutable
+snapshots are what make a score explainable rather than a number, and every
+later step reads from one.
 
 One contract conflict recorded there and settled: the repo's `LEAD_STATUSES`
 and the pack's `CRM_LEAD_STATUS_V1` disagree. The pack's set wins — it has
