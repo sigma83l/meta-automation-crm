@@ -11,6 +11,11 @@ import type {
   CustomerSummary,
   EvidenceInput,
   StoredEvidence,
+  FieldDefinitionInput,
+  FieldValueInput,
+  FieldWriteResult,
+  StoredFieldDefinition,
+  StoredFieldValue,
   FollowUpInput,
   FollowUpOwner,
   OpportunityInput,
@@ -23,6 +28,16 @@ import type {
   TransitionResult
 } from "../contracts";
 import { FOLLOWUP_OWNERS } from "../contracts";
+import {
+  AI_WRITE_PERMISSIONS,
+  FIELD_TYPES,
+  FIELD_WRITERS,
+  authorizeFieldWrite,
+  type AiWritePermission,
+  type FieldConfidence,
+  type FieldType,
+  type FieldWriter
+} from "../custom-field-policy";
 import {
   STOP_REASONS,
   defaultCancelCondition,
@@ -85,6 +100,30 @@ const outcomeSchema = z.object({
   source: z.enum(OUTCOME_SOURCES),
   evidenceRef: z.string().trim().min(1).max(200).nullable().optional(),
   lostReason: z.string().trim().min(1).max(200).nullable().optional()
+});
+
+const fieldDefinitionSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  // Mirrors the column's own pattern so a bad key is refused before a round
+  // trip. The key is what every stored value joins on, so it is deliberately
+  // narrower than the name beside it.
+  fieldKey: z
+    .string()
+    .trim()
+    .regex(/^[a-z][a-z0-9_]{0,63}$/, "lowercase, starting with a letter"),
+  fieldType: z.enum(FIELD_TYPES),
+  aiWrite: z.enum(AI_WRITE_PERMISSIONS).optional()
+});
+
+const fieldValueSchema = z.object({
+  customerId: z.string().uuid(),
+  fieldKey: z.string().trim().min(1).max(64),
+  // The type is checked against the definition, which is only known after the
+  // lookup; this is the outer bound of what jsonb will hold at all.
+  value: z.union([z.string().trim().min(1).max(500), z.number(), z.boolean()]),
+  writer: z.enum(FIELD_WRITERS),
+  authoritative: z.boolean().optional(),
+  sourceRef: z.string().trim().min(1).max(200)
 });
 
 const evidenceSchema = z.object({
@@ -475,6 +514,110 @@ export class SupabaseCrmRepository implements CrmRepository {
     return { outcome: "recorded", opportunity: mapOpportunity(data) };
   }
 
+  async defineCustomField(raw: FieldDefinitionInput): Promise<StoredFieldDefinition> {
+    const input = fieldDefinitionSchema.parse(raw);
+    const { data, error } = await this.client
+      .from("custom_field_definitions")
+      .insert({
+        workspace_id: this.workspace.id,
+        name: input.name,
+        field_key: input.fieldKey,
+        field_type: input.fieldType,
+        // Closed unless the caller opens it. A field defined without an opinion
+        // is one nobody considered, and no is the safe reading of silence.
+        ai_write: input.aiWrite ?? "never"
+      })
+      .select(FIELD_DEFINITION_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("FIELD_DEFINITION_WRITE_FAILED");
+    return mapFieldDefinition(data);
+  }
+
+  async customFieldDefinitions(): Promise<readonly StoredFieldDefinition[]> {
+    const { data, error } = await this.client
+      .from("custom_field_definitions")
+      .select(FIELD_DEFINITION_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .order("field_key");
+    if (error) throw new Error("FIELD_DEFINITION_READ_FAILED");
+    return (data ?? []).map(mapFieldDefinition);
+  }
+
+  async setCustomFieldValue(raw: FieldValueInput): Promise<FieldWriteResult> {
+    const input = fieldValueSchema.parse(raw);
+
+    const { data: definitionRow, error: definitionError } = await this.client
+      .from("custom_field_definitions")
+      .select(FIELD_DEFINITION_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("field_key", input.fieldKey)
+      .maybeSingle();
+    if (definitionError) throw new Error("FIELD_DEFINITION_READ_FAILED");
+    // An undefined field is refused rather than created. A write that defines
+    // its own field would let a model invent the schema it then fills in.
+    if (!definitionRow) {
+      return { outcome: "refused", reason: `${input.fieldKey} is not a defined field` };
+    }
+    const definition = mapFieldDefinition(definitionRow);
+
+    const verdict = authorizeFieldWrite(
+      {
+        fieldKey: definition.fieldKey,
+        fieldType: definition.fieldType,
+        aiWrite: definition.aiWrite
+      },
+      {
+        value: input.value,
+        writer: input.writer,
+        authoritative: input.authoritative ?? false,
+        sourceRef: input.sourceRef
+      }
+    );
+    if (verdict.outcome === "refused") return { outcome: "refused", reason: verdict.reason };
+    if (verdict.outcome === "suggest") return { outcome: "suggested", reason: verdict.reason };
+
+    const updatedAt = new Date().toISOString();
+    const { data, error } = await this.client
+      .from("customer_custom_field_values")
+      .upsert(
+        {
+          workspace_id: this.workspace.id,
+          customer_id: input.customerId,
+          definition_id: definition.id,
+          value: input.value,
+          written_by: input.writer,
+          confidence: verdict.confidence,
+          source_ref: input.sourceRef,
+          updated_at: updatedAt
+        },
+        { onConflict: "workspace_id,customer_id,definition_id" }
+      )
+      .select(FIELD_VALUE_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("FIELD_VALUE_WRITE_FAILED");
+    return { outcome: "stored", value: mapFieldValue(data, definition.fieldKey) };
+  }
+
+  async customFieldValuesFor(customerId: string): Promise<readonly StoredFieldValue[]> {
+    // Two queries rather than an embed. Values are keyed by definition id and
+    // callers want the field key, and a workspace's definition list is bounded
+    // by how many fields an operator has made - so this is one small extra read
+    // rather than a per-row one, and it does not rest on PostgREST's embedding
+    // shape, which differs between a single row and a collection.
+    const definitions = await this.customFieldDefinitions();
+    const keys = new Map(definitions.map((definition) => [definition.id, definition.fieldKey]));
+
+    const { data, error } = await this.client
+      .from("customer_custom_field_values")
+      .select(FIELD_VALUE_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId);
+    if (error) throw new Error("FIELD_VALUE_READ_FAILED");
+    return (data ?? []).map((row: Record<string, unknown>) =>
+      mapFieldValue(row, keys.get(String(row.definition_id)) ?? "")
+    );
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -500,6 +643,33 @@ export class SupabaseCrmRepository implements CrmRepository {
 // the select string, and `"a" + "b"` widens to `string`, which loses it.
 const FOLLOWUP_COLUMNS =
   "id,customer_id,stop_reason,objective,cancel_condition,eligibility_state,message_version,due_at,attempts,owner_type,owner_id,last_result,next_eligible_at" as const;
+
+const FIELD_DEFINITION_COLUMNS = "id,name,field_key,field_type,ai_write" as const;
+
+const FIELD_VALUE_COLUMNS =
+  "customer_id,definition_id,value,written_by,confidence,source_ref,updated_at" as const;
+
+function mapFieldDefinition(row: Record<string, unknown>): StoredFieldDefinition {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    fieldKey: String(row.field_key),
+    fieldType: row.field_type as FieldType,
+    aiWrite: row.ai_write as AiWritePermission
+  };
+}
+
+function mapFieldValue(row: Record<string, unknown>, fieldKey: string): StoredFieldValue {
+  return {
+    customerId: String(row.customer_id),
+    fieldKey,
+    value: row.value as string | number | boolean,
+    writer: row.written_by as FieldWriter,
+    confidence: row.confidence as FieldConfidence,
+    sourceRef: String(row.source_ref ?? ""),
+    updatedAt: String(row.updated_at)
+  };
+}
 
 const OPPORTUNITY_COLUMNS =
   "id,customer_id,stage,value_band,owner_id,next_action,lost_reason,outcome_source,outcome_evidence_ref,outcome_recorded_at" as const;

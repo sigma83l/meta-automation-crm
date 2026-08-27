@@ -1,4 +1,10 @@
 import type { StopReason, EligibilityVerdict } from "./followup-policy";
+import type {
+  AiWritePermission,
+  FieldConfidence,
+  FieldType,
+  FieldWriter
+} from "./custom-field-policy";
 import type { OpportunityStage, OutcomeSource } from "./opportunity-outcome";
 import type { LifecycleStage } from "./revenue-state";
 
@@ -147,6 +153,53 @@ export type OutcomeResult =
   | Readonly<{ outcome: "recorded"; opportunity: StoredOpportunity }>
   | Readonly<{ outcome: "refused"; reason: string }>;
 
+export type FieldDefinitionInput = Readonly<{
+  name: string;
+  /** Stable identifier; the name is a label and may be renamed freely. */
+  fieldKey: string;
+  fieldType: FieldType;
+  /** Defaults to `never`. A field nobody opted in stays closed to the model. */
+  aiWrite?: AiWritePermission;
+}>;
+
+export type StoredFieldDefinition = Readonly<{
+  id: string;
+  name: string;
+  fieldKey: string;
+  fieldType: FieldType;
+  aiWrite: AiWritePermission;
+}>;
+
+export type FieldValueInput = Readonly<{
+  customerId: string;
+  fieldKey: string;
+  value: string | number | boolean;
+  writer: FieldWriter;
+  /** Only meaningful for `confirmed_if_authoritative`. */
+  authoritative?: boolean;
+  sourceRef: string;
+}>;
+
+export type StoredFieldValue = Readonly<{
+  customerId: string;
+  fieldKey: string;
+  value: string | number | boolean;
+  writer: FieldWriter;
+  confidence: FieldConfidence;
+  sourceRef: string;
+  updatedAt: string;
+}>;
+
+/**
+ * `suggested` is not a failure. The field permits the model to propose and not
+ * to decide, so the value is withheld rather than rejected, and the caller is
+ * the one that knows where a proposal goes.
+ */
+export type FieldWriteResult =
+  | Readonly<{ outcome: "stored"; value: StoredFieldValue }>
+  | Readonly<{ outcome: "suggested"; reason: string }>
+  | Readonly<{ outcome: "refused"; reason: string }>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -183,4 +236,12 @@ export interface CrmRepository {
   opportunitiesFor(customerId: string): Promise<readonly StoredOpportunity[]>;
   /** Settles one, or explains why the claim was not permitted. */
   settleOpportunity(opportunityId: string, outcome: OutcomeInput): Promise<OutcomeResult>;
+  /** Defines a workspace custom field. */
+  defineCustomField(input: FieldDefinitionInput): Promise<StoredFieldDefinition>;
+  /** Every field this workspace has defined. */
+  customFieldDefinitions(): Promise<readonly StoredFieldDefinition[]>;
+  /** Sets one field on one customer, subject to its type and its ai_write rule. */
+  setCustomFieldValue(input: FieldValueInput): Promise<FieldWriteResult>;
+  /** One customer's field values. */
+  customFieldValuesFor(customerId: string): Promise<readonly StoredFieldValue[]>;
 }
