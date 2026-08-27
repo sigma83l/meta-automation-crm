@@ -1,4 +1,5 @@
 import type { StopReason, EligibilityVerdict } from "./followup-policy";
+import type { OpportunityStage, OutcomeSource } from "./opportunity-outcome";
 import type { LifecycleStage } from "./revenue-state";
 
 export type CustomerSummary = Readonly<{
@@ -114,6 +115,38 @@ export type StoredFollowUp = Readonly<{
   nextEligibleAt: string | null;
 }>;
 
+export type OpportunityInput = Readonly<{
+  customerId: string;
+  /** A band, never an amount: an estimated figure would look authoritative. */
+  valueBand?: "unknown" | "low" | "medium" | "high";
+  ownerId?: string | null;
+  nextAction?: string | null;
+}>;
+
+export type OutcomeInput = Readonly<{
+  stage: OpportunityStage;
+  source: OutcomeSource;
+  evidenceRef?: string | null;
+  lostReason?: string | null;
+}>;
+
+export type StoredOpportunity = Readonly<{
+  id: string;
+  customerId: string;
+  stage: OpportunityStage;
+  valueBand: "unknown" | "low" | "medium" | "high" | null;
+  ownerId: string | null;
+  nextAction: string | null;
+  lostReason: string | null;
+  outcomeSource: OutcomeSource | null;
+  outcomeEvidenceRef: string | null;
+  outcomeRecordedAt: string | null;
+}>;
+
+export type OutcomeResult =
+  | Readonly<{ outcome: "recorded"; opportunity: StoredOpportunity }>
+  | Readonly<{ outcome: "refused"; reason: string }>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -144,4 +177,10 @@ export interface CrmRepository {
   ): Promise<StoredFollowUp>;
   /** Records an attempt and what came of it. */
   recordFollowUpAttempt(followUpId: string, result: string): Promise<StoredFollowUp>;
+  /** Opens an opportunity. It starts unsettled and cites nothing. */
+  openOpportunity(input: OpportunityInput): Promise<StoredOpportunity>;
+  /** One customer's opportunities, newest first. */
+  opportunitiesFor(customerId: string): Promise<readonly StoredOpportunity[]>;
+  /** Settles one, or explains why the claim was not permitted. */
+  settleOpportunity(opportunityId: string, outcome: OutcomeInput): Promise<OutcomeResult>;
 }

@@ -13,6 +13,10 @@ import type {
   StoredEvidence,
   FollowUpInput,
   FollowUpOwner,
+  OpportunityInput,
+  OutcomeInput,
+  OutcomeResult,
+  StoredOpportunity,
   StoredFollowUp,
   StoredLifecycleEvent,
   TransitionInput,
@@ -25,6 +29,13 @@ import {
   defaultObjective,
   type EligibilityVerdict
 } from "../followup-policy";
+import {
+  OUTCOME_SOURCES,
+  OPPORTUNITY_STAGES,
+  authorizeOutcome,
+  type OpportunityStage,
+  type OutcomeSource
+} from "../opportunity-outcome";
 import { authorizeLifecycleTransition, type LifecycleStage } from "../revenue-state";
 
 const inputSchema = z.object({
@@ -61,6 +72,20 @@ const followUpSchema = z
   .refine((input) => (input.ownerType === "human") === Boolean(input.ownerId), {
     message: "a human owner needs an owner id, and only a human owner may have one"
   });
+
+const opportunitySchema = z.object({
+  customerId: z.string().uuid(),
+  valueBand: z.enum(["unknown", "low", "medium", "high"]).optional(),
+  ownerId: z.string().uuid().nullable().optional(),
+  nextAction: z.string().trim().min(1).max(200).nullable().optional()
+});
+
+const outcomeSchema = z.object({
+  stage: z.enum(OPPORTUNITY_STAGES),
+  source: z.enum(OUTCOME_SOURCES),
+  evidenceRef: z.string().trim().min(1).max(200).nullable().optional(),
+  lostReason: z.string().trim().min(1).max(200).nullable().optional()
+});
 
 const evidenceSchema = z.object({
   customerId: z.string().uuid(),
@@ -385,6 +410,71 @@ export class SupabaseCrmRepository implements CrmRepository {
     return mapFollowUp(data);
   }
 
+  async openOpportunity(raw: OpportunityInput): Promise<StoredOpportunity> {
+    const input = opportunitySchema.parse(raw);
+    // Deliberately no stage argument. An opportunity that could be created
+    // already won would route around every check settleOpportunity performs.
+    const { data, error } = await this.client
+      .from("opportunities")
+      .insert({
+        workspace_id: this.workspace.id,
+        customer_id: input.customerId,
+        stage: "open",
+        value_band: input.valueBand ?? "unknown",
+        owner_id: input.ownerId ?? null,
+        next_action: input.nextAction ?? null
+      })
+      .select(OPPORTUNITY_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("OPPORTUNITY_WRITE_FAILED");
+    return mapOpportunity(data);
+  }
+
+  async opportunitiesFor(customerId: string): Promise<readonly StoredOpportunity[]> {
+    const { data, error } = await this.client
+      .from("opportunities")
+      .select(OPPORTUNITY_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error("OPPORTUNITY_READ_FAILED");
+    return (data ?? []).map(mapOpportunity);
+  }
+
+  async settleOpportunity(opportunityId: string, raw: OutcomeInput): Promise<OutcomeResult> {
+    const claim = outcomeSchema.parse(raw);
+    // Rebuilt rather than spread: exactOptionalPropertyTypes distinguishes an
+    // absent key from one holding undefined, and Zod's optional() produces the
+    // latter.
+    const verdict = authorizeOutcome({
+      stage: claim.stage,
+      source: claim.source,
+      evidenceRef: claim.evidenceRef ?? null,
+      lostReason: claim.lostReason ?? null
+    });
+    if (!verdict.allowed) return { outcome: "refused", reason: verdict.reason };
+
+    const settled = claim.stage === "won" || claim.stage === "lost";
+    const { data, error } = await this.client
+      .from("opportunities")
+      .update({
+        stage: claim.stage,
+        lost_reason: claim.lostReason ?? null,
+        // Reopening clears the provenance rather than keeping a stale claim
+        // attached to a stage that no longer makes it.
+        outcome_source: settled ? claim.source : null,
+        outcome_evidence_ref: settled ? (claim.evidenceRef ?? null) : null,
+        outcome_recorded_at: settled ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("workspace_id", this.workspace.id)
+      .eq("id", opportunityId)
+      .select(OPPORTUNITY_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("OPPORTUNITY_NOT_FOUND");
+    return { outcome: "recorded", opportunity: mapOpportunity(data) };
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -410,6 +500,24 @@ export class SupabaseCrmRepository implements CrmRepository {
 // the select string, and `"a" + "b"` widens to `string`, which loses it.
 const FOLLOWUP_COLUMNS =
   "id,customer_id,stop_reason,objective,cancel_condition,eligibility_state,message_version,due_at,attempts,owner_type,owner_id,last_result,next_eligible_at" as const;
+
+const OPPORTUNITY_COLUMNS =
+  "id,customer_id,stage,value_band,owner_id,next_action,lost_reason,outcome_source,outcome_evidence_ref,outcome_recorded_at" as const;
+
+function mapOpportunity(row: Record<string, unknown>): StoredOpportunity {
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    stage: row.stage as OpportunityStage,
+    valueBand: (row.value_band as StoredOpportunity["valueBand"]) ?? null,
+    ownerId: (row.owner_id as string | null) ?? null,
+    nextAction: (row.next_action as string | null) ?? null,
+    lostReason: (row.lost_reason as string | null) ?? null,
+    outcomeSource: (row.outcome_source as OutcomeSource | null) ?? null,
+    outcomeEvidenceRef: (row.outcome_evidence_ref as string | null) ?? null,
+    outcomeRecordedAt: (row.outcome_recorded_at as string | null) ?? null
+  };
+}
 
 function mapFollowUp(row: Record<string, unknown>): StoredFollowUp {
   return {
