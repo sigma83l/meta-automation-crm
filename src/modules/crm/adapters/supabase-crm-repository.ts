@@ -58,6 +58,7 @@ import {
   type OpportunityStage,
   type OutcomeSource
 } from "../opportunity-outcome";
+import { rankAttention, type AttentionVerdict } from "../attention-priority";
 import {
   DEFAULT_SCORE_CONFIG,
   EVIDENCE_COMPONENTS,
@@ -70,7 +71,11 @@ import {
   type ScoreDriver,
   type ScoredEvidence
 } from "../qualification-score";
-import { authorizeLifecycleTransition, type LifecycleStage } from "../revenue-state";
+import {
+  authorizeLifecycleTransition,
+  type LeadStatus,
+  type LifecycleStage
+} from "../revenue-state";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -799,6 +804,74 @@ export class SupabaseCrmRepository implements CrmRepository {
       overrideReason,
       calculatedAt: new Date().toISOString()
     };
+  }
+
+  async attentionFor(customerId: string, now: Date = new Date()): Promise<AttentionVerdict> {
+    const iso = now.toISOString();
+    const [customer, conversations, followUps, consents, score] = await Promise.all([
+      this.client
+        .from("customers")
+        .select("lead_status,lifecycle_stage")
+        .eq("workspace_id", this.workspace.id)
+        .eq("id", customerId)
+        .maybeSingle(),
+      // Open conversations only. An unread count on a closed conversation is a
+      // record of what happened, not a thing anybody still has to answer.
+      this.client
+        .from("conversations")
+        .select("unread_count,requires_human_review")
+        .eq("workspace_id", this.workspace.id)
+        .eq("customer_id", customerId)
+        .eq("state", "open"),
+      this.client
+        .from("tasks_followups")
+        .select("due_at,next_eligible_at")
+        .eq("workspace_id", this.workspace.id)
+        .eq("customer_id", customerId)
+        .eq("eligibility_state", "eligible")
+        .order("due_at", { ascending: true }),
+      this.client
+        .from("customer_consents")
+        .select("opt_out")
+        .eq("workspace_id", this.workspace.id)
+        .eq("customer_id", customerId),
+      this.latestScore(customerId)
+    ]);
+
+    if (customer.error || !customer.data) throw new Error("CUSTOMER_NOT_FOUND");
+
+    const rows = (conversations.data ?? []) as {
+      unread_count: number | null;
+      requires_human_review: boolean | null;
+    }[];
+    const live = (followUps.data ?? []) as {
+      due_at: string | null;
+      next_eligible_at: string | null;
+    }[];
+    // The soonest live follow-up decides. A contact with four pending
+    // follow-ups is not four times as urgent as one with a single overdue one,
+    // and ranking on the earliest is what an operator would do by eye.
+    const next = live[0];
+    const snooze = live.find((row) => row.next_eligible_at && row.next_eligible_at > iso);
+
+    return rankAttention(
+      {
+        leadStatus: customer.data.lead_status as LeadStatus,
+        lifecycleStage: customer.data.lifecycle_stage as LifecycleStage,
+        unreadInbound: rows.reduce((sum, row) => sum + (row.unread_count ?? 0), 0),
+        humanReviewRequested: rows.some((row) => row.requires_human_review === true),
+        followUpDueAt: next?.due_at ?? null,
+        followUpSnoozedUntil: snooze?.next_eligible_at ?? null,
+        // Opted out anywhere is opted out: the penalty is about whether there is
+        // anything an operator may do, and one closed channel is enough to make
+        // a queued outbound the wrong suggestion.
+        optedOut: ((consents.data ?? []) as { opt_out: boolean | null }[]).some(
+          (row) => row.opt_out === true
+        ),
+        qualificationScore: score?.score ?? null
+      },
+      now
+    );
   }
 
   private async activity(customerId: string, activityType: string, summary: string) {

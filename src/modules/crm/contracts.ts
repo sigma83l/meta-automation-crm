@@ -6,6 +6,7 @@ import type {
   FieldWriter
 } from "./custom-field-policy";
 import type { OpportunityStage, OutcomeSource } from "./opportunity-outcome";
+import type { AttentionVerdict } from "./attention-priority";
 import type {
   EvidenceComponent,
   ScoreConfig,
@@ -306,4 +307,12 @@ export interface CrmRepository {
     reason: string,
     now?: Date
   ): Promise<StoredScoreSnapshot>;
+  /**
+   * What this contact needs from an operator right now.
+   *
+   * Computed on read and never stored: priority is a function of current state
+   * and goes stale the moment anything moves, so a persisted one would be a
+   * cache with no invalidation.
+   */
+  attentionFor(customerId: string, now?: Date): Promise<AttentionVerdict>;
 }
