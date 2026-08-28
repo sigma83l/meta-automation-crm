@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement";
 import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
+import { CONTACT_FACTS_CONFLICT } from "@/src/modules/crm/ai-write";
 import type { ModelCallRecord } from "./ai-turn-ports";
 import type { StoredFact } from "./memory-policy";
 import {
@@ -245,10 +246,7 @@ export function createSupabaseTurnPorts(
       if (facts.length === 0) return 0;
 
       // The table holds one row per key per customer, so an accepted write is
-      // an upsert on that key and history lives in the audit trail. The
-      // conflict target has to name the unique constraint exactly: get it
-      // wrong and every turn inserts a second row for a key that is supposed
-      // to have one, which is how a customer ends up with two budgets.
+      // an upsert on that key and history lives in the audit trail.
       const { error } = await admin.from("contact_facts").upsert(
         facts.map((fact) => ({
           workspace_id: event.workspaceId,
@@ -261,7 +259,10 @@ export function createSupabaseTurnPorts(
           valid_until: fact.validUntil ?? null,
           updated_at: new Date().toISOString()
         })),
-        { onConflict: "workspace_id,customer_id,fact_key" }
+        // Named once, in the CRM module, because that module's write engine
+        // upserts the same table: two spellings of this target is how a
+        // customer ends up with two budgets.
+        { onConflict: CONTACT_FACTS_CONFLICT }
       );
       // Reported, not thrown. The engine turns a short count into a
       // `memory_write_failed` reason code on the turn record, which is visible

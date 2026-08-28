@@ -14,7 +14,8 @@ import type {
   NextActionType,
   ProposedAction
 } from "./next-action";
-import type { FactConfidence, StoredFact } from "@/src/modules/rcos/memory-policy";
+import type { FactConfidence, ProposedFact, StoredFact } from "@/src/modules/rcos/memory-policy";
+import type { AiCrmProposal, ClassifiedProposal } from "./ai-write";
 import type { NowCard } from "./now-card";
 import type { TimelineEvent, TimelineFilter } from "./timeline";
 import type { RadarViewFilters } from "./radar-views";
@@ -321,6 +322,23 @@ export type SavedView = Readonly<{
   createdAt: string;
 }>;
 
+/**
+ * What one applied proposal did.
+ *
+ * The classification is returned in full rather than as counts: an operator
+ * reviewing what a model changed needs to see the writes it refused as much as
+ * the ones it made, and a count cannot say which fact was conflicted.
+ */
+export type AiWriteOutcome = Readonly<{
+  classified: ClassifiedProposal;
+  /** Facts durable after the write. Short of the accepted count means storage failed. */
+  remembered: number;
+  score: StoredScoreSnapshot;
+  transition: TransitionResult | null;
+  /** Computed, never stored: it is a function of the state just written. */
+  nextAction: ProposedAction;
+}>;
+
 export type SavedViewInput = Readonly<{ name: string; filters: RadarViewFilters }>;
 
 export type ActionProposalInput = Readonly<{
@@ -438,6 +456,14 @@ export interface CrmRepository {
   ): Promise<readonly TimelineEvent[]>;
   /** What is remembered about this contact, newest first, with its provenance. */
   memoryFor(customerId: string): Promise<readonly StoredFact[]>;
+  /** Stores accepted facts. Returns how many are durable rather than throwing. */
+  rememberFacts(customerId: string, facts: readonly ProposedFact[]): Promise<number>;
+  /**
+   * Applies a model's proposal and recomputes what follows from it: score,
+   * lifecycle eligibility, next action. The proposal is an application-owned
+   * shape, so nothing in it can name a column or a query.
+   */
+  applyAiProposal(customerId: string, proposal: AiCrmProposal, now?: Date): Promise<AiWriteOutcome>;
   /** Every follow-up for one contact, soonest due first - not only the live ones. */
   followUpsFor(customerId: string): Promise<readonly StoredFollowUp[]>;
   /**

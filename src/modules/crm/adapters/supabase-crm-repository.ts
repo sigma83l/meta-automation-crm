@@ -30,6 +30,7 @@ import type {
   ScoreConfigInput,
   ScoreConfigResult,
   ActionProposalInput,
+  AiWriteOutcome,
   RadarCursor,
   RadarPage,
   RadarQuery,
@@ -80,6 +81,7 @@ import {
   type NextActionType
 } from "../next-action";
 import { buildNowCard, type NowCard } from "../now-card";
+import { classifyProposal, evidenceKey, summariseProposal, type AiCrmProposal } from "../ai-write";
 import {
   buildTimeline,
   filterTimeline,
@@ -106,7 +108,8 @@ import {
   type LeadStatus,
   type LifecycleStage
 } from "../revenue-state";
-import type { FactConfidence, StoredFact } from "@/src/modules/rcos/memory-policy";
+import type { FactConfidence, ProposedFact, StoredFact } from "@/src/modules/rcos/memory-policy";
+import { CONTACT_FACTS_CONFLICT } from "../ai-write";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -952,6 +955,143 @@ export class SupabaseCrmRepository implements CrmRepository {
    * lazy, and an unbounded timeline is how a three-year-old contact takes the
    * page down.
    */
+  async rememberFacts(customerId: string, facts: readonly ProposedFact[]): Promise<number> {
+    if (facts.length === 0) return 0;
+    const { error } = await this.client.from("contact_facts").upsert(
+      facts.map((fact) => ({
+        workspace_id: this.workspace.id,
+        customer_id: customerId,
+        fact_key: fact.key,
+        fact_value: fact.value,
+        confidence: fact.confidence,
+        source_ref: fact.sourceRef,
+        recorded_at: fact.recordedAt,
+        valid_until: fact.validUntil ?? null,
+        updated_at: new Date().toISOString()
+      })),
+      { onConflict: CONTACT_FACTS_CONFLICT }
+    );
+    // Counted rather than thrown, the same rule the turn's own fact writer
+    // follows: a customer who loses their reply because a fact could not be
+    // filed is worse off than one whose fact was not filed.
+    return error ? 0 : facts.length;
+  }
+
+  /**
+   * Applies one model proposal, then recomputes everything that follows from it.
+   *
+   * Steps 5 to 12 of `10_AI_CRM_WRITE_ENGINE.md`. The classification is pure and
+   * lives in `ai-write.ts`; what happens here is the committing, in the order
+   * the pack sets: facts and evidence first, then the score, then whether the
+   * lifecycle may move, then what to do next.
+   *
+   * The next action is computed and returned, not stored. A derived action is a
+   * function of the state that was just written and goes stale the moment
+   * anything moves - the projection refuses `derived` for that reason, and this
+   * is the caller that would otherwise have been tempted to write one.
+   */
+  async applyAiProposal(
+    customerId: string,
+    proposal: AiCrmProposal,
+    now: Date = new Date()
+  ): Promise<AiWriteOutcome> {
+    const [facts, evidence, definitions, row] = await Promise.all([
+      this.memoryFor(customerId),
+      this.evidenceFor(customerId),
+      this.customFieldDefinitions(),
+      this.radarRowFor(customerId, now)
+    ]);
+
+    const classified = classifyProposal(
+      proposal,
+      {
+        facts,
+        evidenceKeys: new Set(
+          evidence
+            .filter((item) => item.component && item.evidenceRef)
+            .map((item) => evidenceKey(item.component!, item.evidenceRef!))
+        ),
+        definitions: definitions.map((definition) => ({
+          fieldKey: definition.fieldKey,
+          fieldType: definition.fieldType,
+          aiWrite: definition.aiWrite
+        })),
+        lifecycleStage: row.lifecycleStage
+      },
+      now
+    );
+
+    const remembered = await this.rememberFacts(
+      customerId,
+      classified.facts.filter((item) => item.commit).map((item) => item.candidate)
+    );
+
+    for (const item of classified.evidence) {
+      if (!item.commit) continue;
+      await this.recordEvidence({
+        customerId,
+        signal: item.candidate.signal,
+        component: item.candidate.component,
+        weight: item.candidate.weight,
+        confidence: item.candidate.confidence,
+        evidenceRef: item.candidate.evidenceRef
+      });
+    }
+
+    for (const item of classified.fieldValues) {
+      if (!item.commit) continue;
+      await this.setCustomFieldValue({
+        customerId,
+        fieldKey: item.candidate.fieldKey,
+        value: item.candidate.value,
+        writer: "ai",
+        sourceRef: item.candidate.sourceRef,
+        ...(item.candidate.authoritative === undefined
+          ? {}
+          : { authoritative: item.candidate.authoritative })
+      });
+    }
+
+    // Step 10. Recomputed from the evidence on file rather than adjusted by
+    // what was just written: the score is a projection, and a delta applied to
+    // it is a second scorer.
+    const score = await this.rescoreCustomer(customerId, now);
+
+    // Step 11. The proposal only got as far as "well formed"; whether the move
+    // is allowed is the same decision a person's move goes through.
+    let transition: TransitionResult | null = null;
+    if (classified.transition?.commit) {
+      transition = await this.transitionLifecycle({
+        customerId,
+        // The stage the contact is in, read before anything was written: the
+        // transition rules compare against where the move started.
+        from: row.lifecycleStage,
+        to: classified.transition.candidate.to,
+        reasonCodes: classified.transition.candidate.reasonCodes,
+        actor: "ai",
+        ...(classified.transition.candidate.evidenceRef
+          ? { evidenceRef: classified.transition.candidate.evidenceRef }
+          : {})
+      });
+    }
+
+    // Step 12, from the state as it now stands - including the stage this
+    // proposal may just have moved.
+    const nextAction = proposeNextAction(await this.stateFor(customerId), now);
+
+    // Step 13. What a model changed about a customer is an audited action, not
+    // a detail of the turn that produced it.
+    await this.client.from("crm_audit_events").insert({
+      workspace_id: this.workspace.id,
+      actor_user_id: this.workspace.userId,
+      customer_id: customerId,
+      action: "crm.ai_write",
+      metadata: { ...summariseProposal(classified), remembered }
+    });
+
+    return { classified, remembered, score, transition, nextAction };
+  }
+
   async timelineFor(
     customerId: string,
     filter: TimelineFilter = {},
