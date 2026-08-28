@@ -163,8 +163,10 @@ class FakeQuery implements PromiseLike<FakeResult> {
   private headMode = false;
   private singleMode: "none" | "single" | "maybe" = "none";
   private readonly filters: Filter[] = [];
-  private orderColumn: string | null = null;
-  private orderAscending = true;
+  // PostgREST applies order clauses in the order they were added, each one
+  // breaking the previous one's ties. Keeping only the last would silently sort
+  // by the tiebreak alone - a wrong order that reads as a working query.
+  private readonly ordering: { column: string; ascending: boolean }[] = [];
   private limitCount: number | null = null;
   private payload: FakeRow[] = [];
   private updates: FakeRow = {};
@@ -267,8 +269,7 @@ class FakeQuery implements PromiseLike<FakeResult> {
   }
 
   order(column: string, options?: { ascending?: boolean }) {
-    this.orderColumn = column;
-    this.orderAscending = options?.ascending !== false;
+    this.ordering.push({ column, ascending: options?.ascending !== false });
     return this;
   }
 
@@ -309,12 +310,14 @@ class FakeQuery implements PromiseLike<FakeResult> {
         return filter.conditions.some((condition) => matches(row, condition));
       })
     );
-    if (this.orderColumn !== null) {
-      const column = this.orderColumn;
-      const direction = this.orderAscending ? 1 : -1;
-      rows = [...rows].sort(
-        (left, right) => (ordered(left[column], right[column]) ?? 0) * direction
-      );
+    if (this.ordering.length > 0) {
+      rows = [...rows].sort((left, right) => {
+        for (const { column, ascending } of this.ordering) {
+          const comparison = (ordered(left[column], right[column]) ?? 0) * (ascending ? 1 : -1);
+          if (comparison !== 0) return comparison;
+        }
+        return 0;
+      });
     }
     if (this.limitCount !== null) rows = rows.slice(0, this.limitCount);
     return rows;
