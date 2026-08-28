@@ -14,7 +14,8 @@ import type {
   NextActionType,
   ProposedAction
 } from "./next-action";
-import type { FactConfidence } from "@/src/modules/rcos/memory-policy";
+import type { FactConfidence, StoredFact } from "@/src/modules/rcos/memory-policy";
+import type { NowCard } from "./now-card";
 import type { RadarViewFilters } from "./radar-views";
 import type {
   EvidenceComponent,
@@ -418,6 +419,15 @@ export interface CrmRepository {
    * cache with no invalidation.
    */
   attentionFor(customerId: string, now?: Date): Promise<AttentionVerdict>;
+  /**
+   * The record's Now card, assembled on read for the same reason: every field
+   * is a function of current state, and a stored one would go stale silently.
+   */
+  nowCardFor(customerId: string, now?: Date): Promise<NowCard>;
+  /** What is remembered about this contact, newest first, with its provenance. */
+  memoryFor(customerId: string): Promise<readonly StoredFact[]>;
+  /** Every follow-up for one contact, soonest due first - not only the live ones. */
+  followUpsFor(customerId: string): Promise<readonly StoredFollowUp[]>;
   /**
    * One page of the index, with priority and next action computed per row.
    *

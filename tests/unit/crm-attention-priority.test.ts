@@ -225,167 +225,73 @@ describe("spotting a queue worth opening", () => {
   });
 });
 
-describe("the repository assembles the state it ranks", () => {
-  function harness(over: Record<string, FakeRow[]> = {}) {
-    const fake = createFakeSupabase({
-      tables: {
-        customers: [
-          {
-            id: CUSTOMER,
-            workspace_id: WORKSPACE,
-            lead_status: "awaiting_customer",
-            lifecycle_stage: "engaged"
-          }
-        ],
-        conversations: [],
-        tasks_followups: [],
-        customer_consents: [],
-        crm_score_snapshots: [],
-        ...over
-      }
-    });
+describe("the repository ranks the state the view assembles", () => {
+  /**
+   * The five queries this used to run are one row of `crm_radar_view` now, so
+   * what the assembly does with conversations, consents and follow-ups is
+   * checked against a real engine in `tests/migrations/next-action-and-radar`.
+   * What is left here is the part that lives in TypeScript: reading the right
+   * row, and ranking it.
+   */
+  function harness(rows: FakeRow[]) {
+    const fake = createFakeSupabase({ tables: { crm_radar_view: rows } });
     return new SupabaseCrmRepository(fake.client, workspace);
   }
 
-  it("counts unread messages across a customer's open conversations", async () => {
-    const repository = harness({
-      conversations: [
-        {
-          id: "c1",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          state: "open",
-          unread_count: 2,
-          requires_human_review: false
-        }
-      ]
-    });
+  const row = (over: Partial<FakeRow> = {}): FakeRow => ({
+    workspace_id: WORKSPACE,
+    customer_id: CUSTOMER,
+    display_name: "Probe",
+    company_name: null,
+    status: "active",
+    source: "manual",
+    lifecycle_stage: "engaged",
+    lead_status: "awaiting_customer",
+    created_at: EARLIER,
+    updated_at: EARLIER,
+    score: null,
+    unread_inbound: 0,
+    human_review_requested: false,
+    followup_due_at: null,
+    followup_snoozed_until: null,
+    opted_out: false,
+    has_evidence: false,
+    owner_id: null,
+    channel: null,
+    last_activity_at: EARLIER,
+    current_need: null,
+    current_need_confidence: null,
+    ...over
+  });
+
+  it("ranks the row it read", async () => {
+    const repository = harness([row({ unread_inbound: 2 })]);
     expect((await repository.attentionFor(CUSTOMER, NOW)).priority).toBe("normal");
   });
 
-  it("ignores unread messages on a closed conversation", async () => {
-    // A record of what happened, not something anybody still has to answer.
-    const repository = harness({
-      conversations: [
-        {
-          id: "c2",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          state: "closed",
-          unread_count: 9,
-          requires_human_review: false
-        }
-      ]
-    });
-    const verdict = await repository.attentionFor(CUSTOMER, NOW);
-    expect(verdict.reasons.map((reason) => reason.code)).not.toContain("unanswered_inbound");
-  });
-
   it("picks up a request for a person", async () => {
-    const repository = harness({
-      conversations: [
-        {
-          id: "c3",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          state: "open",
-          unread_count: 0,
-          requires_human_review: true
-        }
-      ]
-    });
+    const repository = harness([
+      row({ human_review_requested: true, lead_status: "human_review" })
+    ]);
     expect((await repository.attentionFor(CUSTOMER, NOW)).priority).toBe("critical");
   });
 
-  it("treats an opt-out on any channel as an opt-out", async () => {
-    // One closed channel is enough to make a queued outbound the wrong
-    // suggestion.
-    const repository = harness({
-      conversations: [
-        {
-          id: "c4",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          state: "open",
-          unread_count: 5,
-          requires_human_review: false
-        }
-      ],
-      customer_consents: [
-        {
-          id: "k1",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          channel: "email",
-          opt_out: false
-        },
-        {
-          id: "k2",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          channel: "whatsapp",
-          opt_out: true
-        }
-      ]
-    });
+  it("caps a contact who opted out, whatever else is true", async () => {
+    const repository = harness([row({ unread_inbound: 5, opted_out: true })]);
     expect((await repository.attentionFor(CUSTOMER, NOW)).priority).toBe("low");
   });
 
-  it("ranks on the soonest live follow-up", async () => {
-    // Four pending follow-ups do not make a contact four times as urgent.
-    const repository = harness({
-      tasks_followups: [
-        {
-          id: "f1",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          eligibility_state: "eligible",
-          due_at: EARLIER,
-          next_eligible_at: null
-        },
-        {
-          id: "f2",
-          workspace_id: WORKSPACE,
-          customer_id: CUSTOMER,
-          eligibility_state: "eligible",
-          due_at: NEXT_WEEK,
-          next_eligible_at: null
-        }
-      ]
-    });
-    const verdict = await repository.attentionFor(CUSTOMER, NOW);
-    expect(verdict.reasons.map((reason) => reason.code)).toContain("followup_overdue");
+  it("does not read another customer's row", async () => {
+    const repository = harness([
+      row({ customer_id: "someone-else", unread_inbound: 9, human_review_requested: true })
+    ]);
+    await expect(repository.attentionFor(CUSTOMER, NOW)).rejects.toThrow("CUSTOMER_NOT_FOUND");
   });
 
-  it("does not read another customer's state", async () => {
-    const repository = harness({
-      conversations: [
-        {
-          id: "c5",
-          workspace_id: WORKSPACE,
-          customer_id: "someone-else",
-          state: "open",
-          unread_count: 9,
-          requires_human_review: true
-        }
-      ]
-    });
-    expect((await repository.attentionFor(CUSTOMER, NOW)).priority).toBe("low");
-  });
-
-  it("does not read another workspace's state", async () => {
-    const repository = harness({
-      conversations: [
-        {
-          id: "c6",
-          workspace_id: "someone-else",
-          customer_id: CUSTOMER,
-          state: "open",
-          unread_count: 9,
-          requires_human_review: true
-        }
-      ]
-    });
-    expect((await repository.attentionFor(CUSTOMER, NOW)).priority).toBe("low");
+  it("does not read another workspace's row", async () => {
+    const repository = harness([
+      row({ workspace_id: "someone-else", unread_inbound: 9, human_review_requested: true })
+    ]);
+    await expect(repository.attentionFor(CUSTOMER, NOW)).rejects.toThrow("CUSTOMER_NOT_FOUND");
   });
 });

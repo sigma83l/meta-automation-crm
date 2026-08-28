@@ -76,8 +76,10 @@ import {
   type ActionEligibility,
   type ActionOwner,
   type ActionSource,
+  type NextActionState,
   type NextActionType
 } from "../next-action";
+import { buildNowCard, type NowCard } from "../now-card";
 import {
   DEFAULT_SCORE_CONFIG,
   EVIDENCE_COMPONENTS,
@@ -98,7 +100,7 @@ import {
   type LeadStatus,
   type LifecycleStage
 } from "../revenue-state";
-import type { FactConfidence } from "@/src/modules/rcos/memory-policy";
+import type { FactConfidence, StoredFact } from "@/src/modules/rcos/memory-policy";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -866,69 +868,110 @@ export class SupabaseCrmRepository implements CrmRepository {
     };
   }
 
+  /**
+   * The state every read of one contact starts from.
+   *
+   * One row of the same view the index reads, rather than the five queries this
+   * used to assemble by hand. The list and the record now answer "what is going
+   * on with this contact" from one place: two assemblies of the same state are
+   * how a contact ends up Critical on one screen and Normal on the other, and
+   * the view was already computing every column this needs.
+   */
+  private async stateFor(customerId: string): Promise<NextActionState> {
+    const { data, error } = await this.client
+      .from("crm_radar_view")
+      .select(RADAR_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .maybeSingle();
+    if (error) throw new Error("RADAR_READ_FAILED");
+    if (!data) throw new Error("CUSTOMER_NOT_FOUND");
+    return radarState(data as Record<string, unknown>);
+  }
+
   async attentionFor(customerId: string, now: Date = new Date()): Promise<AttentionVerdict> {
-    const iso = now.toISOString();
-    const [customer, conversations, followUps, consents, score] = await Promise.all([
+    return rankAttention(await this.stateFor(customerId), now);
+  }
+
+  async memoryFor(customerId: string): Promise<readonly StoredFact[]> {
+    const { data, error } = await this.client
+      .from("contact_facts")
+      .select("fact_key,fact_value,confidence,source_ref,recorded_at,valid_until")
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("recorded_at", { ascending: false });
+    if (error) throw new Error("MEMORY_READ_FAILED");
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      key: String(row.fact_key),
+      value: String(row.fact_value),
+      confidence: row.confidence as FactConfidence,
+      sourceRef: String(row.source_ref),
+      recordedAt: String(row.recorded_at),
+      validUntil: (row.valid_until as string | null) ?? null
+    }));
+  }
+
+  async followUpsFor(customerId: string): Promise<readonly StoredFollowUp[]> {
+    const { data, error } = await this.client
+      .from("tasks_followups")
+      .select(FOLLOWUP_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .order("due_at", { ascending: true });
+    if (error) throw new Error("FOLLOWUP_READ_FAILED");
+    return (data ?? []).map(mapFollowUp);
+  }
+
+  async nowCardFor(customerId: string, now: Date = new Date()): Promise<NowCard> {
+    const [state, facts, score, message, conversation] = await Promise.all([
+      this.stateFor(customerId),
+      this.memoryFor(customerId),
+      this.latestScore(customerId),
+      // The last meaningful message: one somebody actually sent or received.
+      // Automation internals live in the timeline, where they can be filtered;
+      // the card has room for one line and it should be the conversation.
       this.client
-        .from("customers")
-        .select("lead_status,lifecycle_stage")
+        .from("messages")
+        .select("id,conversation_id,direction,body,sent_at")
         .eq("workspace_id", this.workspace.id)
-        .eq("id", customerId)
+        .eq("customer_id", customerId)
+        .order("sent_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
-      // Open conversations only. An unread count on a closed conversation is a
-      // record of what happened, not a thing anybody still has to answer.
       this.client
         .from("conversations")
-        .select("unread_count,requires_human_review")
+        .select("owner")
         .eq("workspace_id", this.workspace.id)
         .eq("customer_id", customerId)
-        .eq("state", "open"),
-      this.client
-        .from("tasks_followups")
-        .select("due_at,next_eligible_at")
-        .eq("workspace_id", this.workspace.id)
-        .eq("customer_id", customerId)
-        .eq("eligibility_state", "eligible")
-        .order("due_at", { ascending: true }),
-      this.client
-        .from("customer_consents")
-        .select("opt_out")
-        .eq("workspace_id", this.workspace.id)
-        .eq("customer_id", customerId),
-      this.latestScore(customerId)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
     ]);
 
-    if (customer.error || !customer.data) throw new Error("CUSTOMER_NOT_FOUND");
-
-    const rows = (conversations.data ?? []) as {
-      unread_count: number | null;
-      requires_human_review: boolean | null;
-    }[];
-    const live = (followUps.data ?? []) as {
-      due_at: string | null;
-      next_eligible_at: string | null;
-    }[];
-    // The soonest live follow-up decides. A contact with four pending
-    // follow-ups is not four times as urgent as one with a single overdue one,
-    // and ranking on the earliest is what an operator would do by eye.
-    const next = live[0];
-    const snooze = live.find((row) => row.next_eligible_at && row.next_eligible_at > iso);
-
-    return rankAttention(
+    const last = message.data as Record<string, unknown> | null;
+    return buildNowCard(
       {
-        leadStatus: customer.data.lead_status as LeadStatus,
-        lifecycleStage: customer.data.lifecycle_stage as LifecycleStage,
-        unreadInbound: rows.reduce((sum, row) => sum + (row.unread_count ?? 0), 0),
-        humanReviewRequested: rows.some((row) => row.requires_human_review === true),
-        followUpDueAt: next?.due_at ?? null,
-        followUpSnoozedUntil: snooze?.next_eligible_at ?? null,
-        // Opted out anywhere is opted out: the penalty is about whether there is
-        // anything an operator may do, and one closed channel is enough to make
-        // a queued outbound the wrong suggestion.
-        optedOut: ((consents.data ?? []) as { opt_out: boolean | null }[]).some(
-          (row) => row.opt_out === true
-        ),
-        qualificationScore: score?.score ?? null
+        state,
+        facts,
+        score: score
+          ? {
+              id: score.id,
+              score: score.score,
+              topDrivers: score.topDrivers,
+              topBlockers: score.topBlockers,
+              evidenceRefs: score.evidenceRefs
+            }
+          : null,
+        lastMessage: last
+          ? {
+              id: String(last.id),
+              conversationId: String(last.conversation_id),
+              direction: last.direction as "inbound" | "outbound",
+              body: String(last.body ?? ""),
+              sentAt: String(last.sent_at)
+            }
+          : null,
+        handling: (conversation.data?.owner as "automation" | "human" | undefined) ?? null
       },
       now
     );
@@ -1275,8 +1318,15 @@ const PROPOSAL_COLUMNS =
  * SQL for the list, one in TypeScript for the detail - is how a contact ends up
  * Critical on one screen and Normal on the other.
  */
-function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
-  const state = {
+/**
+ * The state the rules read, from one view row.
+ *
+ * Shared by the list and the record so there is one derivation of it. The
+ * columns are the view's; everything above them - priority, next action, the
+ * Now card - is computed from this and nowhere else.
+ */
+function radarState(row: Record<string, unknown>): NextActionState {
+  return {
     leadStatus: row.lead_status as LeadStatus,
     lifecycleStage: row.lifecycle_stage as LifecycleStage,
     unreadInbound: Number(row.unread_inbound ?? 0),
@@ -1288,6 +1338,10 @@ function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
     ownerId: (row.owner_id as string | null) ?? null,
     hasEvidence: row.has_evidence === true
   };
+}
+
+function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
+  const state = radarState(row);
   const attention = rankAttention(state, now);
   return {
     customerId: String(row.customer_id),
@@ -1297,11 +1351,11 @@ function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
     source: String(row.source),
     lifecycleStage: state.lifecycleStage,
     leadStatus: state.leadStatus,
-    score: state.qualificationScore,
+    score: state.qualificationScore ?? null,
     priority: attention.priority,
     reasons: attention.reasons,
     nextAction: proposeNextAction(state, now),
-    ownerId: state.ownerId,
+    ownerId: state.ownerId ?? null,
     channel: row.channel ? String(row.channel) : null,
     lastActivityAt: String(row.last_activity_at),
     updatedAt: String(row.updated_at),

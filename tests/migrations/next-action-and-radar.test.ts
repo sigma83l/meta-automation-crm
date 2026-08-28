@@ -149,6 +149,20 @@ describe("the radar view assembles one row per customer", () => {
     expect(row.opted_out).toBe(true);
   });
 
+  it("reports the soonest live follow-up rather than the latest", async () => {
+    // Four pending follow-ups do not make a contact four times as urgent, and
+    // ranking on the earliest is what an operator would do by eye.
+    await db.query(
+      `insert into public.tasks_followups
+         (workspace_id, customer_id, stop_reason, objective, cancel_condition, due_at, owner_type)
+       values ($1, $2, 'price_sent', 'ask sooner', 'they answer',
+               '2026-08-20T00:00:00Z', 'automation')`,
+      [workspaceId, customerId]
+    );
+    const row = (await radar(customerId)).rows[0]!;
+    expect(new Date(row.followup_due_at!).toISOString()).toBe("2026-08-20T00:00:00.000Z");
+  });
+
   it("sees evidence only when it can both name a source and a component", async () => {
     await db.query(
       `insert into public.qualification_evidence
