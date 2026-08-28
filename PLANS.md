@@ -284,12 +284,55 @@ in all three languages; the stored English summaries on activity rows do not,
 and are shown as written rather than machine-translated into a claim nobody
 made.
 
-Next is step 7, the AI → CRM write engine: the fourteen-step pipeline, of which
-the turn engine and the memory policy already hold half. What is new is
-structured extraction of qualification evidence, score recomputation, transition
-eligibility and next-action computation — and the invariant that must survive it
-is the one already load-bearing: the model emits a proposal in an
-application-owned schema, never a field path or a query.
+**Done — step 7, the AI → CRM write engine, with its producer deferred.** The
+pack's closing rule is that the AI never executes SQL or an update by field
+name; it emits a strict application-owned proposal. The proposal type is that
+rule made structural — facts under keys, evidence under the eight scored
+components, values for fields the workspace declared model-writable, a stage
+from the fixed vocabulary — with nowhere in it to put a column, a table, a path
+or an operator.
+
+Every candidate is classified rather than accepted: `confirmed | inferred |
+conflicted | rejected`. The rules doing the classifying are the ones that
+already exist, because a second set would be a second answer to "may this be
+written". A refusal about strength or freshness is a _conflict_ rather than a
+rejection — a model disagreeing with something known is what an operator needs
+to see. `commit` is a separate flag because the four names cannot express a
+fifth state: a `suggest` field produces a real, well-formed inference that a
+person still has to accept, and calling that rejected would misdescribe the
+value while confirmed would misdescribe its standing.
+
+Then what follows. The score is recomputed from the evidence on file, never
+adjusted by a delta, because a delta is a second scorer. A stage change goes to
+`authorizeLifecycleTransition`, the same decision a person's move goes through.
+The next action is computed and returned, never stored: the projection refuses
+`derived` precisely because such an action is a function of the state just
+written, and this was the caller that would otherwise have written one. The same
+observation offered twice is refused, or a re-processed conversation raises the
+score once per replay for one thing that happened.
+
+The human half is live: suggestions sit beside the Now card, and accepting or
+rejecting one settles the row that has held an outcome column since step 4 with
+nothing to fill it. Accepting performs nothing — the CRM proposes and the domain
+that owns the send executes — and a rejection is kept, because a pattern of bad
+suggestions is only visible if the bad ones survive.
+
+**What is deferred, and why.** Step 4 of the pipeline — structured extraction —
+needs a model call that returns this proposal shape, and the provider interface
+in `ai-turn-ports.ts` has exactly two: classify and draft. Adding a third is the
+AI orchestration engine's work, which is Pack 03. So `applyAiProposal` is the
+seam that call will land on, and until it does the engine runs only from tests.
+That is a dependency on a later pack rather than an omission, and naming it
+beats wiring a fake producer to make the path look exercised.
+
+One risk left standing: `contact_facts` has two writers — the turn's
+`persistFacts` and the CRM module's `rememberFacts`. They now share one named
+conflict target so they cannot drift on the thing that matters, but a single
+writer would be better and belongs with the Pack 03 wiring above.
+
+Next is step 8, custom fields and the gates: the definition-driven validation
+layer landed early, in step 1, along with the `ai_write` permission it needed —
+so what remains is the rest of that step's gates.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
