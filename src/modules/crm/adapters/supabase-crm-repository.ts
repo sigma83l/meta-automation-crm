@@ -1454,6 +1454,9 @@ export class SupabaseCrmRepository implements CrmRepository {
     proposalId: string,
     outcome: "accepted" | "rejected" | "superseded"
   ): Promise<StoredActionProposal> {
+    // Taking on or turning down a suggestion is an operational decision, and a
+    // viewer's role is to read the queue rather than to answer it.
+    assertWorkspaceOperator(this.workspace);
     const { data, error } = await this.client
       .from("crm_next_action_projection")
       .update({ settled_at: new Date().toISOString(), settled_outcome: outcome })

@@ -541,6 +541,56 @@ body {
   font-style: italic;
 }
 
+/* Suggestions waiting on a person. Beside the Now card rather than in a tab:
+   they are the one thing on the record that stops mattering if nobody sees it. */
+.proposal-panel {
+  padding: 16px clamp(18px, 3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--info-soft);
+}
+.proposal-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.proposal-panel li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.86rem;
+}
+.proposal-panel small {
+  flex-basis: 100%;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+}
+.proposal-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.proposal-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--blue);
+  color: white;
+  font-weight: 700;
+}
+.proposal-actions .button-text {
+  background: none;
+  color: var(--muted);
+}
+
 /* Timeline. Routine rows are dimmed rather than restyled: when somebody turns
    them on they are reading them beside the rest, and a different visual
    language would break the sequence they came for. */

@@ -434,4 +434,11 @@ describe("storing a proposal somebody made", () => {
     expect(settled.settledOutcome).toBe("rejected");
     expect(fake.database.rows("crm_next_action_projection")).toHaveLength(1);
   });
+
+  it("does not let a viewer answer the queue", async () => {
+    // Taking a suggestion on or turning it down is an operational decision.
+    const fake = createFakeSupabase({ tables: { crm_next_action_projection: [] } });
+    const repository = new SupabaseCrmRepository(fake.client, { ...workspace, role: "viewer" });
+    await expect(repository.settleProposal("p3", "accepted")).rejects.toThrow(/operator/i);
+  });
 });

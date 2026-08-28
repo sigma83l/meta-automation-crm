@@ -4,6 +4,7 @@ import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { CustomerActions } from "@/src/modules/crm/ui/customer-actions";
 import { NowCardPanel } from "@/src/modules/crm/ui/now-card";
+import { ProposalsPanel } from "@/src/modules/crm/ui/proposals";
 import {
   AutomationsSection,
   ConversationsSection,
@@ -78,9 +79,12 @@ export default async function CustomerPage({
 
   // Only the sections that read the record's other tables pay for them.
   const needsDetail = ["overview", "conversations", "automations", "files", "fields", "audit"];
-  const [header, card, detail] = await Promise.all([
+  const [header, card, proposals, detail] = await Promise.all([
     repository.radarRowFor(id),
     repository.nowCardFor(id),
+    // Live suggestions, whichever section is open: they are waiting on a person
+    // and burying them behind a tab is how they stay waiting.
+    repository.proposalsFor(id),
     needsDetail.includes(section)
       ? repository.detail(id)
       : Promise.resolve({} as Readonly<Record<string, unknown>>)
@@ -117,6 +121,8 @@ export default async function CustomerPage({
         </section>
 
         <NowCardPanel card={card} customerId={id} />
+
+        {workspace.role === "viewer" ? null : <ProposalsPanel proposals={proposals} />}
 
         {workspace.role === "viewer" ? null : (
           <CustomerActions
