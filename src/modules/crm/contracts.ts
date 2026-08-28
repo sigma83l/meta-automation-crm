@@ -420,6 +420,8 @@ export interface CrmRepository {
    * cache with no invalidation.
    */
   attentionFor(customerId: string, now?: Date): Promise<AttentionVerdict>;
+  /** One contact as the index sees them: same row, same ranking. */
+  radarRowFor(customerId: string, now?: Date): Promise<RadarRow>;
   /**
    * The record's Now card, assembled on read for the same reason: every field
    * is a function of current state, and a stored one would go stale silently.

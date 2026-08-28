@@ -883,7 +883,7 @@ export class SupabaseCrmRepository implements CrmRepository {
    * how a contact ends up Critical on one screen and Normal on the other, and
    * the view was already computing every column this needs.
    */
-  private async stateFor(customerId: string): Promise<NextActionState> {
+  private async radarRow(customerId: string): Promise<Record<string, unknown>> {
     const { data, error } = await this.client
       .from("crm_radar_view")
       .select(RADAR_COLUMNS)
@@ -892,7 +892,21 @@ export class SupabaseCrmRepository implements CrmRepository {
       .maybeSingle();
     if (error) throw new Error("RADAR_READ_FAILED");
     if (!data) throw new Error("CUSTOMER_NOT_FOUND");
-    return radarState(data as Record<string, unknown>);
+    return data as Record<string, unknown>;
+  }
+
+  private async stateFor(customerId: string): Promise<NextActionState> {
+    return radarState(await this.radarRow(customerId));
+  }
+
+  /**
+   * One contact as the index sees them, for the record's identity header.
+   *
+   * The same row and the same ranking, so the header cannot contradict the list
+   * an operator arrived from.
+   */
+  async radarRowFor(customerId: string, now: Date = new Date()): Promise<RadarRow> {
+    return toRadarRow(await this.radarRow(customerId), now);
   }
 
   async attentionFor(customerId: string, now: Date = new Date()): Promise<AttentionVerdict> {

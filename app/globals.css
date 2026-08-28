@@ -477,6 +477,199 @@ body {
   margin: 0;
   color: var(--muted);
 }
+/* The Now card: the record's first working block, and the one thing on the page
+   that is always present. Fields stay in a grid so an unknown occupies the same
+   space as a value - a card that reflows as facts arrive hides the fact that it
+   had nothing to say. */
+.now-card {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.now-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-block-end: 16px;
+}
+.now-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+.now-field dt {
+  color: var(--tertiary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.now-field dd {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+}
+.now-field small {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--tertiary);
+  font-size: 0.7rem;
+}
+.now-field .evidence-ref {
+  overflow-wrap: anywhere;
+}
+.now-footnote {
+  margin: 18px 0 0;
+  font-size: 0.74rem;
+}
+.now-footnote a {
+  color: var(--muted);
+}
+.reason-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+.reason-chip[data-effect="caps"] {
+  color: var(--tertiary);
+  font-style: italic;
+}
+
+/* Timeline. Routine rows are dimmed rather than restyled: when somebody turns
+   them on they are reading them beside the rest, and a different visual
+   language would break the sequence they came for. */
+.timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 16px;
+}
+.timeline-filters a {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.timeline-filters a[aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--info-soft);
+  color: var(--blue-deep);
+}
+.timeline {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timeline li {
+  padding: 12px 14px;
+  border-inline-start: 3px solid var(--line-strong);
+  background: var(--surface-raised);
+  border-radius: 0 8px 8px 0;
+}
+.timeline li[data-routine] {
+  border-inline-start-color: var(--line);
+  color: var(--tertiary);
+}
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.timeline-head strong {
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+.timeline li p {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+/* The record's list sections. One layout for all of them: a name, its state,
+   and the small print that says where the row came from. */
+.memory-list,
+.followup-list,
+.conversation-summaries,
+.file-list,
+.automation-list,
+.field-list,
+.note-list,
+.contact-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.memory-list li,
+.followup-list li,
+.conversation-summaries li,
+.file-list li,
+.automation-list li,
+.field-list li,
+.note-list li,
+.contact-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  font-size: 0.86rem;
+}
+.memory-list small,
+.followup-list small,
+.conversation-summaries small,
+.file-list small,
+.field-list small,
+.note-list small {
+  flex-basis: 100%;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+}
+/* Expired memory is shown, and shown as expired: the record is where somebody
+   corrects it, and they cannot correct what they cannot see. */
+.memory-list li[data-expired] {
+  border-style: dashed;
+  color: var(--tertiary);
+}
+.note-list li p {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.section-note {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.detail-panel h4 {
+  margin: 18px 0 10px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tertiary);
+}
+.detail-panel h4:first-of-type {
+  margin-block-start: 0;
+}
+
 .detail-tabs {
   display: flex;
   overflow-x: auto;
@@ -487,7 +680,8 @@ body {
   padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  /* Was `white`, which stayed white in dark mode and left the label unreadable. */
+  background: var(--surface);
   color: var(--muted);
   text-decoration: none;
 }
