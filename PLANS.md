@@ -90,7 +90,9 @@ tests. This, not the data model, is Pack 01's real gap.
 `crm_next_action_projection`, `crm_saved_views`, `knowledge_sources`,
 `entitlements`, `deletion_ledger`, `action_logs`. Corrected 2026-08-26:
 `custom_field_values` was on this list and exists as
-`customer_custom_field_values`.
+`customer_custom_field_values`. The list is a dated snapshot and stays as
+written; three of it have since been built by Pack 01 — `crm_score_configs`
+and `crm_score_snapshots` in step 2, `crm_next_action_projection` in step 4.
 
 **Routes absent:** Studio, Usage Center, Catalog, Knowledge.
 
@@ -169,15 +171,48 @@ every penalty is a reason not to _send_ and that is a request to _look_.
 Nothing is persisted; `attentionFor` computes on read. That also keeps it from
 landing as another pure module with no caller.
 
-Next is step 4, the next-action projection and the read model — where the index
-stops being a `limit(250)` and becomes a server-owned projection with cursor
-pagination.
-
 One contract conflict recorded there and settled: the repo's `LEAD_STATUSES`
 and the pack's `CRM_LEAD_STATUS_V1` disagree. The pack's set wins — it has
 `needs_reply` and `human_review`, which are what an operator queue actually
 sorts by, and it keeps `lost` in the lifecycle where it belongs instead of in
 both places.
+
+**Done — step 4, the next action and the read model.** The split between what
+is computed and what is stored is the whole of it. A next action derived from
+current state is not persisted — it is a function of what is true right now, so
+a row holding it would be a cache with no invalidation and a second answer able
+to disagree with the live one. A next action _proposed_ by a model or a person
+was made at a time and has to survive until it is accepted, executed or
+superseded, so that gets a row. `crm_next_action_projection` holds only those,
+and refuses `derived` on the way in.
+
+The derivation reuses the attention engine rather than restating its rules:
+attention decides what governs, `proposeNextAction` decides what to do about
+it, and the contract's reason codes fall out of that verdict instead of being
+re-derived beside it. The one place the two questions come apart is a cap that
+only lowers urgency — awaiting customer — where the thing to do is still
+whatever the raising reason named, so an unanswered message from a contact
+whose move it is ranks Normal and still proposes a reply. A cap that says
+nothing is actionable — opted out, closed — governs instead. `close` is in the
+vocabulary and is never derived; a quiet week is not a decision.
+
+Settled proposals are kept rather than deleted, because "the model suggested
+this and somebody rejected it" is the record that makes a bad suggestion
+pattern visible.
+
+`crm_radar_view` supplies the inputs the ranking reads, one row per customer,
+and deliberately does not rank. Re-encoding priority in SQL would leave two
+implementations to keep in step — how a contact ends up Critical on the list
+and Normal on the record — the same drift `record_lifecycle_transition` avoids.
+Paging is keyset on the customer's own `(updated_at, id)` rather than an
+offset, which shifts under anybody editing a record while somebody else pages
+through, and it reads one row past the limit so "is there more" comes from the
+same read. `list()` and its `limit(250)` stay until step 5 moves the index onto
+this.
+
+Next is step 5, the CRM index becoming the Customer Radar: the columns the pack
+names, the seven default views, and `crm_saved_views` as server-owned query
+definitions rather than a client-supplied filter string reaching the database.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
