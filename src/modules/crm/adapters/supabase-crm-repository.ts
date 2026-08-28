@@ -81,6 +81,12 @@ import {
 } from "../next-action";
 import { buildNowCard, type NowCard } from "../now-card";
 import {
+  buildTimeline,
+  filterTimeline,
+  type TimelineEvent,
+  type TimelineFilter
+} from "../timeline";
+import {
   DEFAULT_SCORE_CONFIG,
   EVIDENCE_COMPONENTS,
   SCORE_COMPONENTS,
@@ -920,6 +926,158 @@ export class SupabaseCrmRepository implements CrmRepository {
       .order("due_at", { ascending: true });
     if (error) throw new Error("FOLLOWUP_READ_FAILED");
     return (data ?? []).map(mapFollowUp);
+  }
+
+  /**
+   * One contact's history, from the rows that recorded it.
+   *
+   * Ten reads rather than a joined query, because these are ten unrelated
+   * tables and a join across them would produce a cartesian mess to
+   * de-duplicate in memory anyway. They run together and each is bounded: the
+   * read model contract asks the record's secondary detail to be paginated or
+   * lazy, and an unbounded timeline is how a three-year-old contact takes the
+   * page down.
+   */
+  async timelineFor(
+    customerId: string,
+    filter: TimelineFilter = {},
+    limit = 100
+  ): Promise<readonly TimelineEvent[]> {
+    const per = Math.min(Math.max(limit, 1), 200);
+    const scope = <T>(table: string, columns: string, order: string) =>
+      this.client
+        .from(table)
+        .select(columns)
+        .eq("workspace_id", this.workspace.id)
+        .eq("customer_id", customerId)
+        .order(order, { ascending: false })
+        .limit(per) as unknown as Promise<{ data: T[] | null }>;
+
+    const [
+      messages,
+      notes,
+      activities,
+      lifecycle,
+      scores,
+      followUps,
+      opportunities,
+      handoffs,
+      automations,
+      audit
+    ] = await Promise.all([
+      scope<Record<string, unknown>>(
+        "messages",
+        "id,conversation_id,direction,body,sent_at",
+        "sent_at"
+      ),
+      scope<Record<string, unknown>>("customer_notes", "id,body,created_at", "created_at"),
+      scope<Record<string, unknown>>(
+        "customer_activities",
+        "id,activity_type,summary,occurred_at",
+        "occurred_at"
+      ),
+      scope<Record<string, unknown>>(
+        "lifecycle_events",
+        "id,from_stage,to_stage,reason_codes,actor,evidence_ref,occurred_at",
+        "occurred_at"
+      ),
+      scope<Record<string, unknown>>(
+        "crm_score_snapshots",
+        "id,score,previous_score,config_version,override_by,calculated_at",
+        "calculated_at"
+      ),
+      scope<Record<string, unknown>>(
+        "tasks_followups",
+        "id,objective,due_at,eligibility_state,owner_type,last_result,created_at,updated_at",
+        "created_at"
+      ),
+      scope<Record<string, unknown>>(
+        "opportunities",
+        "id,stage,value_band,outcome_source,created_at,updated_at",
+        "created_at"
+      ),
+      scope<Record<string, unknown>>("handoff_packets", "id,trigger,raised_at", "raised_at"),
+      scope<Record<string, unknown>>(
+        "customer_automation_references",
+        "id,automation_key,state,created_at",
+        "created_at"
+      ),
+      scope<Record<string, unknown>>("crm_audit_events", "id,action,occurred_at", "occurred_at")
+    ]);
+
+    const built = buildTimeline({
+      messages: (messages.data ?? []).map((row) => ({
+        id: String(row.id),
+        conversationId: String(row.conversation_id),
+        direction: row.direction as "inbound" | "outbound",
+        body: String(row.body ?? ""),
+        sentAt: String(row.sent_at)
+      })),
+      notes: (notes.data ?? []).map((row) => ({
+        id: String(row.id),
+        body: String(row.body),
+        createdAt: String(row.created_at)
+      })),
+      activities: (activities.data ?? []).map((row) => ({
+        id: String(row.id),
+        type: String(row.activity_type),
+        summary: String(row.summary),
+        occurredAt: String(row.occurred_at)
+      })),
+      lifecycle: (lifecycle.data ?? []).map((row) => ({
+        id: String(row.id),
+        fromStage: (row.from_stage as string | null) ?? null,
+        toStage: String(row.to_stage),
+        reasonCodes: (row.reason_codes ?? []) as readonly string[],
+        actor: String(row.actor),
+        evidenceRef: (row.evidence_ref as string | null) ?? null,
+        occurredAt: String(row.occurred_at)
+      })),
+      scores: (scores.data ?? []).map((row) => ({
+        id: String(row.id),
+        score: Number(row.score),
+        previousScore: row.previous_score === null ? null : Number(row.previous_score),
+        configVersion: String(row.config_version),
+        overrideBy: (row.override_by as string | null) ?? null,
+        calculatedAt: String(row.calculated_at)
+      })),
+      followUps: (followUps.data ?? []).map((row) => ({
+        id: String(row.id),
+        objective: String(row.objective),
+        dueAt: String(row.due_at),
+        eligibilityState: row.eligibility_state as StoredFollowUp["eligibilityState"],
+        ownerType: String(row.owner_type),
+        lastResult: (row.last_result as string | null) ?? null,
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at)
+      })),
+      opportunities: (opportunities.data ?? []).map((row) => ({
+        id: String(row.id),
+        stage: String(row.stage),
+        valueBand: (row.value_band as string | null) ?? null,
+        outcomeSource: (row.outcome_source as string | null) ?? null,
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at)
+      })),
+      handoffs: (handoffs.data ?? []).map((row) => ({
+        id: String(row.id),
+        trigger: String(row.trigger),
+        raisedAt: String(row.raised_at)
+      })),
+      automations: (automations.data ?? []).map((row) => ({
+        id: String(row.id),
+        automationKey: String(row.automation_key),
+        state: String(row.state),
+        createdAt: String(row.created_at)
+      })),
+      audit: (audit.data ?? []).map((row) => ({
+        id: String(row.id),
+        action: String(row.action),
+        occurredAt: String(row.occurred_at)
+      }))
+    });
+
+    return filterTimeline(built, filter).slice(0, per);
   }
 
   async nowCardFor(customerId: string, now: Date = new Date()): Promise<NowCard> {

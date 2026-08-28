@@ -16,6 +16,7 @@ import type {
 } from "./next-action";
 import type { FactConfidence, StoredFact } from "@/src/modules/rcos/memory-policy";
 import type { NowCard } from "./now-card";
+import type { TimelineEvent, TimelineFilter } from "./timeline";
 import type { RadarViewFilters } from "./radar-views";
 import type {
   EvidenceComponent,
@@ -424,6 +425,15 @@ export interface CrmRepository {
    * is a function of current state, and a stored one would go stale silently.
    */
   nowCardFor(customerId: string, now?: Date): Promise<NowCard>;
+  /**
+   * One contact's history, newest first. Routine machinery - automation
+   * internals, refreshes that changed nothing - is left out unless asked for.
+   */
+  timelineFor(
+    customerId: string,
+    filter?: TimelineFilter,
+    limit?: number
+  ): Promise<readonly TimelineEvent[]>;
   /** What is remembered about this contact, newest first, with its provenance. */
   memoryFor(customerId: string): Promise<readonly StoredFact[]>;
   /** Every follow-up for one contact, soonest due first - not only the live ones. */
