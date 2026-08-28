@@ -246,9 +246,50 @@ export button now says Export search: it exports what the search and status
 controls select, and the two attention views are decided by a ranking the
 export path does not have.
 
-Next is step 6, the customer record: the Now card, and the sections behind it.
-Its rule is the one this step just applied to a column — every value links to
-its evidence, and anything unknown says so instead of being quietly omitted.
+**Done — step 6, the customer record.** It listed every column of every table
+it could reach, twelve key/value pairs at a time. That dump is now what only
+the Audit section does, where a raw trace of what was recorded is the point.
+
+The Now card renders every field the same way — a value with what backs it, or
+_Unknown / needs confirmation_ — and no branch in it can omit a field it has no
+value for. Two derivations could each have been quietly invented and were not.
+Data confidence is the weakest confidence among the card's remembered values,
+not an average and not the score's own 0–1 folded in: one guess in a card read
+as a single claim makes the whole thing a guess, and combining two scales would
+produce a number neither could defend. Whether anything is late is read off the
+attention verdict rather than recomputed, so the due state and the priority chip
+beside it cannot disagree. Evidence becomes a link only where a route exists;
+a score snapshot has no page yet, so the card names the reference instead of
+offering a link that goes nowhere.
+
+The timeline merges the ten tables that recorded what happened. The pack's line
+is between what happened and how it happened, so every event says whether it is
+routine and the default view leaves those out — collapsed, not dropped, because
+the machinery is exactly what somebody debugging a bad reply needs. A score
+recomputation that moved nothing is machinery by that test; a score that changed
+is history. Events carry a kind and the values a phrasing needs rather than a
+finished sentence, since a summary assembled in the merge would only ever be in
+one of the three languages.
+
+`attentionFor` now reads one radar row instead of assembling the same state from
+five queries, so the list and the record answer "what is going on with this
+contact" from one derivation. What the assembly does with conversations,
+consents and follow-ups moved to the migration test, where a real engine checks
+it.
+
+Two limits. An outbound message's actor is _this workspace_, not a person:
+`messages` records that it went out from here and not who wrote it. And the
+record's own vocabularies — lifecycle, status, action, timeline kind — now exist
+in all three languages; the stored English summaries on activity rows do not,
+and are shown as written rather than machine-translated into a claim nobody
+made.
+
+Next is step 7, the AI → CRM write engine: the fourteen-step pipeline, of which
+the turn engine and the memory policy already hold half. What is new is
+structured extraction of qualification evidence, score recomputation, transition
+eligibility and next-action computation — and the invariant that must survive it
+is the one already load-bearing: the model emits a proposal in an
+application-owned schema, never a field path or a query.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
