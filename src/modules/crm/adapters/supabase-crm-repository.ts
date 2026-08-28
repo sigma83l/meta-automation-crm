@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import {
   assertWorkspaceManager,
+  assertWorkspaceOperator,
   type TrustedWorkspace
 } from "@/src/modules/workspaces/server/resolve-workspace";
 import type {
@@ -29,9 +30,12 @@ import type {
   ScoreConfigInput,
   ScoreConfigResult,
   ActionProposalInput,
+  RadarCursor,
   RadarPage,
   RadarQuery,
   RadarRow,
+  SavedView,
+  SavedViewInput,
   StoredActionProposal,
   StoredScoreConfig,
   StoredScoreSnapshot,
@@ -86,11 +90,15 @@ import {
   type ScoreDriver,
   type ScoredEvidence
 } from "../qualification-score";
+import { ATTENTION_FILTERS, matchesAttention } from "../radar-views";
 import {
+  LEAD_STATUSES,
+  LIFECYCLE_STAGES,
   authorizeLifecycleTransition,
   type LeadStatus,
   type LifecycleStage
 } from "../revenue-state";
+import type { FactConfidence } from "@/src/modules/rcos/memory-policy";
 
 const inputSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -194,6 +202,23 @@ const proposalSchema = z
   .refine((input) => (input.ownerType === "human") === Boolean(input.ownerId), {
     message: "a human owner needs an owner id, and only a human owner may have one"
   });
+
+const savedViewSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  filters: z
+    .object({
+      status: z.enum(["active", "archived"]).optional(),
+      lifecycleStage: z.enum(LIFECYCLE_STAGES).optional(),
+      leadStatus: z.enum(LEAD_STATUSES).optional(),
+      attention: z.enum(ATTENTION_FILTERS).optional(),
+      activeWithinDays: z.number().int().min(1).max(365).optional()
+    })
+    // The same rule the table states, so the refusal names the problem instead
+    // of arriving as a constraint violation.
+    .refine((filters) => Object.values(filters).some((value) => value !== undefined), {
+      message: "a saved view needs at least one filter"
+    })
+});
 
 const scoreConfigSchema = z.object({
   version: z.string().trim().min(1).max(60),
@@ -910,50 +935,129 @@ export class SupabaseCrmRepository implements CrmRepository {
   }
 
   async radar(query: RadarQuery = {}, now: Date = new Date()): Promise<RadarPage> {
-    // One more than asked for, so "is there another page" is answered by the
-    // read rather than by a second count query that can disagree with it.
     const limit = Math.min(Math.max(query.limit ?? 50, 1), 200);
+    const filter = query.attention ?? null;
+    let cursor = query.cursor ? safeCursor(query.cursor) : null;
+    const kept: RadarRow[] = [];
+    // An attention filter is answered after ranking, so a page can come back
+    // short and the read has to continue. The budget is what stops a view that
+    // matches almost nothing from walking the whole workspace in one request:
+    // it returns fewer rows and a cursor, which is a smaller lie than a long
+    // silence.
+    const scans = filter ? MAX_RADAR_SCANS : 1;
 
+    for (let scan = 0; scan < scans; scan += 1) {
+      const raw = await this.readRadarRows(query, cursor, limit + 1);
+      const more = raw.length > limit;
+      const batch = raw.slice(0, limit).map((row) => toRadarRow(row, now));
+      if (batch.length === 0) return { rows: kept, nextCursor: null };
+
+      for (const [index, row] of batch.entries()) {
+        if (filter && !matchesAttention(filter, row)) continue;
+        kept.push(row);
+        if (kept.length < limit) continue;
+        // Full. The cursor is this row rather than the last one scanned, or
+        // everything between them is skipped on the next page.
+        return {
+          rows: kept,
+          nextCursor: index + 1 < batch.length || more ? cursorOf(row) : null
+        };
+      }
+
+      cursor = cursorOf(batch[batch.length - 1]!);
+      if (!more) return { rows: kept, nextCursor: null };
+    }
+
+    return { rows: kept, nextCursor: cursor };
+  }
+
+  private async readRadarRows(
+    query: RadarQuery,
+    cursor: RadarCursor | null,
+    size: number
+  ): Promise<Record<string, unknown>[]> {
     let request = this.client
       .from("crm_radar_view")
       .select(RADAR_COLUMNS)
       .eq("workspace_id", this.workspace.id)
       .order("updated_at", { ascending: false })
       .order("customer_id", { ascending: false })
-      .limit(limit + 1);
+      // One more than asked for, so "is there another page" is answered by the
+      // read rather than by a second count query that can disagree with it.
+      .limit(size);
 
     if (query.status) request = request.eq("status", query.status);
     if (query.lifecycleStage) request = request.eq("lifecycle_stage", query.lifecycleStage);
     if (query.leadStatus) request = request.eq("lead_status", query.leadStatus);
+    if (query.activeWithinDays) {
+      const since = new Date(Date.now() - query.activeWithinDays * 86_400_000);
+      request = request.gte("last_activity_at", since.toISOString());
+    }
     if (query.query) {
       const safe = query.query.replaceAll(/[,%()]/g, "").slice(0, 80);
       request = request.or(`display_name.ilike.%${safe}%,company_name.ilike.%${safe}%`);
     }
-    if (query.cursor) {
+    if (cursor) {
       // Keyset, on the same pair the ordering uses. An offset page shifts under
       // anybody editing a record while somebody else is paging, which silently
       // skips rows rather than failing.
       request = request.or(
-        `updated_at.lt.${query.cursor.updatedAt},` +
-          `and(updated_at.eq.${query.cursor.updatedAt},customer_id.lt.${query.cursor.customerId})`
+        `updated_at.lt.${cursor.updatedAt},` +
+          `and(updated_at.eq.${cursor.updatedAt},customer_id.lt.${cursor.customerId})`
       );
     }
 
     const { data, error } = await request;
     if (error) throw new Error("RADAR_READ_FAILED");
+    return (data ?? []) as Record<string, unknown>[];
+  }
 
-    const all = (data ?? []) as Record<string, unknown>[];
-    const page = all.slice(0, limit);
-    const rows = page.map((row) => toRadarRow(row, now));
-    const last = page.at(-1);
+  async savedViews(): Promise<readonly SavedView[]> {
+    const { data, error } = await this.client
+      .from("crm_saved_views")
+      .select(SAVED_VIEW_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error("SAVED_VIEW_READ_FAILED");
+    return (data ?? []).map(mapSavedView);
+  }
 
-    return {
-      rows,
-      nextCursor:
-        all.length > limit && last
-          ? { updatedAt: String(last.updated_at), customerId: String(last.customer_id) }
-          : null
-    };
+  async saveView(raw: SavedViewInput): Promise<SavedView> {
+    // A saved view is shared furniture: it changes what the team's index means,
+    // which is wider than a viewer's read-only role anywhere else here. The
+    // policy on the table says the same thing; this says it before the round
+    // trip, and to callers that are not the browser.
+    assertWorkspaceOperator(this.workspace);
+    const input = savedViewSchema.parse(raw);
+    const { data, error } = await this.client
+      .from("crm_saved_views")
+      .insert({
+        workspace_id: this.workspace.id,
+        name: input.name,
+        status: input.filters.status ?? null,
+        lifecycle_stage: input.filters.lifecycleStage ?? null,
+        lead_status: input.filters.leadStatus ?? null,
+        attention: input.filters.attention ?? null,
+        active_within_days: input.filters.activeWithinDays ?? null,
+        created_by: this.workspace.userId
+      })
+      .select(SAVED_VIEW_COLUMNS)
+      .single();
+    // A name collision is the one failure an operator can fix themselves, so it
+    // is named rather than folded into a generic write failure.
+    if (error?.code === "23505") throw new Error("SAVED_VIEW_NAME_TAKEN");
+    if (error || !data) throw new Error("SAVED_VIEW_WRITE_FAILED");
+    return mapSavedView(data);
+  }
+
+  async deleteSavedView(viewId: string): Promise<void> {
+    assertWorkspaceOperator(this.workspace);
+    const { error } = await this.client
+      .from("crm_saved_views")
+      .delete()
+      .eq("workspace_id", this.workspace.id)
+      .eq("id", viewId);
+    if (error) throw new Error("SAVED_VIEW_DELETE_FAILED");
   }
 
   async proposeAction(raw: ActionProposalInput): Promise<StoredActionProposal> {
@@ -1107,7 +1211,58 @@ function toScoredEvidence(evidence: StoredEvidence): ScoredEvidence {
 }
 
 const RADAR_COLUMNS =
-  "customer_id,display_name,company_name,status,source,lifecycle_stage,lead_status,created_at,updated_at,score,unread_inbound,human_review_requested,followup_due_at,followup_snoozed_until,opted_out,has_evidence,owner_id,channel,last_activity_at" as const;
+  "customer_id,display_name,company_name,status,source,lifecycle_stage,lead_status,created_at,updated_at,score,unread_inbound,human_review_requested,followup_due_at,followup_snoozed_until,opted_out,has_evidence,owner_id,channel,last_activity_at,current_need,current_need_confidence" as const;
+
+const SAVED_VIEW_COLUMNS =
+  "id,name,status,lifecycle_stage,lead_status,attention,active_within_days,created_at" as const;
+
+/**
+ * How many pages an attention-filtered read will walk before giving up.
+ *
+ * Only the filters no column can answer need this, and the alternative to a
+ * budget is a request whose cost is set by how empty the view happens to be.
+ */
+const MAX_RADAR_SCANS = 5;
+
+/**
+ * The two halves of a cursor, checked rather than trusted.
+ *
+ * A cursor comes back through a URL and both halves are interpolated into a
+ * PostgREST filter expression, where a comma or a parenthesis is syntax rather
+ * than data. These are shapes with exactly one form each, so the check is what
+ * they may contain - escaping would be answering a harder question than the one
+ * asked.
+ */
+const CURSOR_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})?$/;
+const CURSOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function safeCursor(cursor: RadarCursor): RadarCursor {
+  if (!CURSOR_TIMESTAMP.test(cursor.updatedAt) || !CURSOR_ID.test(cursor.customerId)) {
+    throw new Error("INVALID_RADAR_CURSOR");
+  }
+  return cursor;
+}
+
+const cursorOf = (row: RadarRow): RadarCursor => ({
+  updatedAt: row.updatedAt,
+  customerId: row.customerId
+});
+
+function mapSavedView(row: Record<string, unknown>): SavedView {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    filters: {
+      ...(row.status ? { status: row.status as "active" | "archived" } : {}),
+      ...(row.lifecycle_stage ? { lifecycleStage: row.lifecycle_stage as LifecycleStage } : {}),
+      ...(row.lead_status ? { leadStatus: row.lead_status as LeadStatus } : {}),
+      ...(row.attention ? { attention: row.attention as (typeof ATTENTION_FILTERS)[number] } : {}),
+      ...(row.active_within_days ? { activeWithinDays: Number(row.active_within_days) } : {})
+    },
+    createdAt: String(row.created_at)
+  };
+}
 
 const PROPOSAL_COLUMNS =
   "id,customer_id,action_type,reason_codes,evidence_refs,owner_type,owner_id,due_at,eligibility,confidence,source,settled_at,settled_outcome,proposed_at" as const;
@@ -1149,7 +1304,11 @@ function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
     ownerId: state.ownerId,
     channel: row.channel ? String(row.channel) : null,
     lastActivityAt: String(row.last_activity_at),
-    updatedAt: String(row.updated_at)
+    updatedAt: String(row.updated_at),
+    currentNeed: row.current_need ? String(row.current_need) : null,
+    currentNeedConfidence: row.current_need_confidence
+      ? (row.current_need_confidence as FactConfidence)
+      : null
   };
 }
 

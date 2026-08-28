@@ -14,6 +14,8 @@ import type {
   NextActionType,
   ProposedAction
 } from "./next-action";
+import type { FactConfidence } from "@/src/modules/rcos/memory-policy";
+import type { RadarViewFilters } from "./radar-views";
 import type {
   EvidenceComponent,
   ScoreConfig,
@@ -278,6 +280,14 @@ export type RadarRow = Readonly<{
   channel: string | null;
   lastActivityAt: string;
   updatedAt: string;
+  /**
+   * What this contact currently wants, in their own terms - null when nobody
+   * has established it. The column says Unknown rather than going blank,
+   * because a gap an operator can see is one they can close.
+   */
+  currentNeed: string | null;
+  /** How firm that is. A model's inference and a stated need are not the same. */
+  currentNeedConfidence: FactConfidence | null;
 }>;
 
 export type RadarCursor = Readonly<{ updatedAt: string; customerId: string }>;
@@ -288,14 +298,28 @@ export type RadarPage = Readonly<{
   nextCursor: RadarCursor | null;
 }>;
 
-export type RadarQuery = Readonly<{
-  query?: string;
-  status?: "active" | "archived";
-  lifecycleStage?: LifecycleStage;
-  leadStatus?: LeadStatus;
-  limit?: number;
-  cursor?: RadarCursor | null;
+/**
+ * A page request: a view's filters, plus what the operator typed and where the
+ * last page stopped.
+ *
+ * `attention` is the one filter no column answers, so the repository applies it
+ * to the ranked row and reads further when a page comes back short.
+ */
+export type RadarQuery = RadarViewFilters &
+  Readonly<{
+    query?: string;
+    limit?: number;
+    cursor?: RadarCursor | null;
+  }>;
+
+export type SavedView = Readonly<{
+  id: string;
+  name: string;
+  filters: RadarViewFilters;
+  createdAt: string;
 }>;
+
+export type SavedViewInput = Readonly<{ name: string; filters: RadarViewFilters }>;
 
 export type ActionProposalInput = Readonly<{
   customerId: string;
@@ -408,6 +432,11 @@ export interface CrmRepository {
   proposeAction(input: ActionProposalInput): Promise<StoredActionProposal>;
   /** Live proposals for one contact, newest first. */
   proposalsFor(customerId: string): Promise<readonly StoredActionProposal[]>;
+  /** The workspace's own views, oldest first, beside the seven built-in ones. */
+  savedViews(): Promise<readonly SavedView[]>;
+  /** Defines one. The filters are values from fixed vocabularies, never a query. */
+  saveView(input: SavedViewInput): Promise<SavedView>;
+  deleteSavedView(viewId: string): Promise<void>;
   /** Marks a proposal acted on, so a rejected suggestion stays visible. */
   settleProposal(
     proposalId: string,

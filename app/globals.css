@@ -335,7 +335,12 @@ body {
 }
 .crm-row {
   display: grid;
-  grid-template-columns: 60px minmax(180px, 1.4fr) minmax(140px, 1fr) 100px 100px;
+  /* Select, customer, current need, lifecycle, status, score, next action,
+     owner, last activity - the radar's primary columns. Company folds into the
+     customer cell rather than taking a tenth. */
+  grid-template-columns:
+    44px minmax(150px, 1.3fr) minmax(140px, 1.2fr) 110px 120px 64px
+    minmax(120px, 0.9fr) 110px 110px;
   gap: 12px;
   align-items: center;
   min-height: 52px;
@@ -354,6 +359,97 @@ body {
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+.crm-row [role="cell"] small {
+  display: block;
+  color: var(--tertiary);
+  font-size: 0.68rem;
+}
+/* An unknown is stated, never left blank: a gap an operator can see is one they
+   can close. */
+.unknown-value {
+  color: var(--tertiary);
+  font-style: normal;
+}
+/* Priority carries its word as well as its colour, per the pack's rule that a
+   score or a level is never colour-only. */
+.crm-row [role="cell"] small.priority-chip {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.crm-row [role="cell"] small.priority-chip[data-priority="critical"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.crm-row [role="cell"] small.priority-chip[data-priority="high"] {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.radar-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.radar-views ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.radar-views li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.radar-views a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.radar-views a[aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--info-soft);
+  color: var(--blue-deep);
+}
+.radar-views form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+.radar-views label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.crm-pager {
+  display: flex;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+}
+.crm-pager a {
+  color: var(--blue-deep);
+  font-weight: 750;
+  text-decoration: none;
 }
 .status-pill {
   width: fit-content;
@@ -652,15 +748,33 @@ body {
   }
 }
 
+@media (max-width: 1080px) {
+  .crm-row {
+    grid-template-columns: 44px minmax(140px, 1.3fr) 110px 120px 64px minmax(120px, 0.9fr);
+  }
+  .crm-row > :nth-child(3),
+  .crm-row > :nth-child(8),
+  .crm-row > :nth-child(9) {
+    display: none;
+  }
+}
+
 @media (max-width: 680px) {
   .crm-filter {
     display: grid;
   }
   .crm-row {
-    grid-template-columns: 40px 1fr 90px;
+    grid-template-columns: 40px 1fr minmax(96px, auto);
   }
+  /* What survives on a phone: who it is, and what to do about them. The rest is
+     on the record, one tap away - the pack's rule is that mobile stays usable
+     for real work, not that it shows every column badly. */
   .crm-row > :nth-child(3),
-  .crm-row > :nth-child(5) {
+  .crm-row > :nth-child(4),
+  .crm-row > :nth-child(5),
+  .crm-row > :nth-child(6),
+  .crm-row > :nth-child(8),
+  .crm-row > :nth-child(9) {
     display: none;
   }
   .inbox-grid {

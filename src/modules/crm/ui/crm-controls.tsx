@@ -18,6 +18,10 @@ export function CrmControls() {
     const params = new URLSearchParams();
     const query = String(form.get("q") ?? "");
     const status = String(form.get("status") ?? "");
+    // The view survives a filter. Search and status compose over the list an
+    // operator chose rather than dropping them back to the default one.
+    const view = search.get("view");
+    if (view) params.set("view", view);
     if (query) params.set("q", query);
     if (status) params.set("status", status);
     router.push(`/crm?${params}`);
@@ -43,6 +47,13 @@ export function CrmControls() {
     }
   }
 
+  /**
+   * Exports what the search and status controls select - not what the chosen
+   * view selects. Two of the views are decided by the attention ranking, which
+   * lives in the read path and not in the export path, and a button labelled
+   * for the view would quietly export the whole workspace instead of the queue
+   * on screen. The label says which one this is.
+   */
   async function exportView(kind: "filtered" | "workspace") {
     setLoading(true);
     const csrf = (await fetch("/api/auth/csrf").then((response) => response.json())) as {
@@ -126,7 +137,7 @@ export function CrmControls() {
         </select>
         <button>{text("Apply filters", "Filtreleri uygula", "اعمال فیلتر")}</button>
         <button type="button" onClick={() => exportView("filtered")} disabled={loading}>
-          {text("Export view", "Görünümü dışa aktar", "خروجی این نما")}
+          {text("Export search", "Aramayı dışa aktar", "خروجی نتایج جستجو")}
         </button>
         <button type="button" onClick={() => exportView("workspace")} disabled={loading}>
           {text("Export all", "Tümünü dışa aktar", "خروجی همه")}
