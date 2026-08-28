@@ -30,9 +30,22 @@ export type FakeRpcHandler = (
 ) => FakeResult;
 
 type Comparison = Readonly<{ column: string; op: string; value: unknown }>;
+/**
+ * One term of an `.or(...)` expression: a comparison, or a nested group.
+ *
+ * PostgREST allows `and(...)` inside `or(...)`, and keyset pagination is built
+ * out of exactly that - "older than this timestamp, or the same timestamp and a
+ * lower id". Splitting the expression on every comma turns that group into two
+ * broken halves that still match rows, so a cursor reads as working while
+ * repeating the page it just returned.
+ */
+type Term =
+  | Readonly<{ kind: "cmp"; condition: Comparison }>
+  | Readonly<{ kind: "all"; terms: readonly Term[] }>
+  | Readonly<{ kind: "any"; terms: readonly Term[] }>;
 type Filter =
   | Readonly<{ kind: "and"; condition: Comparison }>
-  | Readonly<{ kind: "or"; conditions: readonly Comparison[] }>
+  | Readonly<{ kind: "or"; conditions: readonly Term[] }>
   | Readonly<{ kind: "not"; condition: Comparison }>;
 
 function comparable(value: unknown): number | string | null {
@@ -65,6 +78,17 @@ function matches(row: FakeRow, condition: Comparison): boolean {
       return actual === null || String(actual) !== String(condition.value);
     case "is":
       return condition.value === null ? actual === null : actual === condition.value;
+    case "ilike": {
+      // PostgREST's `%` is Postgres's, so the pattern becomes the equivalent
+      // anchored regexp rather than a substring test: `ilike.%a%b%` matches an
+      // order, not two separate contains.
+      if (actual === null) return false;
+      const pattern = String(condition.value)
+        .replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+        .replaceAll("%", ".*")
+        .replaceAll("_", ".");
+      return new RegExp(`^${pattern}$`, "i").test(String(actual));
+    }
     case "in":
       return (
         actual !== null &&
@@ -88,8 +112,42 @@ function matches(row: FakeRow, condition: Comparison): boolean {
   }
 }
 
+/** Splits on the commas that are not inside a nested group. */
+function splitTerms(expression: string): string[] {
+  const terms: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < expression.length; index += 1) {
+    const character = expression[index];
+    if (character === "(") depth += 1;
+    else if (character === ")") depth -= 1;
+    else if (character === "," && depth === 0) {
+      terms.push(expression.slice(start, index));
+      start = index + 1;
+    }
+  }
+  terms.push(expression.slice(start));
+  return terms.map((term) => term.trim()).filter(Boolean);
+}
+
+function parseTerm(term: string): Term {
+  for (const kind of ["and", "or"] as const) {
+    if (term.startsWith(`${kind}(`) && term.endsWith(")")) {
+      const terms = splitTerms(term.slice(kind.length + 1, -1)).map(parseTerm);
+      return kind === "and" ? { kind: "all", terms } : { kind: "any", terms };
+    }
+  }
+  return { kind: "cmp", condition: parseComparison(term) };
+}
+
+function matchesTerm(row: FakeRow, term: Term): boolean {
+  if (term.kind === "cmp") return matches(row, term.condition);
+  if (term.kind === "all") return term.terms.every((inner) => matchesTerm(row, inner));
+  return term.terms.some((inner) => matchesTerm(row, inner));
+}
+
 /** Parses one PostgREST `column.op.value` term as used inside `.or(...)`. */
-function parseTerm(term: string): Comparison {
+function parseComparison(term: string): Comparison {
   const first = term.indexOf(".");
   const second = term.indexOf(".", first + 1);
   if (first < 0 || second < 0) throw new Error(`Unparseable PostgREST filter term "${term}".`);
@@ -246,6 +304,11 @@ class FakeQuery implements PromiseLike<FakeResult> {
     return this;
   }
 
+  ilike(column: string, value: unknown) {
+    this.filters.push({ kind: "and", condition: { column, op: "ilike", value } });
+    return this;
+  }
+
   gte(column: string, value: unknown) {
     this.filters.push({ kind: "and", condition: { column, op: "gte", value } });
     return this;
@@ -259,11 +322,7 @@ class FakeQuery implements PromiseLike<FakeResult> {
   or(expression: string) {
     this.filters.push({
       kind: "or",
-      conditions: expression
-        .split(",")
-        .map((term) => term.trim())
-        .filter(Boolean)
-        .map(parseTerm)
+      conditions: splitTerms(expression).map(parseTerm)
     });
     return this;
   }
@@ -307,7 +366,7 @@ class FakeQuery implements PromiseLike<FakeResult> {
       this.filters.every((filter) => {
         if (filter.kind === "and") return matches(row, filter.condition);
         if (filter.kind === "not") return !matches(row, filter.condition);
-        return filter.conditions.some((condition) => matches(row, condition));
+        return filter.conditions.some((term) => matchesTerm(row, term));
       })
     );
     if (this.ordering.length > 0) {
