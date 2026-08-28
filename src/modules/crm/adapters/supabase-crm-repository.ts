@@ -28,6 +28,11 @@ import type {
   StoredFollowUp,
   ScoreConfigInput,
   ScoreConfigResult,
+  ActionProposalInput,
+  RadarPage,
+  RadarQuery,
+  RadarRow,
+  StoredActionProposal,
   StoredScoreConfig,
   StoredScoreSnapshot,
   StoredLifecycleEvent,
@@ -59,6 +64,16 @@ import {
   type OutcomeSource
 } from "../opportunity-outcome";
 import { rankAttention, type AttentionVerdict } from "../attention-priority";
+import {
+  ACTION_ELIGIBILITY,
+  ACTION_OWNERS,
+  NEXT_ACTION_TYPES,
+  proposeNextAction,
+  type ActionEligibility,
+  type ActionOwner,
+  type ActionSource,
+  type NextActionType
+} from "../next-action";
 import {
   DEFAULT_SCORE_CONFIG,
   EVIDENCE_COMPONENTS,
@@ -159,6 +174,26 @@ const evidenceSchema = z.object({
   evidenceRef: z.string().trim().min(1).max(200),
   expiresAt: z.string().datetime().nullable().optional()
 });
+
+const proposalSchema = z
+  .object({
+    customerId: z.string().uuid(),
+    type: z.enum(NEXT_ACTION_TYPES),
+    reasonCodes: z.array(z.string().trim().min(1).max(60)).max(20),
+    evidenceRefs: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
+    ownerType: z.enum(ACTION_OWNERS),
+    ownerId: z.string().uuid().nullable().optional(),
+    dueAt: z.string().datetime().nullable().optional(),
+    eligibility: z.enum(ACTION_ELIGIBILITY).optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    // 'derived' is refused here rather than merely unused. A derived action is
+    // recomputed on every read, so storing one would create a second answer
+    // that can disagree with the live one.
+    source: z.enum(["ai", "human"])
+  })
+  .refine((input) => (input.ownerType === "human") === Boolean(input.ownerId), {
+    message: "a human owner needs an owner id, and only a human owner may have one"
+  });
 
 const scoreConfigSchema = z.object({
   version: z.string().trim().min(1).max(60),
@@ -874,6 +909,103 @@ export class SupabaseCrmRepository implements CrmRepository {
     );
   }
 
+  async radar(query: RadarQuery = {}, now: Date = new Date()): Promise<RadarPage> {
+    // One more than asked for, so "is there another page" is answered by the
+    // read rather than by a second count query that can disagree with it.
+    const limit = Math.min(Math.max(query.limit ?? 50, 1), 200);
+
+    let request = this.client
+      .from("crm_radar_view")
+      .select(RADAR_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .order("updated_at", { ascending: false })
+      .order("customer_id", { ascending: false })
+      .limit(limit + 1);
+
+    if (query.status) request = request.eq("status", query.status);
+    if (query.lifecycleStage) request = request.eq("lifecycle_stage", query.lifecycleStage);
+    if (query.leadStatus) request = request.eq("lead_status", query.leadStatus);
+    if (query.query) {
+      const safe = query.query.replaceAll(/[,%()]/g, "").slice(0, 80);
+      request = request.or(`display_name.ilike.%${safe}%,company_name.ilike.%${safe}%`);
+    }
+    if (query.cursor) {
+      // Keyset, on the same pair the ordering uses. An offset page shifts under
+      // anybody editing a record while somebody else is paging, which silently
+      // skips rows rather than failing.
+      request = request.or(
+        `updated_at.lt.${query.cursor.updatedAt},` +
+          `and(updated_at.eq.${query.cursor.updatedAt},customer_id.lt.${query.cursor.customerId})`
+      );
+    }
+
+    const { data, error } = await request;
+    if (error) throw new Error("RADAR_READ_FAILED");
+
+    const all = (data ?? []) as Record<string, unknown>[];
+    const page = all.slice(0, limit);
+    const rows = page.map((row) => toRadarRow(row, now));
+    const last = page.at(-1);
+
+    return {
+      rows,
+      nextCursor:
+        all.length > limit && last
+          ? { updatedAt: String(last.updated_at), customerId: String(last.customer_id) }
+          : null
+    };
+  }
+
+  async proposeAction(raw: ActionProposalInput): Promise<StoredActionProposal> {
+    const input = proposalSchema.parse(raw);
+    const { data, error } = await this.client
+      .from("crm_next_action_projection")
+      .insert({
+        workspace_id: this.workspace.id,
+        customer_id: input.customerId,
+        action_type: input.type,
+        reason_codes: [...input.reasonCodes],
+        evidence_refs: [...(input.evidenceRefs ?? [])],
+        owner_type: input.ownerType,
+        owner_id: input.ownerId ?? null,
+        due_at: input.dueAt ?? null,
+        eligibility: input.eligibility ?? "eligible",
+        confidence: input.confidence ?? 1,
+        source: input.source
+      })
+      .select(PROPOSAL_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("ACTION_PROPOSAL_WRITE_FAILED");
+    return mapProposal(data);
+  }
+
+  async proposalsFor(customerId: string): Promise<readonly StoredActionProposal[]> {
+    const { data, error } = await this.client
+      .from("crm_next_action_projection")
+      .select(PROPOSAL_COLUMNS)
+      .eq("workspace_id", this.workspace.id)
+      .eq("customer_id", customerId)
+      .is("settled_at", null)
+      .order("proposed_at", { ascending: false });
+    if (error) throw new Error("ACTION_PROPOSAL_READ_FAILED");
+    return (data ?? []).map(mapProposal);
+  }
+
+  async settleProposal(
+    proposalId: string,
+    outcome: "accepted" | "rejected" | "superseded"
+  ): Promise<StoredActionProposal> {
+    const { data, error } = await this.client
+      .from("crm_next_action_projection")
+      .update({ settled_at: new Date().toISOString(), settled_outcome: outcome })
+      .eq("workspace_id", this.workspace.id)
+      .eq("id", proposalId)
+      .select(PROPOSAL_COLUMNS)
+      .single();
+    if (error || !data) throw new Error("ACTION_PROPOSAL_NOT_FOUND");
+    return mapProposal(data);
+  }
+
   private async activity(customerId: string, activityType: string, summary: string) {
     const { error } = await this.client.from("customer_activities").insert({
       workspace_id: this.workspace.id,
@@ -971,6 +1103,72 @@ function toScoredEvidence(evidence: StoredEvidence): ScoredEvidence {
     confidence: evidence.confidence,
     evidenceRef: evidence.evidenceRef,
     expiresAt: evidence.expiresAt
+  };
+}
+
+const RADAR_COLUMNS =
+  "customer_id,display_name,company_name,status,source,lifecycle_stage,lead_status,created_at,updated_at,score,unread_inbound,human_review_requested,followup_due_at,followup_snoozed_until,opted_out,has_evidence,owner_id,channel,last_activity_at" as const;
+
+const PROPOSAL_COLUMNS =
+  "id,customer_id,action_type,reason_codes,evidence_refs,owner_type,owner_id,due_at,eligibility,confidence,source,settled_at,settled_outcome,proposed_at" as const;
+
+/**
+ * Turns one view row into a radar row, ranking it on the way.
+ *
+ * The view supplies inputs and this applies the rules, which is why the same
+ * ranking serves the list and the record screen. Two implementations - one in
+ * SQL for the list, one in TypeScript for the detail - is how a contact ends up
+ * Critical on one screen and Normal on the other.
+ */
+function toRadarRow(row: Record<string, unknown>, now: Date): RadarRow {
+  const state = {
+    leadStatus: row.lead_status as LeadStatus,
+    lifecycleStage: row.lifecycle_stage as LifecycleStage,
+    unreadInbound: Number(row.unread_inbound ?? 0),
+    humanReviewRequested: row.human_review_requested === true,
+    followUpDueAt: (row.followup_due_at as string | null) ?? null,
+    followUpSnoozedUntil: (row.followup_snoozed_until as string | null) ?? null,
+    optedOut: row.opted_out === true,
+    qualificationScore: row.score === null ? null : Number(row.score),
+    ownerId: (row.owner_id as string | null) ?? null,
+    hasEvidence: row.has_evidence === true
+  };
+  const attention = rankAttention(state, now);
+  return {
+    customerId: String(row.customer_id),
+    displayName: String(row.display_name),
+    companyName: row.company_name ? String(row.company_name) : null,
+    status: row.status as "active" | "archived",
+    source: String(row.source),
+    lifecycleStage: state.lifecycleStage,
+    leadStatus: state.leadStatus,
+    score: state.qualificationScore,
+    priority: attention.priority,
+    reasons: attention.reasons,
+    nextAction: proposeNextAction(state, now),
+    ownerId: state.ownerId,
+    channel: row.channel ? String(row.channel) : null,
+    lastActivityAt: String(row.last_activity_at),
+    updatedAt: String(row.updated_at)
+  };
+}
+
+function mapProposal(row: Record<string, unknown>): StoredActionProposal {
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    type: row.action_type as NextActionType,
+    reasonCodes: (row.reason_codes ?? []) as readonly string[],
+    evidenceRefs: (row.evidence_refs ?? []) as readonly string[],
+    ownerType: row.owner_type as ActionOwner,
+    ownerId: (row.owner_id as string | null) ?? null,
+    dueAt: (row.due_at as string | null) ?? null,
+    eligibility: row.eligibility as ActionEligibility,
+    confidence: Number(row.confidence),
+    source: row.source as ActionSource,
+    settledAt: (row.settled_at as string | null) ?? null,
+    settledOutcome: (row.settled_outcome as StoredActionProposal["settledOutcome"]) ?? null,
+    proposedAt: String(row.proposed_at)
   };
 }
 

@@ -8,12 +8,19 @@ import type {
 import type { OpportunityStage, OutcomeSource } from "./opportunity-outcome";
 import type { AttentionVerdict } from "./attention-priority";
 import type {
+  ActionEligibility,
+  ActionOwner,
+  ActionSource,
+  NextActionType,
+  ProposedAction
+} from "./next-action";
+import type {
   EvidenceComponent,
   ScoreConfig,
   ScoreDriver,
   ScoreBlocker
 } from "./qualification-score";
-import type { LifecycleStage } from "./revenue-state";
+import type { LeadStatus, LifecycleStage } from "./revenue-state";
 
 export type CustomerSummary = Readonly<{
   id: string;
@@ -248,6 +255,78 @@ export type ScoreConfigResult =
   | Readonly<{ outcome: "stored"; config: StoredScoreConfig }>
   | Readonly<{ outcome: "refused"; reason: string }>;
 
+/**
+ * One row of the index, assembled server-side.
+ *
+ * Priority and next action are computed rather than stored: both are functions
+ * of the state beside them and would be a cache with no invalidation. The view
+ * supplies the inputs; the ranking happens once, here.
+ */
+export type RadarRow = Readonly<{
+  customerId: string;
+  displayName: string;
+  companyName: string | null;
+  status: "active" | "archived";
+  source: string;
+  lifecycleStage: LifecycleStage;
+  leadStatus: LeadStatus;
+  score: number | null;
+  priority: AttentionVerdict["priority"];
+  reasons: AttentionVerdict["reasons"];
+  nextAction: ProposedAction;
+  ownerId: string | null;
+  channel: string | null;
+  lastActivityAt: string;
+  updatedAt: string;
+}>;
+
+export type RadarCursor = Readonly<{ updatedAt: string; customerId: string }>;
+
+export type RadarPage = Readonly<{
+  rows: readonly RadarRow[];
+  /** Null when this was the last page. */
+  nextCursor: RadarCursor | null;
+}>;
+
+export type RadarQuery = Readonly<{
+  query?: string;
+  status?: "active" | "archived";
+  lifecycleStage?: LifecycleStage;
+  leadStatus?: LeadStatus;
+  limit?: number;
+  cursor?: RadarCursor | null;
+}>;
+
+export type ActionProposalInput = Readonly<{
+  customerId: string;
+  type: NextActionType;
+  reasonCodes: readonly string[];
+  evidenceRefs?: readonly string[];
+  ownerType: ActionOwner;
+  ownerId?: string | null;
+  dueAt?: string | null;
+  eligibility?: ActionEligibility;
+  confidence?: number;
+  source: Exclude<ActionSource, "derived">;
+}>;
+
+export type StoredActionProposal = Readonly<{
+  id: string;
+  customerId: string;
+  type: NextActionType;
+  reasonCodes: readonly string[];
+  evidenceRefs: readonly string[];
+  ownerType: ActionOwner;
+  ownerId: string | null;
+  dueAt: string | null;
+  eligibility: ActionEligibility;
+  confidence: number;
+  source: ActionSource;
+  settledAt: string | null;
+  settledOutcome: "accepted" | "rejected" | "superseded" | null;
+  proposedAt: string;
+}>;
+
 export interface CrmRepository {
   list(filters: CustomerFilters): Promise<readonly CustomerSummary[]>;
   create(input: CustomerInput): Promise<CustomerSummary>;
@@ -315,4 +394,23 @@ export interface CrmRepository {
    * cache with no invalidation.
    */
   attentionFor(customerId: string, now?: Date): Promise<AttentionVerdict>;
+  /**
+   * One page of the index, with priority and next action computed per row.
+   *
+   * Cursor rather than offset: an offset page shifts under anybody editing a
+   * record while somebody else pages through, silently skipping rows.
+   */
+  radar(query?: RadarQuery, now?: Date): Promise<RadarPage>;
+  /**
+   * Records a proposal a model or a person made. Never executes it - execution
+   * belongs to the domain that owns the send.
+   */
+  proposeAction(input: ActionProposalInput): Promise<StoredActionProposal>;
+  /** Live proposals for one contact, newest first. */
+  proposalsFor(customerId: string): Promise<readonly StoredActionProposal[]>;
+  /** Marks a proposal acted on, so a rejected suggestion stays visible. */
+  settleProposal(
+    proposalId: string,
+    outcome: "accepted" | "rejected" | "superseded"
+  ): Promise<StoredActionProposal>;
 }
