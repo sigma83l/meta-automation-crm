@@ -210,9 +210,45 @@ through, and it reads one row past the limit so "is there more" comes from the
 same read. `list()` and its `limit(250)` stay until step 5 moves the index onto
 this.
 
-Next is step 5, the CRM index becoming the Customer Radar: the columns the pack
-names, the seven default views, and `crm_saved_views` as server-owned query
-definitions rather than a client-supplied filter string reaching the database.
+**Done — step 5, the index is a queue.** It listed name, company, status and
+source for whatever 250 customers came back first. It now shows current need,
+lifecycle, status, score, next action with its priority, owner and last
+activity, a page at a time from step 4's projection.
+
+The seven views split into two kinds, and keeping them apart is the whole
+design. Qualified, Sales-ready, Customers and Recently Active are column
+equality. Needs Attention and Follow-up Due are questions about the attention
+verdict, whose rules live in TypeScript — so they filter the ranked row and the
+read continues when a page comes back short, rather than being restated in SQL.
+The alternative fails silently: a contact in the Needs Attention list whose
+record screen calls them Normal. The scan is bounded, so a view matching almost
+nothing returns a short page and a cursor instead of walking the workspace.
+
+`crm_saved_views` holds a definition, not a query. Every filter is its own
+column constrained to a vocabulary the application already fixes, so a
+definition this code could not have written is refused by the database and
+nothing typed reaches SQL as syntax. A jsonb blob would have been shorter and
+would have accepted anything. Defining one is an operator's right rather than a
+viewer's, in the policy as well as the code: a saved view is shared furniture.
+
+Current need comes from customer memory under a reserved key, with its
+confidence beside it, because the only honest source for what somebody wants is
+what they said. Nothing writes that key until step 7, so the column reads
+_Unknown_ today — the pack's rule for an unknown, rather than a blank that reads
+as nothing to know.
+
+Three limits worth recording. Ordering stays by recency inside every view,
+Needs Attention included, because ordering globally by priority would put the
+ranking back in SQL; the priority is on every row instead. The Owner column
+says You, A teammate or Unassigned, since nothing in this repository can turn a
+user id into a name — the member directory is Pack 02's team seats. And the
+export button now says Export search: it exports what the search and status
+controls select, and the two attention views are decided by a ranking the
+export path does not have.
+
+Next is step 6, the customer record: the Now card, and the sections behind it.
+Its rule is the one this step just applied to a column — every value links to
+its evidence, and anything unknown says so instead of being quietly omitted.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 
