@@ -171,6 +171,79 @@ describe("policy, before any model is called", () => {
     expect((await ports.evaluatePolicy(event)).blockedReason).toBe("billing_entitlement_required");
   });
 
+  it("refuses when this workspace's assistant replies are switched off", async () => {
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        workspace_feature_overrides: [
+          { workspace_id: WORKSPACE, flag_key: "ai_replies", enabled: false, expires_at: null }
+        ]
+      }
+    });
+    expect((await ports.evaluatePolicy(event)).blockedReason).toBe("ai_replies_disabled");
+  });
+
+  it("keeps replying under an override that has expired", async () => {
+    // A time-boxed staff override is a loan, not a setting. If an expired row
+    // still blocked, a support action taken during one incident would go on
+    // silently withholding the capability long after it was returned.
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        workspace_feature_overrides: [
+          {
+            workspace_id: WORKSPACE,
+            flag_key: "ai_replies",
+            enabled: false,
+            expires_at: "2020-01-01T00:00:00.000Z"
+          }
+        ]
+      }
+    });
+    expect((await ports.evaluatePolicy(event)).canSend).toBe(true);
+  });
+
+  it("refuses when replies are paused platform-wide", async () => {
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        platform_switches: [{ key: "ai_replies", enabled: false }]
+      }
+    });
+    // A different reason from the one above, because the two have different
+    // owners and different fixes: one is a conversation about the plan, the
+    // other is us, and only one of them resolves on its own.
+    expect((await ports.evaluatePolicy(event)).blockedReason).toBe("ai_replies_paused");
+  });
+
+  it("reports the lapsed subscription rather than the flag when both are true", async () => {
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [{ ...activeTrial, trial_ends_at: "2020-01-01T00:00:00.000Z" }],
+        platform_switches: [{ key: "ai_replies", enabled: false }]
+      }
+    });
+    // Ours is not the reason to give somebody who can act on theirs.
+    expect((await ports.evaluatePolicy(event)).blockedReason).toBe("billing_entitlement_required");
+  });
+
+  it("refuses when the flag cannot be resolved at all", async () => {
+    // An empty catalogue stands in for a read that answered nothing. A turn
+    // that cannot establish permission does not get a model; it gets a person.
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [activeTrial],
+        feature_flags: []
+      }
+    });
+    expect((await ports.evaluatePolicy(event)).blockedReason).toBe("ai_replies_disabled");
+  });
+
   it("never offers an action, so no tool can be authorised", async () => {
     const { ports } = harness();
     expect((await ports.evaluatePolicy(event)).allowedActions).toEqual([]);

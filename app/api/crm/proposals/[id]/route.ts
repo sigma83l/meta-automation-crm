@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { billingBlockedResponse } from "@/src/modules/billing/http";
+import { featureErrorResponse } from "@/src/modules/features/http";
 
 /**
  * A person answering a suggestion.
@@ -28,6 +29,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     return NextResponse.json({ proposal: await repository.settleProposal(id, outcome) });
   } catch (error) {
-    return billingBlockedResponse(error, "PROPOSAL_NOT_SETTLED", 400);
+    return (
+      featureErrorResponse(error) ?? billingBlockedResponse(error, "PROPOSAL_NOT_SETTLED", 400)
+    );
   }
 }

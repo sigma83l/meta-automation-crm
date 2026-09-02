@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { featureKeys, platformSwitchKeys } from "@/src/modules/features/contracts";
+
 /**
  * The platform console's database half.
  *
@@ -242,6 +244,18 @@ describe("feature flag resolution", () => {
     expect(byKey.get("crm_import")).toBe("override");
     // Untouched flags fall through to the catalogue, and say so.
     expect(byKey.get("analytics")).toBe("default");
+  });
+
+  it("seeds exactly the keys the application gates on", async () => {
+    // The two lists are written in different languages in different files, and
+    // nothing but this makes them agree. A flag in the contract with no
+    // catalogue row resolves to false forever - the capability is off for every
+    // workspace, in production only, and the gate that did it looks correct.
+    const flags = await db.query<{ key: string }>(`select key from public.feature_flags;`);
+    expect(flags.rows.map((row) => row.key).sort()).toEqual([...featureKeys].sort());
+
+    const switches = await db.query<{ key: string }>(`select key from public.platform_switches;`);
+    expect(switches.rows.map((row) => row.key).sort()).toEqual([...platformSwitchKeys].sort());
   });
 
   it("answers false for a flag that does not exist", async () => {

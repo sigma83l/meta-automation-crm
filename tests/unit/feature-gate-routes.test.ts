@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { featureBlockedResponse, platformBlockedResponse } from "@/src/modules/features/http";
+import {
+  featureBlockedResponse,
+  featureErrorResponse,
+  platformBlockedResponse
+} from "@/src/modules/features/http";
+import { FeatureNotEnabledError } from "@/src/modules/features/server/gate";
 
 /**
  * What a blocked capability tells the caller.
@@ -29,6 +34,27 @@ describe("featureBlockedResponse", () => {
     const response = featureBlockedResponse("ai_replies");
     expect(response.status).not.toBe(402);
     expect((await response.json()).error).not.toBe("BILLING_ENTITLEMENT_REQUIRED");
+  });
+});
+
+describe("featureErrorResponse", () => {
+  it("turns a refusal thrown deeper in a module into the same 403", async () => {
+    // A gate that has to throw - because its caller's return type has no room
+    // for "nothing happened" - must not thereby become a different answer on
+    // the wire from a gate that could return.
+    const response = featureErrorResponse(new FeatureNotEnabledError("ai_proposals"));
+    expect(response?.status).toBe(403);
+    expect(await response!.json()).toEqual({
+      error: "FEATURE_NOT_ENABLED",
+      feature: "ai_proposals"
+    });
+  });
+
+  it("declines anything else, so the caller keeps its own handling", async () => {
+    // Returning a 403 for an unrecognised failure would report every database
+    // outage as an entitlement problem.
+    expect(featureErrorResponse(new Error("connection reset"))).toBeNull();
+    expect(featureErrorResponse("FEATURE_NOT_ENABLED:ai_proposals")).toBeNull();
   });
 });
 

@@ -4,6 +4,8 @@ import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { billingBlockedResponse } from "@/src/modules/billing/http";
 import type { SavedViewInput } from "@/src/modules/crm/contracts";
+import { featureBlockedResponse } from "@/src/modules/features/http";
+import { isFeatureEnabled } from "@/src/modules/features/server/gate";
 
 export async function GET() {
   try {
@@ -19,7 +21,13 @@ export async function POST(request: NextRequest) {
   if (rejected) return rejected;
   try {
     const body = (await request.json()) as { name?: unknown; filters?: unknown };
-    const { repository } = await createCrmRuntime();
+    const { client, workspace, repository } = await createCrmRuntime();
+    // Creation only. A workspace whose saved views were switched off keeps
+    // reading the ones it already has - withdrawing a filter somebody built
+    // their day around would be a worse answer than declining to add another.
+    if (!(await isFeatureEnabled(client, workspace.id, "saved_views"))) {
+      return featureBlockedResponse("saved_views");
+    }
     // The filters are not trusted for being well-formed here: the repository
     // checks every value against the vocabulary it belongs to and stores them in
     // typed columns, which is what makes the definition the server's rather than

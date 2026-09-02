@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { featureKeys, platformSwitchKeys } from "@/src/modules/features/contracts";
+
 /**
  * In-memory Supabase double for billing unit tests.
  *
@@ -599,6 +601,86 @@ function billingRpcHandlers(): Record<string, FakeRpcHandler> {
   };
 }
 
+/**
+ * The flag catalogue and the global switches, as the platform-admin migration
+ * seeds them.
+ *
+ * Every fake database gets these, because every real one has them: they are
+ * inserted by `20260902120000_platform_admin_console.sql` itself, not by
+ * anything a workspace does. Leaving them out would make each gated code path
+ * read as switched off in tests and switched on in production - the worst of
+ * the two directions to be wrong in, since it hides a broken gate behind a
+ * green suite.
+ *
+ * The keys come from the contract rather than a third hand-written list, so a
+ * flag added there without a catalogue row fails in the migration test, which
+ * is where that disagreement belongs.
+ */
+function seededFeatureFlags(): FakeRow[] {
+  return featureKeys.map((key) => ({ key, default_enabled: true, archived: false }));
+}
+
+function seededPlatformSwitches(): FakeRow[] {
+  return platformSwitchKeys.map((key) => ({ key, enabled: true }));
+}
+
+/**
+ * `workspace_feature_enabled` and `workspace_feature_flags`, mirroring the
+ * migration's resolution order: an unexpired workspace override, else the plan
+ * default for the workspace's subscription, else the catalogue default. An
+ * archived or absent flag is off regardless.
+ *
+ * A test switches a capability off the way staff would - an override row, or an
+ * archived catalogue entry - rather than by stubbing the RPC, so what it
+ * exercises is the resolution the database performs.
+ */
+function featureRpcHandlers(): Record<string, FakeRpcHandler> {
+  const resolve = (database: FakeDatabase, workspaceId: unknown, key: unknown): boolean => {
+    const flag = database.rows("feature_flags").find((row) => row.key === key);
+    if (!flag || flag.archived === true) return false;
+
+    const override = database
+      .rows("workspace_feature_overrides")
+      .find(
+        (row) =>
+          row.workspace_id === workspaceId &&
+          row.flag_key === key &&
+          (row.expires_at === null ||
+            row.expires_at === undefined ||
+            Date.parse(String(row.expires_at)) > Date.now())
+      );
+    if (override) return override.enabled === true;
+
+    const subscription = database
+      .rows("workspace_subscriptions")
+      .find((row) => row.workspace_id === workspaceId);
+    if (subscription && subscription.plan_id !== null && subscription.plan_id !== undefined) {
+      const planDefault = database
+        .rows("plan_feature_defaults")
+        .find((row) => row.plan_id === subscription.plan_id && row.flag_key === key);
+      if (planDefault) return planDefault.enabled === true;
+    }
+
+    return flag.default_enabled === true;
+  };
+
+  return {
+    workspace_feature_enabled: (args, database) =>
+      emptyResult(resolve(database, args.target_workspace_id, args.target_flag_key)),
+    workspace_feature_flags: (args, database) =>
+      emptyResult(
+        database
+          .rows("feature_flags")
+          .filter((flag) => flag.archived !== true)
+          .map((flag) => ({
+            flag_key: flag.key,
+            enabled: resolve(database, args.target_workspace_id, flag.key)
+          }))
+          .sort((left, right) => String(left.flag_key).localeCompare(String(right.flag_key)))
+      )
+  };
+}
+
 export type FakeSupabase = Readonly<{
   database: FakeDatabase;
   client: SupabaseClient;
@@ -612,8 +694,18 @@ export function createFakeSupabase(
     currentUserId?: string;
   }> = {}
 ): FakeSupabase {
-  const database = new FakeDatabase(options.tables ?? {});
-  const handlers = { ...billingRpcHandlers(), ...(options.rpc ?? {}) };
+  // Spread after the seeds, so a test that wants an archived flag or a switch
+  // turned off supplies its own rows and gets them.
+  const database = new FakeDatabase({
+    feature_flags: seededFeatureFlags(),
+    platform_switches: seededPlatformSwitches(),
+    ...(options.tables ?? {})
+  });
+  const handlers = {
+    ...billingRpcHandlers(),
+    ...featureRpcHandlers(),
+    ...(options.rpc ?? {})
+  };
   const users = options.users ?? {};
 
   const client = {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { FeatureNotEnabledError } from "./server/gate";
+
 /**
  * A capability this workspace is not entitled to.
  *
@@ -12,6 +14,15 @@ import { NextResponse } from "next/server";
  */
 export function featureBlockedResponse(flagKey: string) {
   return NextResponse.json({ error: "FEATURE_NOT_ENABLED", feature: flagKey }, { status: 403 });
+}
+
+/**
+ * The same 403 for a refusal that arrived as a thrown error from deeper in a
+ * module. Returns null for anything else, so a caller can fall through to
+ * whatever it already does with an unrecognised failure.
+ */
+export function featureErrorResponse(error: unknown) {
+  return error instanceof FeatureNotEnabledError ? featureBlockedResponse(error.featureKey) : null;
 }
 
 /**

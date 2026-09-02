@@ -159,6 +159,8 @@ const en = {
   "review.conversation_missing": "The conversation record could not be read.",
   "review.billing_entitlement_required":
     "The trial or subscription does not currently allow replies.",
+  "review.ai_replies_disabled": "Assistant replies are not included on this plan.",
+  "review.ai_replies_paused": "Assistant replies are paused. Nothing was lost; try again shortly.",
   "automations.create": "Create automation",
   "automations.recipes": "Recipe gallery",
   "automations.testCenter": "Test Center",
@@ -355,6 +357,9 @@ const tr: Dictionary = {
   "review.conversation_missing": "Konuşma kaydı okunamadı.",
   "review.billing_entitlement_required":
     "Deneme veya abonelik şu anda yanıt vermeye izin vermiyor.",
+  "review.ai_replies_disabled": "Asistan yanıtları bu plana dahil değil.",
+  "review.ai_replies_paused":
+    "Asistan yanıtları duraklatıldı. Hiçbir şey kaybolmadı; kısa süre sonra tekrar deneyin.",
   "automations.create": "Otomasyon oluştur",
   "automations.recipes": "Tarif galerisi",
   "automations.testCenter": "Test Merkezi",
@@ -528,6 +533,9 @@ const fa: Dictionary = {
   "review.conversation_closed": "گفتگو بسته است.",
   "review.conversation_missing": "رکورد گفتگو خوانده نشد.",
   "review.billing_entitlement_required": "دوره آزمایشی یا اشتراک در حال حاضر اجازه پاسخ نمی‌دهد.",
+  "review.ai_replies_disabled": "پاسخ‌های دستیار در این طرح گنجانده نشده است.",
+  "review.ai_replies_paused":
+    "پاسخ‌های دستیار موقتاً متوقف شده است. چیزی از دست نرفت؛ کمی بعد دوباره تلاش کنید.",
   "automations.create": "ساخت اتوماسیون",
   "automations.recipes": "گالری دستورکارها",
   "automations.testCenter": "مرکز آزمایش",

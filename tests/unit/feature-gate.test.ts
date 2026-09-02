@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { featureKeys, platformSwitchKeys } from "@/src/modules/features/contracts";
 import {
+  assertFeatureEnabled,
+  FeatureNotEnabledError,
   isFeatureEnabled,
   isPlatformSwitchEnabled,
   loadFeatureMap
@@ -41,6 +43,35 @@ describe("isFeatureEnabled", () => {
     expect(
       await isFeatureEnabled(rpcClient(true, { message: "connection reset" }), "ws-1", "ai_replies")
     ).toBe(false);
+  });
+});
+
+describe("assertFeatureEnabled", () => {
+  it("passes silently when the capability is on", async () => {
+    await expect(
+      assertFeatureEnabled(rpcClient(true), "ws-1", "ai_proposals")
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws an error that still names the capability", async () => {
+    // The whole reason this exists rather than a bare `throw`: the refusal has
+    // to survive being caught several frames away and still turn into the same
+    // 403 the route-level gates return, naming the same flag.
+    const failure = await assertFeatureEnabled(rpcClient(false), "ws-1", "ai_proposals").catch(
+      (error: unknown) => error
+    );
+    expect(failure).toBeInstanceOf(FeatureNotEnabledError);
+    expect((failure as FeatureNotEnabledError).featureKey).toBe("ai_proposals");
+  });
+
+  it("throws on an unreadable flag, like every other gate here", async () => {
+    await expect(
+      assertFeatureEnabled(
+        rpcClient(true, { message: "connection reset" }),
+        "ws-1",
+        "custom_fields"
+      )
+    ).rejects.toBeInstanceOf(FeatureNotEnabledError);
   });
 });
 

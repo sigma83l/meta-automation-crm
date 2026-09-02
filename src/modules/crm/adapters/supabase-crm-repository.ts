@@ -81,6 +81,7 @@ import {
   type NextActionType
 } from "../next-action";
 import { buildNowCard, type NowCard } from "../now-card";
+import { assertFeatureEnabled } from "@/src/modules/features/server/gate";
 import { classifyProposal, evidenceKey, summariseProposal, type AiCrmProposal } from "../ai-write";
 import {
   buildTimeline,
@@ -620,6 +621,11 @@ export class SupabaseCrmRepository implements CrmRepository {
   }
 
   async defineCustomField(raw: FieldDefinitionInput): Promise<StoredFieldDefinition> {
+    // Defining a field, not reading or filling one. A workspace whose custom
+    // fields were switched off keeps every definition it already made and every
+    // value stored against them — withdrawing those would hide data the
+    // workspace entered itself, which no entitlement decision should do.
+    await assertFeatureEnabled(this.client, this.workspace.id, "custom_fields");
     const input = fieldDefinitionSchema.parse(raw);
     const { data, error } = await this.client
       .from("custom_field_definitions")
@@ -995,6 +1001,11 @@ export class SupabaseCrmRepository implements CrmRepository {
     proposal: AiCrmProposal,
     now: Date = new Date()
   ): Promise<AiWriteOutcome> {
+    // Before anything is read, because this method's return type has no way to
+    // say "nothing happened": it promises a classification, a score and a next
+    // action. A blocked write has to throw, or the caller reads it as an empty
+    // proposal that was considered and produced nothing.
+    await assertFeatureEnabled(this.client, this.workspace.id, "ai_proposals");
     const [facts, evidence, definitions, row] = await Promise.all([
       this.memoryFor(customerId),
       this.evidenceFor(customerId),

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { isFeatureEnabled } from "@/src/modules/features/server/gate";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 
@@ -11,6 +12,38 @@ export default async function AnalyticsPage() {
     createMetaRuntime(),
     getRequestPreferences()
   ]);
+
+  // Checked before the six counts run, not after. A page that gathers the
+  // numbers and then declines to render them has already done the work and
+  // still shows nothing, and the shape of an empty analytics screen is itself
+  // information about the workspace.
+  if (!(await isFeatureEnabled(client, workspace.id, "analytics"))) {
+    const pickOne = (en: string, tr: string, fa: string) =>
+      locale === "tr" ? tr : locale === "fa" ? fa : en;
+    return (
+      <WorkspaceShell active="analytics" workspaceName={workspace.name}>
+        <div className="content analytics-content">
+          <div className="empty-state">
+            <strong>
+              {pickOne(
+                "Analytics is not part of this plan",
+                "Analitik bu plana dahil değil",
+                "تحلیل بخشی از این طرح نیست"
+              )}
+            </strong>
+            <p>
+              {pickOne(
+                "Nothing has been switched off in your workspace — the records are all still there. Talk to us about including it.",
+                "Çalışma alanınızda hiçbir şey kapatılmadı — kayıtların tamamı yerinde. Dahil etmek için bizimle görüşün.",
+                "چیزی در فضای کاری شما خاموش نشده است — همه رکوردها سر جای خود هستند. برای افزودن آن با ما در تماس باشید."
+              )}
+            </p>
+          </div>
+        </div>
+      </WorkspaceShell>
+    );
+  }
+
   const [conversations, messages, reviews, runs, blocked, customers] = await Promise.all([
     client.from("conversations").select("*", { count: "exact", head: true }),
     client.from("messages").select("*", { count: "exact", head: true }),

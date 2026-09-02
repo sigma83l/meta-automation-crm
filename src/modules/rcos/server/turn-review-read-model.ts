@@ -37,7 +37,9 @@ export const REVIEW_REASONS = [
   "human_takeover",
   "conversation_closed",
   "conversation_missing",
-  "billing_entitlement_required"
+  "billing_entitlement_required",
+  "ai_replies_disabled",
+  "ai_replies_paused"
 ] as const;
 
 export type ReviewReason = (typeof REVIEW_REASONS)[number];

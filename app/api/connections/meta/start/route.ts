@@ -8,14 +8,23 @@ import {
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { assertWorkspaceManager } from "@/src/modules/workspaces/server/resolve-workspace";
 import { billingBlockedResponse } from "@/src/modules/billing/http";
+import { featureBlockedResponse } from "@/src/modules/features/http";
+import { isFeatureEnabled } from "@/src/modules/features/server/gate";
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
   if (rejected) return rejected;
   try {
     const body = await request.json();
     if (body.channel !== "whatsapp" && body.channel !== "instagram") throw new Error();
-    const { workspace } = await createMetaRuntime();
+    const { client, workspace } = await createMetaRuntime();
     assertWorkspaceManager(workspace);
+    // Per channel: the two are sold separately, so a workspace entitled to
+    // WhatsApp and not Instagram is an ordinary state rather than a
+    // misconfiguration.
+    const channelFlag = body.channel === "whatsapp" ? "whatsapp_channel" : "instagram_channel";
+    if (!(await isFeatureEnabled(client, workspace.id, channelFlag))) {
+      return featureBlockedResponse(channelFlag);
+    }
     const readiness = liveMetaReadiness();
     if (!readiness.ready) return NextResponse.json(readiness, { status: 409 });
     const environment = getServerEnvironment();

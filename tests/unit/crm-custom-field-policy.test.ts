@@ -55,9 +55,17 @@ const definitionRow = (over: Partial<FakeRow> = {}): FakeRow => ({
   ...over
 });
 
-function harness(definitions: FakeRow[] = [definitionRow()], values: FakeRow[] = []) {
+function harness(
+  definitions: FakeRow[] = [definitionRow()],
+  values: FakeRow[] = [],
+  over: Record<string, FakeRow[]> = {}
+) {
   const fake = createFakeSupabase({
-    tables: { custom_field_definitions: definitions, customer_custom_field_values: values }
+    tables: {
+      custom_field_definitions: definitions,
+      customer_custom_field_values: values,
+      ...over
+    }
   });
   return { fake, repository: new SupabaseCrmRepository(fake.client, workspace) };
 }
@@ -286,5 +294,46 @@ describe("the repository boundary", () => {
     );
     expect(await repository.customFieldDefinitions()).toHaveLength(1);
     expect(await repository.customFieldValuesFor(CUSTOMER)).toHaveLength(0);
+  });
+
+  it("refuses to define another field when custom fields are off", async () => {
+    const { fake, repository } = harness([], [], {
+      workspace_feature_overrides: [
+        { workspace_id: WORKSPACE, flag_key: "custom_fields", enabled: false, expires_at: null }
+      ]
+    });
+    await expect(
+      repository.defineCustomField({ name: "Tier", fieldKey: "tier", fieldType: "text" })
+    ).rejects.toThrow("FEATURE_NOT_ENABLED:custom_fields");
+    expect(fake.database.rows("custom_field_definitions")).toHaveLength(0);
+  });
+
+  it("keeps showing the fields and values the workspace already has", async () => {
+    // Creation is the whole of the gate. A workspace that loses the
+    // entitlement stops adding fields; it does not stop seeing the ones it
+    // defined or the values it entered against them, because hiding those
+    // would withhold the workspace's own data rather than a capability.
+    const { repository } = harness(
+      [definitionRow()],
+      [
+        {
+          workspace_id: WORKSPACE,
+          customer_id: CUSTOMER,
+          definition_id: "d1",
+          value: "gold",
+          written_by: "human",
+          confidence: "human_verified",
+          source_ref: "note-1",
+          updated_at: "2026-08-28T00:00:00.000Z"
+        }
+      ],
+      {
+        workspace_feature_overrides: [
+          { workspace_id: WORKSPACE, flag_key: "custom_fields", enabled: false, expires_at: null }
+        ]
+      }
+    );
+    expect(await repository.customFieldDefinitions()).toHaveLength(1);
+    expect(await repository.customFieldValuesFor(CUSTOMER)).toHaveLength(1);
   });
 });

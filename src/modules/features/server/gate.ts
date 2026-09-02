@@ -29,6 +29,31 @@ export async function isFeatureEnabled(
   return data === true;
 }
 
+/**
+ * A withheld capability, thrown rather than returned.
+ *
+ * For the operations whose success type has no room for a refusal —
+ * `applyAiProposal` returns a classification, a score and a next action, and
+ * there is no honest way to say "none of this happened" in that shape. Throwing
+ * keeps the caller from reading a blocked write as an empty one.
+ */
+export class FeatureNotEnabledError extends Error {
+  constructor(readonly featureKey: FeatureKey) {
+    super(`FEATURE_NOT_ENABLED:${featureKey}`);
+    this.name = "FeatureNotEnabledError";
+  }
+}
+
+export async function assertFeatureEnabled(
+  client: SupabaseClient,
+  workspaceId: string,
+  key: FeatureKey
+): Promise<void> {
+  if (!(await isFeatureEnabled(client, workspaceId, key))) {
+    throw new FeatureNotEnabledError(key);
+  }
+}
+
 export type FeatureMap = Readonly<Partial<Record<FeatureKey, boolean>>>;
 
 /**

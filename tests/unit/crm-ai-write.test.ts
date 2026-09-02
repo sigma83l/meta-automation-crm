@@ -426,4 +426,34 @@ describe("the repository applies one", () => {
       "CUSTOMER_NOT_FOUND"
     );
   });
+  it("refuses, rather than returning an empty result, when proposals are off", async () => {
+    // The return type has no way to say "nothing happened": it promises a
+    // classification, a score and a next action. An empty one of those would
+    // read as a proposal that was considered and found to contain nothing,
+    // which is a different and much quieter claim than a refusal.
+    const { fake, repository } = harness({
+      workspace_feature_overrides: [
+        { workspace_id: WORKSPACE, flag_key: "ai_proposals", enabled: false, expires_at: null }
+      ]
+    });
+    await expect(repository.applyAiProposal(CUSTOMER, proposal, NOW)).rejects.toThrow(
+      "FEATURE_NOT_ENABLED:ai_proposals"
+    );
+    expect(fake.database.rows("contact_facts")).toHaveLength(0);
+    expect(fake.database.rows("qualification_evidence")).toHaveLength(0);
+    expect(fake.database.rows("crm_audit_events")).toHaveLength(0);
+  });
+
+  it("checks the flag before it reads anything", async () => {
+    // Gating after the reads would leave a refused proposal costing the same
+    // five queries as an accepted one, on the path most likely to be called in
+    // a loop by a workspace that is not entitled to it.
+    const { fake, repository } = harness({
+      workspace_feature_overrides: [
+        { workspace_id: WORKSPACE, flag_key: "ai_proposals", enabled: false, expires_at: null }
+      ]
+    });
+    await expect(repository.applyAiProposal(CUSTOMER, proposal, NOW)).rejects.toThrow();
+    expect(fake.database.rpcCalls.map((call) => call.name)).toEqual(["workspace_feature_enabled"]);
+  });
 });

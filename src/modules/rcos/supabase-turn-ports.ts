@@ -5,6 +5,7 @@ import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement
 import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
 import { CONTACT_FACTS_CONFLICT } from "@/src/modules/crm/ai-write";
+import { isFeatureEnabled, isPlatformSwitchEnabled } from "@/src/modules/features/server/gate";
 import type { ModelCallRecord } from "./ai-turn-ports";
 import type { StoredFact } from "./memory-policy";
 import {
@@ -99,7 +100,14 @@ export const POLICY_BLOCKS = [
   "human_takeover",
   "conversation_closed",
   "conversation_missing",
-  "billing_entitlement_required"
+  "billing_entitlement_required",
+  // The workspace's plan or a staff override withholds assistant replies.
+  "ai_replies_disabled",
+  // Switched off platform-wide by an operator. Distinct from the above because
+  // the two have different owners and different fixes: one is a conversation
+  // with us about the plan, the other is us, and only one of them will resolve
+  // on its own.
+  "ai_replies_paused"
 ] as const;
 
 export type PolicyBlock = (typeof POLICY_BLOCKS)[number];
@@ -196,6 +204,23 @@ export function createSupabaseTurnPorts(
       // cost nothing to serve, and the customer's message is still stored
       // either way.
       if (!entitlement || !entitlement.ok) return blocked("billing_entitlement_required");
+
+      // After entitlement, deliberately. When a lapsed subscription and a
+      // withheld feature are both true, the billing reason is the one the
+      // workspace can act on, and reporting ours instead would hide the problem
+      // they can actually fix.
+      //
+      // Read here rather than at the job boundary so a turn reaching the engine
+      // by any route is gated the same way, and so the refusal lands in
+      // `turn_records` with a reason the review surface can explain. Both fail
+      // closed: a turn that cannot establish permission does not get a model,
+      // it gets a person.
+      if (!(await isPlatformSwitchEnabled(admin, "ai_replies"))) {
+        return blocked("ai_replies_paused");
+      }
+      if (!(await isFeatureEnabled(admin, event.workspaceId, "ai_replies"))) {
+        return blocked("ai_replies_disabled");
+      }
 
       return { canSend: true, allowedActions };
     },
