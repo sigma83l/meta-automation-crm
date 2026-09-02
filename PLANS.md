@@ -330,9 +330,66 @@ One risk left standing: `contact_facts` has two writers — the turn's
 conflict target so they cannot drift on the thing that matters, but a single
 writer would be better and belongs with the Pack 03 wiring above.
 
-Next is step 8, custom fields and the gates: the definition-driven validation
-layer landed early, in step 1, along with the `ai_write` permission it needed —
-so what remains is the rest of that step's gates.
+**Done — step 8, the gates.** Custom fields landed early, in step 1, so what
+this step was is the pack's own evidence gates: the RBAC matrix, the two golden
+matrices, the ten E2E flows, the visual matrix and `docs/final-crm/`.
+
+Building them found three live defects that reading the code had not.
+
+**Answering a suggestion did nothing.** `crm_next_action_projection` grants
+`authenticated` select and nothing else, and `settleProposal` issued an update
+through the caller's own client: it matched no rows, and the repository read
+that as a missing proposal. Every test covering it used a double with no
+grants — which is precisely the shape of double that cannot see a missing
+grant. `settle_next_action` is now the opening, two columns wide, re-deriving
+authority from the caller because definer rights bypass row security. Widening
+the grant instead would have let a session change an action's type, confidence
+or source — including to `derived`, which the table permits and only TypeScript
+refuses.
+
+**Customer memory was write-only.** `persistFacts` had filled `contact_facts`
+since step 9 of the pack and nothing read it back into a turn, so the model's
+whole view of a contact was one conversation's transcript and a returning
+customer was asked for what they had already answered. `context-budget.ts` had
+reserved a `customer_memory` layer from the start and nothing filled it. It is
+filled now: above the untrusted fence, because the facts are the workspace's
+record rather than the customer's words; with confidence beside each value,
+because a model that cannot see an answer is a guess will quote it back as
+fact; and filtered through the same `hasExpired` the write path uses, because
+two implementations of "is this still true" disagree eventually and only in
+production.
+
+**The flag catalogue decided nothing.** The staff console shipped a resolver, an
+audited override and a seeded catalogue that no product code asked. Ten flags
+now have exactly one gate each, placed where the answer is still cheap. Three
+are narrower than the flag they read — creation is gated, reading is not —
+because an entitlement decides what may be made, not what may be seen.
+
+Two smaller ones, both found by the evidence rather than by review: a record id
+this workspace cannot read threw into the error boundary rather than rendering
+not-found, and the new-customer form named three inputs by placeholder alone.
+
+**What the gates now prove.** All 105 RBAC cells run against a real engine,
+recording three endings rather than two — `ungranted` is a denial that happened
+before any policy was consulted, and three of the seven mutations end that way
+for every role including owner. Both golden matrices run under the pack's own
+wording and compare their key sets against the pack's files. Eight of the ten
+E2E flows run in a browser. All 54 visual cells render with no overflow,
+correct direction and theme, one `h1` and no unlabelled control.
+
+**What they do not prove, and why the pack is not frozen.** Two hard fails
+stand. The visual matrix requires human screenshot review, which is not mine to
+give. And Git = CI = Preview at one SHA cannot be established, because nothing
+is pushed. `docs/final-crm/CRM_FREEZE.md` records both, and the scorecard is 88
+with the shortfall attributed per category rather than rounded up.
+
+**The two flows that cannot be driven at all** are the largest gap this pack
+leaves. Editing a remembered fact and managing a follow-up both have engines,
+unit tests and no route — so flows 4 and 5 have nothing for an operator to
+click. Whether that is unfinished Pack 01 work or Pack 02 scope is an owner
+decision; it is recorded in `docs/final-crm/CRM_FUTURE_BACKLOG.md` along with
+`proposeAction`, which carries the identical defect to the settlement bug above
+and has no caller yet.
 
 ### Pack 02 — Settings, Billing Sandbox, Knowledge, Commerce
 

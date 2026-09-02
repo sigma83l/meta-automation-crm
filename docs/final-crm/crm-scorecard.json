@@ -1,0 +1,177 @@
+{
+  "target": 100,
+  "rule": "100 is earned only from current final-SHA evidence; hard fails override numeric score.",
+  "scored_at_sha": "691f10a",
+  "scored_on": "2026-09-03",
+  "scored": 88,
+  "verdict": "NOT_FROZEN",
+  "verdict_note": "Two hard fails stand and override the number: visual QA awaits the human screenshot review the pack requires, and no SHA has been pushed, built in CI or deployed to a protected preview. See CRM_FREEZE.md. Partial credit is recorded per category rather than rounded up; a category is only full where a test at this SHA proves it.",
+  "categories": [
+    {
+      "name": "Governance/current-state/repo-policy",
+      "weight": 4,
+      "earned": 4,
+      "status": "PASS",
+      "evidence": [
+        "docs/final-crm/CRM_CURRENT_STATE_BEFORE.md",
+        "PLANS.md",
+        "docs/master-run/PACK_01_PLAN.md"
+      ]
+    },
+    {
+      "name": "CRM product differentiation/IA",
+      "weight": 6,
+      "earned": 6,
+      "status": "PASS",
+      "evidence": ["docs/final-crm/CRM_ARCHITECTURE_FINAL.md", "docs/final-crm/CRM_UX_FINAL.md"]
+    },
+    {
+      "name": "CRM index/customer radar UX",
+      "weight": 7,
+      "earned": 6,
+      "status": "PARTIAL",
+      "evidence": ["tests/e2e/crm-flows.spec.ts", "tests/e2e/crm-visual-matrix.spec.ts"],
+      "gap": "The Owner column cannot name a person; the member directory is Pack 02."
+    },
+    {
+      "name": "Customer Memory record UX",
+      "weight": 10,
+      "earned": 8,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/e2e/crm-flows.spec.ts",
+        "tests/unit/crm-now-card.test.ts",
+        "tests/unit/crm-timeline.test.ts"
+      ],
+      "gap": "No surface edits a remembered fact, so the pack's E2E flow 4 cannot be driven."
+    },
+    {
+      "name": "Memory ledger/provenance/conflict",
+      "weight": 10,
+      "earned": 10,
+      "status": "PASS",
+      "evidence": [
+        "tests/golden/memory-matrix.test.ts",
+        "docs/final-crm/CRM_MEMORY_ENGINE_FINAL.md"
+      ]
+    },
+    {
+      "name": "Qualification/evidence scoring",
+      "weight": 9,
+      "earned": 9,
+      "status": "PASS",
+      "evidence": [
+        "tests/golden/score-matrix.test.ts",
+        "tests/migrations/qualification-score-engine.test.ts"
+      ]
+    },
+    {
+      "name": "Attention/next-action/follow-up",
+      "weight": 8,
+      "earned": 6,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/unit/crm-attention-priority.test.ts",
+        "tests/unit/crm-next-action.test.ts",
+        "tests/migrations/settle-next-action.test.ts"
+      ],
+      "gap": "No route schedules or settles a follow-up, so the pack's E2E flow 5 cannot be driven."
+    },
+    {
+      "name": "Timeline/conversation/history",
+      "weight": 6,
+      "earned": 6,
+      "status": "PASS",
+      "evidence": ["tests/unit/crm-timeline.test.ts", "docs/final-crm/CRM_UX_FINAL.md"]
+    },
+    {
+      "name": "AI→CRM structured write engine",
+      "weight": 8,
+      "earned": 6,
+      "status": "PARTIAL",
+      "evidence": ["tests/unit/crm-ai-write.test.ts", "docs/final-crm/CRM_ARCHITECTURE_FINAL.md"],
+      "gap": "The producer is Pack 03's structured extraction call; the engine runs from tests and from seeded proposals."
+    },
+    {
+      "name": "Backend data model/read models",
+      "weight": 7,
+      "earned": 7,
+      "status": "PASS",
+      "evidence": [
+        "docs/final-crm/CRM_DATA_MODEL_FINAL.md",
+        "tests/migrations/next-action-and-radar.test.ts",
+        "tests/migrations/read-models.test.ts"
+      ]
+    },
+    {
+      "name": "Security/RBAC/RLS/privacy",
+      "weight": 7,
+      "earned": 7,
+      "status": "PASS",
+      "evidence": [
+        "tests/migrations/crm-rbac-matrix.test.ts",
+        "tests/migrations/settle-next-action.test.ts",
+        "docs/final-crm/CRM_SECURITY_EVIDENCE.md"
+      ]
+    },
+    {
+      "name": "Customization/business adaptability",
+      "weight": 4,
+      "earned": 3,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/unit/crm-custom-field-policy.test.ts",
+        "tests/migrations/custom-field-conformance.test.ts"
+      ],
+      "gap": "Custom field definitions and values have no product surface; only the AI write path fills them."
+    },
+    {
+      "name": "Automation/Inbox/outcome integration",
+      "weight": 3,
+      "earned": 2,
+      "status": "PARTIAL",
+      "evidence": ["tests/unit/crm-opportunity-outcome.test.ts"],
+      "gap": "Opportunity outcomes are written by the engine only; no route declares a win."
+    },
+    {
+      "name": "Motion/visual craft",
+      "weight": 3,
+      "earned": 1,
+      "status": "BLOCKED",
+      "evidence": ["tests/e2e/crm-visual-matrix.spec.ts"],
+      "gap": "Craft is the part a machine cannot score. Awaiting human screenshot review."
+    },
+    {
+      "name": "Accessibility/EN-TR-FA/RTL/mobile",
+      "weight": 4,
+      "earned": 4,
+      "status": "PASS",
+      "evidence": ["tests/e2e/crm-visual-matrix.spec.ts", "tests/e2e/crm-flows.spec.ts"]
+    },
+    {
+      "name": "Performance/realtime/resilience",
+      "weight": 2,
+      "earned": 2,
+      "status": "PASS",
+      "evidence": [
+        "tests/migrations/next-action-and-radar.test.ts",
+        "docs/final-crm/CRM_ARCHITECTURE_FINAL.md"
+      ]
+    },
+    {
+      "name": "Tests/visual QA/debug loop",
+      "weight": 1,
+      "earned": 1,
+      "status": "PASS",
+      "evidence": ["docs/final-crm/CRM_TEST_EVIDENCE.md"]
+    },
+    {
+      "name": "Git/CI/exact-SHA Preview/evidence",
+      "weight": 1,
+      "earned": 0,
+      "status": "BLOCKED",
+      "evidence": [],
+      "gap": "Nothing is pushed. The remote is off limits by owner instruction, so Git = CI = Preview cannot be established."
+    }
+  ]
+}
