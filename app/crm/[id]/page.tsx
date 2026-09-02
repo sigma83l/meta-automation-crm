@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
@@ -79,16 +80,36 @@ export default async function CustomerPage({
 
   // Only the sections that read the record's other tables pay for them.
   const needsDetail = ["overview", "conversations", "automations", "files", "fields", "audit"];
-  const [header, card, proposals, detail] = await Promise.all([
-    repository.radarRowFor(id),
-    repository.nowCardFor(id),
-    // Live suggestions, whichever section is open: they are waiting on a person
-    // and burying them behind a tab is how they stay waiting.
-    repository.proposalsFor(id),
-    needsDetail.includes(section)
-      ? repository.detail(id)
-      : Promise.resolve({} as Readonly<Record<string, unknown>>)
-  ]);
+  let header: Awaited<ReturnType<typeof repository.radarRowFor>>;
+  let card: Awaited<ReturnType<typeof repository.nowCardFor>>;
+  let proposals: Awaited<ReturnType<typeof repository.proposalsFor>>;
+  let detail: Readonly<Record<string, unknown>>;
+  try {
+    // The identity header first, alone. It is the read that answers "is this a
+    // contact this workspace has", and running it beside three others means the
+    // page fails with whichever of them rejected first - which is how a missing
+    // id produced "the workspace view could not be loaded" instead of an
+    // answer. It also stops three further queries being spent on a record that
+    // is not there.
+    header = await repository.radarRowFor(id);
+    [card, proposals, detail] = await Promise.all([
+      repository.nowCardFor(id),
+      // Live suggestions, whichever section is open: they are waiting on a person
+      // and burying them behind a tab is how they stay waiting.
+      repository.proposalsFor(id),
+      needsDetail.includes(section)
+        ? repository.detail(id)
+        : Promise.resolve({} as Readonly<Record<string, unknown>>)
+    ]);
+  } catch (error) {
+    // A contact this workspace cannot read is not found, whether it never
+    // existed or belongs to somebody else. The two must be one answer: a
+    // distinct "forbidden" would confirm that an id exists to whoever guessed
+    // it. Without this the read threw into the error boundary, so a mistyped
+    // URL gave an operator a crash page instead of a sentence.
+    if (error instanceof Error && error.message === "CUSTOMER_NOT_FOUND") notFound();
+    throw error;
+  }
   const rows = (key: string) => (detail[key] ?? []) as readonly Record<string, unknown>[];
 
   const categories = (

@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import { createCustomer, signUp } from "./support/workspace";
 
 /**
  * The pack's ten critical CRM flows, driven through the browser.
@@ -25,55 +25,12 @@ import { expect, test, type Page } from "@playwright/test";
  * can take, which is worse than a gap somebody can read.
  */
 
-const PASSWORD = "Correct-Horse-42!";
-
-function admin(): SupabaseClient {
-  // The E2E env script exports the local project's keys; there is no service
-  // role client in the browser and there must never be one.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Local Supabase env missing; run through pnpm test:e2e.");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
-
-/** Signs a new owner up and returns the workspace the signup provisioned. */
-async function signUp(page: Page, label: string) {
-  const email = `crm-flow-${label}-${randomUUID()}@example.test`;
-  await page.goto("/signup");
-  await page.getByLabel("Business name").fill(`Flow ${label}`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create private workspace" }).click();
-  await expect(page).toHaveURL(/\/onboarding/);
-  await page.getByRole("button", { name: "Save and exit" }).click();
-
-  const db = admin();
-  const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });
-  const user = users.users.find((candidate) => candidate.email === email);
-  if (!user) throw new Error(`No auth user for ${email}`);
-  const { data: profile } = await db
-    .from("profiles")
-    .select("workspace_id")
-    .eq("id", user.id)
-    .single();
-  return { db, email, userId: user.id, workspaceId: String(profile?.workspace_id) };
-}
-
-/** Creates a contact through the form and returns its id. */
-async function createCustomer(page: Page, db: SupabaseClient, workspaceId: string, name: string) {
-  await page.goto("/crm");
-  await page.getByPlaceholder("Display name").fill(name);
-  await page.getByPlaceholder("Company", { exact: true }).fill("Flow Labs");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.getByRole("link", { name })).toBeVisible();
-  const { data } = await db
-    .from("customers")
-    .select("id")
-    .eq("workspace_id", workspaceId)
-    .eq("display_name", name)
-    .single();
-  return String(data?.id);
-}
+// Chromium carries the CRM matrix in full, which is what the pack asks for.
+// The mobile project would run these a second time under a viewport it sets
+// itself, which contradicts the two flows that set their own.
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Chromium carries the CRM flows in full.");
+});
 
 test("flow 1: search, open the record, and read the Now state", async ({ page }) => {
   const { db, workspaceId } = await signUp(page, "search");

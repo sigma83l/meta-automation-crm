@@ -145,13 +145,34 @@ export function CrmControls() {
       </form>
       <form className="crm-create" onSubmit={create}>
         <strong>{text("New customer", "Yeni müşteri", "مشتری جدید")}</strong>
+        {/*
+          Named as well as placeheld. A placeholder is the last thing an
+          accessible name falls back to, and it disappears the moment somebody
+          types - so the one control whose label a person most needs while
+          filling it in is the one that no longer has one. Every other form in
+          this application carries an explicit label; this one did not.
+        */}
         <input
           name="displayName"
           placeholder={text("Display name", "Görünen ad", "نام نمایشی")}
+          aria-label={text(
+            "New customer display name",
+            "Yeni müşteri görünen adı",
+            "نام نمایشی مشتری جدید"
+          )}
           required
         />
-        <input name="companyName" placeholder={text("Company", "Şirket", "شرکت")} />
-        <input name="email" type="email" placeholder={text("Email", "E-posta", "ایمیل")} />
+        <input
+          name="companyName"
+          placeholder={text("Company", "Şirket", "شرکت")}
+          aria-label={text("New customer company", "Yeni müşteri şirketi", "شرکت مشتری جدید")}
+        />
+        <input
+          name="email"
+          type="email"
+          placeholder={text("Email", "E-posta", "ایمیل")}
+          aria-label={text("New customer email", "Yeni müşteri e-postası", "ایمیل مشتری جدید")}
+        />
         <button disabled={loading}>
           {loading
             ? text("Working…", "İşleniyor…", "در حال انجام…")
