@@ -1,0 +1,24 @@
+{
+  "roles": [
+    "owner",
+    "admin",
+    "operator",
+    "viewer",
+    "anonymous"
+  ],
+  "contexts": [
+    "own_workspace",
+    "forged_workspace",
+    "other_workspace"
+  ],
+  "mutations": [
+    "edit_contact",
+    "edit_fact",
+    "override_score",
+    "create_followup",
+    "change_status",
+    "import",
+    "export"
+  ],
+  "rule": "Viewer/anonymous/forged/other workspace writes must fail. Exact Owner/Admin/Operator capability follows current AGENTS and server contract."
+}
