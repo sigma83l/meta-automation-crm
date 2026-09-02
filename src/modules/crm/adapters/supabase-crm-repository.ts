@@ -1463,20 +1463,26 @@ export class SupabaseCrmRepository implements CrmRepository {
 
   async settleProposal(
     proposalId: string,
-    outcome: "accepted" | "rejected" | "superseded"
+    outcome: "accepted" | "rejected"
   ): Promise<StoredActionProposal> {
     // Taking on or turning down a suggestion is an operational decision, and a
-    // viewer's role is to read the queue rather than to answer it.
+    // viewer's role is to read the queue rather than to answer it. Asserted
+    // here so the caller gets a clear failure, and again inside the function,
+    // which is where it actually holds - this client cannot write the table.
     assertWorkspaceOperator(this.workspace);
-    const { data, error } = await this.client
-      .from("crm_next_action_projection")
-      .update({ settled_at: new Date().toISOString(), settled_outcome: outcome })
-      .eq("workspace_id", this.workspace.id)
-      .eq("id", proposalId)
-      .select(PROPOSAL_COLUMNS)
-      .single();
-    if (error || !data) throw new Error("ACTION_PROPOSAL_NOT_FOUND");
-    return mapProposal(data);
+    // Through the function rather than an update. `authenticated` holds select
+    // and nothing more on this table: an update here matched no rows and
+    // reported the proposal missing, which is what made the accept and reject
+    // buttons do nothing at all. The function opens exactly the two settlement
+    // columns and refuses a second answer.
+    const { data, error } = await this.client.rpc("settle_next_action", {
+      p_workspace_id: this.workspace.id,
+      p_proposal_id: proposalId,
+      p_outcome: outcome
+    });
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+    if (error || !row) throw new Error("ACTION_PROPOSAL_NOT_FOUND");
+    return mapProposal(row);
   }
 
   private async activity(customerId: string, activityType: string, summary: string) {

@@ -485,9 +485,15 @@ export interface CrmRepository {
   /** Defines one. The filters are values from fixed vocabularies, never a query. */
   saveView(input: SavedViewInput): Promise<SavedView>;
   deleteSavedView(viewId: string): Promise<void>;
-  /** Marks a proposal acted on, so a rejected suggestion stays visible. */
+  /**
+   * Marks a proposal acted on, so a rejected suggestion stays visible.
+   *
+   * Two outcomes, not the three a stored row may hold. `superseded` is what an
+   * engine records when a newer proposal replaces this one; offering it here
+   * would let a person claim something happened that did not.
+   */
   settleProposal(
     proposalId: string,
-    outcome: "accepted" | "rejected" | "superseded"
+    outcome: "accepted" | "rejected"
   ): Promise<StoredActionProposal>;
 }

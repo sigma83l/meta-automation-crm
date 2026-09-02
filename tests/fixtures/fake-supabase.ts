@@ -681,6 +681,36 @@ function featureRpcHandlers(): Record<string, FakeRpcHandler> {
   };
 }
 
+/**
+ * `settle_next_action`, mirroring the migration's semantics.
+ *
+ * The real function's authority check cannot be reproduced here - a double has
+ * no session and no role - and it is asserted against a real engine in
+ * `tests/migrations/settle-next-action.test.ts`. What this reproduces is the
+ * part the application depends on: exactly one settlement per proposal, and the
+ * settled row returned rather than a bare success.
+ */
+function crmRpcHandlers(): Record<string, FakeRpcHandler> {
+  return {
+    settle_next_action: (args, database) => {
+      const row = database
+        .rows("crm_next_action_projection")
+        .find(
+          (candidate) =>
+            candidate.id === args.p_proposal_id &&
+            candidate.workspace_id === args.p_workspace_id &&
+            (candidate.settled_at === null || candidate.settled_at === undefined)
+        );
+      if (!row) {
+        return { data: null, error: { code: "P0002", message: "no open proposal" }, count: null };
+      }
+      row.settled_at = new Date().toISOString();
+      row.settled_outcome = args.p_outcome;
+      return emptyResult({ ...row });
+    }
+  };
+}
+
 export type FakeSupabase = Readonly<{
   database: FakeDatabase;
   client: SupabaseClient;
@@ -704,6 +734,7 @@ export function createFakeSupabase(
   const handlers = {
     ...billingRpcHandlers(),
     ...featureRpcHandlers(),
+    ...crmRpcHandlers(),
     ...(options.rpc ?? {})
   };
   const users = options.users ?? {};
