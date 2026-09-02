@@ -24,6 +24,7 @@ export const PRICE_WHITENING = "bbbbbbbb-0000-4000-8000-000000000003";
 /** A dental clinic: high-stakes enough that grounding failures matter. */
 export const CLINIC: Omit<TurnContext, "messages"> = {
   requiredFields: [],
+  knownFacts: [],
   faqItems: [
     {
       id: FAQ_HOURS,

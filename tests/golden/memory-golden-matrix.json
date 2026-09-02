@@ -1,0 +1,11 @@
+{
+  "cases": [
+    "confirmed fact is never overwritten by lower-confidence inference",
+    "returning customer does not get asked for known confirmed location",
+    "conflicting phone/email fact becomes review state rather than silent replace",
+    "expired availability/budget fact is not used as current truth",
+    "human correction becomes authoritative",
+    "AI extraction failure leaves source messages intact and CRM usable",
+    "duplicate message event does not duplicate fact/evidence"
+  ]
+}

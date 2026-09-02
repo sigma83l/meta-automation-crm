@@ -18,6 +18,7 @@ function replyInput(overrides: Partial<AiReplyInput> = {}): AiReplyInput {
     conversationId: "conv_1",
     messages: [{ role: "customer", content: "Do you deliver on Sundays?" }],
     requiredFields: ["delivery_address"],
+    knownFacts: [],
     faqItems: [{ id: FAQ_ID, question: "Do you deliver?", answer: "Yes, weekdays only." }],
     priceItems: [
       {

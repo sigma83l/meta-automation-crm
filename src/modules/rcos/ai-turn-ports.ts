@@ -30,6 +30,8 @@ import type { ComposedReply, TurnEvent, TurnPorts, TurnUnderstanding } from "./t
 
 export type TurnContext = Readonly<{
   requiredFields: readonly string[];
+  /** What the CRM already recorded about this contact. See `AiReplyInput`. */
+  knownFacts: AiReplyInput["knownFacts"];
   faqItems: readonly Readonly<{ id: string; question: string; answer: string }>[];
   priceItems: readonly Readonly<{
     id: string;
@@ -107,6 +109,7 @@ function replyInput(event: TurnEvent, context: TurnContext): AiReplyInput {
     conversationId: event.conversationId,
     messages: context.messages,
     requiredFields: context.requiredFields,
+    knownFacts: context.knownFacts,
     faqItems: context.faqItems,
     priceItems: context.priceItems,
     policy: context.policy,

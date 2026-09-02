@@ -92,6 +92,7 @@ describe("provider seams", () => {
       conversationId: "conv-synthetic-001",
       messages: [{ role: "customer", content: "What is the price?" }],
       requiredFields: [],
+      knownFacts: [],
       faqItems: [],
       priceItems: [],
       policy: {

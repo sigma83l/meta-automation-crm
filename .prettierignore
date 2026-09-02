@@ -12,3 +12,10 @@ pnpm-lock.yaml
 Rellooma_V1_Backend_Launch_MD_Pack/
 Rellooma_Master_Sequential_Execution_Pack_v1/
 Rellooma_Master_Pack_Complete_File_Category_Guide_EN.md
+
+# Test matrices copied verbatim out of the CRM pack (tests/03_RBAC_MATRIX.json
+# and the two golden matrices). Same reason: the copy is only evidence that the
+# repository tests what the pack declares if it still matches it byte for byte.
+tests/golden/rbac-matrix.json
+tests/golden/memory-golden-matrix.json
+tests/golden/score-golden-matrix.json

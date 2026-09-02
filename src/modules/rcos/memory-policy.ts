@@ -52,6 +52,23 @@ export function hasExpired(fact: StoredFact, now: Date = new Date()): boolean {
   return Number.isFinite(until) && until <= now.getTime();
 }
 
+/**
+ * The facts that are true right now.
+ *
+ * Anything past its validity window is dropped rather than marked, because
+ * every caller of this wants current truth and a stale value that has to be
+ * noticed is a stale value that will eventually not be. `authorizeMemoryWrite`
+ * already treats an expired fact as absent; this is the same rule for reading,
+ * and sharing `hasExpired` is what keeps the two from disagreeing about the
+ * boundary.
+ */
+export function currentFacts(
+  stored: readonly StoredFact[],
+  now: Date = new Date()
+): readonly StoredFact[] {
+  return stored.filter((fact) => !hasExpired(fact, now));
+}
+
 export type WriteVerdict =
   | Readonly<{
       accepted: true;

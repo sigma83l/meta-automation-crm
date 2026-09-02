@@ -53,6 +53,17 @@ export type AiReplyInput = Readonly<{
   conversationId: string;
   messages: readonly Readonly<{ role: "customer" | "business"; content: string }>[];
   requiredFields: readonly string[];
+  /**
+   * What the CRM already knows about this contact.
+   *
+   * The workspace's own record, not the customer's words, so it sits outside
+   * the untrusted fence with the approved knowledge. Its purpose is narrow: a
+   * returning customer must not be asked again for something they already
+   * answered. Facts past their validity window are dropped before they get
+   * here - stale is not knowledge, and a model told an old budget is current
+   * will quote against it.
+   */
+  knownFacts: readonly Readonly<{ key: string; value: string; confidence: string }>[];
   faqItems: readonly Readonly<{ id: string; question: string; answer: string }>[];
   priceItems: readonly Readonly<{
     id: string;

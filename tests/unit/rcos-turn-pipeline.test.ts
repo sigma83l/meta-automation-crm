@@ -40,6 +40,7 @@ const event: TurnEvent = {
 
 const context: TurnContext = {
   requiredFields: [],
+  knownFacts: [],
   faqItems: [],
   priceItems: [
     {

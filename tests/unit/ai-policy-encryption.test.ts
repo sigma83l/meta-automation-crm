@@ -16,6 +16,7 @@ function input(overrides: Record<string, unknown> = {}) {
     conversationId: "30000000-0000-4000-8000-000000000001",
     messages: [{ role: "customer" as const, content: "name: Ada. What are your hours?" }],
     requiredFields: ["name"],
+    knownFacts: [],
     faqItems: [{ id: faqId, question: "Hours?", answer: "Open 09:00–17:00." }],
     priceItems: [],
     policy: {

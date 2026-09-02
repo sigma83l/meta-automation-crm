@@ -8,6 +8,7 @@ import { selectAiProvider, type AiProviderSet } from "@/src/modules/ai/provider-
 import { DIALECTS } from "@/src/modules/ai/providers/dialects";
 import { createHttpAiProvider } from "@/src/modules/ai/providers/http-provider";
 import { MAX_RECENT_TURN_PAIRS } from "./context-budget";
+import { currentFacts, type StoredFact } from "./memory-policy";
 import { createAiTurnPorts, type ModelCallRecord, type TurnContext } from "./ai-turn-ports";
 import {
   createDraftRegistry,
@@ -38,6 +39,16 @@ import type { TurnEvent, TurnPorts } from "./turn-engine";
 
 /** How many past messages a turn may see. Pairs, so twice this many rows. */
 const TRANSCRIPT_ROWS = MAX_RECENT_TURN_PAIRS * 2;
+
+/**
+ * How many remembered facts one turn may carry.
+ *
+ * The context budget reserves `customer_memory` 250 tokens at its widest, and a
+ * fact is a short key and a short value. Reading more would only mean trimming
+ * more, and trimming decides by position rather than by what matters - so the
+ * bound goes here, on the newest facts, rather than downstream.
+ */
+const MEMORY_ROWS = 24;
 
 type ProfileRow = Readonly<{
   primary_language: string;
@@ -175,9 +186,10 @@ async function providersForWorkspace(
 async function loadTurnContext(
   admin: SupabaseClient,
   event: TurnEvent,
-  profile: ProfileRow
+  profile: ProfileRow,
+  customerId: string
 ): Promise<TurnContext> {
-  const [faqs, prices, transcript] = await Promise.all([
+  const [faqs, prices, transcript, facts] = await Promise.all([
     admin
       .from("business_faq_items")
       .select("id,question,answer")
@@ -196,7 +208,19 @@ async function loadTurnContext(
       .eq("workspace_id", event.workspaceId)
       .eq("conversation_id", event.conversationId)
       .order("sent_at", { ascending: false })
-      .limit(TRANSCRIPT_ROWS)
+      .limit(TRANSCRIPT_ROWS),
+    // The read half of customer memory. `persistFacts` has been filling this
+    // table since step 9 of the pack and nothing read it back, which made the
+    // memory write-only: a customer who confirmed their location last week was
+    // asked for it again this week, because the model's whole view of them was
+    // one conversation's transcript.
+    admin
+      .from("contact_facts")
+      .select("fact_key,fact_value,confidence,source_ref,recorded_at,valid_until")
+      .eq("workspace_id", event.workspaceId)
+      .eq("customer_id", customerId)
+      .order("recorded_at", { ascending: false })
+      .limit(MEMORY_ROWS)
   ]);
 
   const messages = (transcript.data ?? [])
@@ -207,8 +231,30 @@ async function loadTurnContext(
       content: String(row.body ?? "")
     }));
 
+  // Expiry is applied here rather than in SQL so one implementation decides it.
+  // `hasExpired` is what the write path already consults, and a `valid_until >
+  // now()` predicate beside it would be a second answer to the same question -
+  // able to disagree about the boundary, and only in production.
+  const stored = (facts.data ?? []).map(
+    (row) =>
+      ({
+        key: String(row.fact_key),
+        value: String(row.fact_value),
+        confidence: String(row.confidence),
+        sourceRef: String(row.source_ref ?? ""),
+        recordedAt: String(row.recorded_at ?? ""),
+        validUntil: (row.valid_until as string | null) ?? null
+      }) as StoredFact
+  );
+  const knownFacts = currentFacts(stored).map(({ key, value, confidence }) => ({
+    key,
+    value,
+    confidence
+  }));
+
   return {
     requiredFields: [],
+    knownFacts,
     faqItems: (faqs.data ?? []).map((row) => ({
       id: String(row.id),
       question: String(row.question),
@@ -274,7 +320,7 @@ export async function createTurnRuntime(
   // escalation keywords and composed against another.
   let context: Promise<TurnContext> | undefined;
   const contextFor = (turn: TurnEvent) => {
-    context ??= loadTurnContext(admin, turn, profile);
+    context ??= loadTurnContext(admin, turn, profile, subject.customerId);
     return context;
   };
 

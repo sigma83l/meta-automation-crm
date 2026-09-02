@@ -24,6 +24,7 @@ const event: TurnEvent = {
 
 const context: TurnContext = {
   requiredFields: ["delivery_address"],
+  knownFacts: [],
   faqItems: [{ id: FAQ_ID, question: "Do you deliver?", answer: "Weekdays only." }],
   priceItems: [
     {
@@ -296,6 +297,7 @@ describe("only a booking turn may claim completion", () => {
 describe("what an approved FAQ answer approves", () => {
   const withFaq = (answer: string): TurnContext => ({
     requiredFields: [],
+    knownFacts: [],
     faqItems: [{ id: "11111111-1111-4111-8111-111111111111", question: "Q", answer }],
     priceItems: [],
     policy: {
