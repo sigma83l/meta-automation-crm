@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { DashboardOverview } from "@/src/modules/workspaces/ui/dashboard-overview";
 import { loadWorkspaceOverview } from "@/src/modules/workspaces/server/overview-read-model";
+import { resolvePlatformAdmin } from "@/src/modules/platform-admin/server/runtime";
 import { resolveTrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,13 @@ export default async function DashboardPage() {
   const { data } = await client.from("onboarding_states").select("auth_completed_at").maybeSingle();
   if (!data?.auth_completed_at) redirect("/onboarding");
   const workspace = await resolveTrustedWorkspace(client);
+  // Whether to show the door to the platform console. Not authority — every
+  // route under /admin resolves staff identity for itself — just visibility, so
+  // staff do not have to remember a URL that is deliberately unlinked elsewhere.
+  const platformStaff = await resolvePlatformAdmin(client).then(
+    () => true,
+    () => false
+  );
   // The overview counts come from one view rather than from counts assembled
   // here, so the definition of "awaiting human" lives in a single place that
   // the migration tests exercise. The totals below it stay as counts: they are
@@ -49,6 +57,7 @@ export default async function DashboardPage() {
   };
   return (
     <DashboardOverview
+      platformStaff={platformStaff}
       workspaceName={workspace.name}
       overview={overview}
       metrics={{

@@ -7,9 +7,12 @@ import { WorkspaceShell } from "./workspace-shell";
 export function DashboardOverview({
   workspaceName,
   overview,
-  metrics
+  metrics,
+  platformStaff = false
 }: {
   workspaceName: string;
+  /** Passed straight through to the shell; see WorkspaceShell. */
+  platformStaff?: boolean;
   /** Null when the read model could not be read. Not the same as all zeroes. */
   overview: WorkspaceOverview | null;
   metrics: {
@@ -41,7 +44,7 @@ export function DashboardOverview({
     ]
   ];
   return (
-    <WorkspaceShell active="overview" workspaceName={workspaceName}>
+    <WorkspaceShell active="overview" workspaceName={workspaceName} platformStaff={platformStaff}>
       <div className="content">
         <section className="control-brief">
           <div className="brief-copy">

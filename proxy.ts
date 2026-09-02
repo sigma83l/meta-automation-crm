@@ -9,7 +9,13 @@ const protectedPrefixes = [
   "/crm",
   "/inbox",
   "/settings",
-  "/connections"
+  "/connections",
+  // The console fails closed twice over: this redirects an anonymous visitor to
+  // the sign-in page, and every route under it then resolves staff identity
+  // through `current_platform_admin()` before rendering anything. Middleware
+  // knows only that somebody is signed in — it deliberately does not try to
+  // decide who is staff, since that answer belongs to the database.
+  "/admin"
 ];
 
 export async function proxy(request: NextRequest) {

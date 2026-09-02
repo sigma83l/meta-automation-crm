@@ -3320,3 +3320,131 @@ main {
 .legal-doc a {
   color: var(--blue);
 }
+
+/* Platform administration console.
+   Semantic tokens throughout, and no palette of its own. A console that
+   recoloured itself to announce "this is the admin area" would be exactly the
+   route-specific authorization colour the UI rules forbid — and it would also
+   be the weakest possible signal, since colour is the first thing a screenshot,
+   a colour-blind reader or a forced-colours mode loses. What distinguishes this
+   area is what it says: the rail names the scope, and the banner names the
+   customer. */
+
+.admin-scope-card strong {
+  unicode-bidi: isolate;
+}
+
+.admin-safety .status-light {
+  background: var(--amber);
+}
+
+.admin-exit {
+  margin-top: auto;
+}
+
+/* Not dismissible, and it holds its place in the flow rather than floating, so
+   the content below it never sits where the banner used to be. */
+.admin-impersonation-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+.admin-impersonation-banner strong {
+  font-weight: 800;
+}
+
+.admin-impersonation-banner span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.admin-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 8px;
+}
+
+.admin-action input,
+.admin-action select {
+  min-height: 40px;
+  padding-inline: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+/* The reason box earns the remaining width: it is the field people actually
+   type into, and the numeric and select fields beside it are a few characters
+   wide at most. */
+.admin-action > input:last-of-type {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.admin-action-field {
+  display: inline-flex;
+}
+
+.admin-action-field input[type="number"] {
+  width: 6rem;
+}
+
+.admin-action-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.admin-grant-form .admin-action {
+  align-items: flex-start;
+}
+
+/* The destructive variant. Reads as a warning in both themes because both
+   `--danger` and `--surface` are redefined for dark, and it never relies on
+   colour alone: these buttons all carry a confirm step and a written label. */
+.btn-danger {
+  border-color: var(--danger);
+  background: var(--surface);
+  color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.status-pill-warning {
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .status-pill-warning {
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+.admin-shell .analytics-table small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Every wide table in the console scrolls inside its own panel rather than
+   pushing the page sideways. */
+.admin-shell .crm-table-panel {
+  overflow-x: auto;
+}
