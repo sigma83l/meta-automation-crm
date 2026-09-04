@@ -1313,7 +1313,7 @@ export class SupabaseCrmRepository implements CrmRepository {
     const scans = filter ? MAX_RADAR_SCANS : 1;
 
     for (let scan = 0; scan < scans; scan += 1) {
-      const raw = await this.readRadarRows(query, cursor, limit + 1);
+      const raw = await this.readRadarRows(query, cursor, limit + 1, now);
       const more = raw.length > limit;
       const batch = raw.slice(0, limit).map((row) => toRadarRow(row, now));
       if (batch.length === 0) return { rows: kept, nextCursor: null };
@@ -1340,7 +1340,8 @@ export class SupabaseCrmRepository implements CrmRepository {
   private async readRadarRows(
     query: RadarQuery,
     cursor: RadarCursor | null,
-    size: number
+    size: number,
+    now: Date
   ): Promise<Record<string, unknown>[]> {
     let request = this.client
       .from("crm_radar_view")
@@ -1356,7 +1357,12 @@ export class SupabaseCrmRepository implements CrmRepository {
     if (query.lifecycleStage) request = request.eq("lifecycle_stage", query.lifecycleStage);
     if (query.leadStatus) request = request.eq("lead_status", query.leadStatus);
     if (query.activeWithinDays) {
-      const since = new Date(Date.now() - query.activeWithinDays * 86_400_000);
+      // The caller's clock, not this process's. `radar` already ranks every row
+      // against `now`, and a read that filtered by a second, later clock would
+      // answer a different question than the one it ranked - a row inside the
+      // window the verdict used, dropped before ranking, for no reason anything
+      // reports.
+      const since = new Date(now.getTime() - query.activeWithinDays * 86_400_000);
       request = request.gte("last_activity_at", since.toISOString());
     }
     if (query.query) {
