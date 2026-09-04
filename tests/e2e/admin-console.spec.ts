@@ -41,24 +41,6 @@ async function grantStaff(db: Awaited<ReturnType<typeof signUp>>["db"], userId: 
 }
 
 /**
- * Marks setup finished, which the product cannot currently do from the wizard.
- *
- * `/dashboard` redirects to `/onboarding` until `auth_completed_at` is set, and
- * the only thing that sets it is Enter Sandbox on the final stage. Save and exit
- * saves and then navigates to `/dashboard`, which bounces straight back - so
- * there is no way out of setup short of finishing all eight steps. That is a
- * product bug, filed separately; walking eight stages here would be testing the
- * wizard rather than the console.
- */
-async function finishSetup(db: Awaited<ReturnType<typeof signUp>>["db"], userId: string) {
-  const { error } = await db
-    .from("onboarding_states")
-    .update({ auth_completed_at: new Date().toISOString() })
-    .eq("user_id", userId);
-  expect(error).toBeNull();
-}
-
-/**
  * Every heading's inline start, and the same edge on the first row's cells.
  *
  * Selects any table on the page rather than one carrying a particular class.
@@ -140,8 +122,11 @@ test("the tables hold their columns in Persian, right to left", async ({ page })
 test("the staff link appears in the workspace bar, and leads to the console", async ({ page }) => {
   const { db, userId } = await signUp(page, "console-door");
   await grantStaff(db, userId);
-  await finishSetup(db, userId);
 
+  // No service-role write to get here. `signUp` leaves setup through Save and
+  // exit, which now opens the account gate, so this session reaches
+  // `/dashboard` the way a real owner does - which also means this assertion
+  // would fail if that regressed.
   await page.goto("/dashboard");
   // Visibility, not authority - every route under /admin resolves staff
   // identity for itself. Without it staff have to remember an unlinked URL.

@@ -59,26 +59,23 @@ export async function signUp(page: Page, label: string): Promise<Owner> {
   }
   // The same race again, one page later, and it fails differently: leaving
   // onboarding before hydration performs a native submit that lands back on
-  // /onboarding, and the next `goto` then aborts against a navigation already
-  // in flight. Waiting for the URL to actually leave is what makes the step
-  // finished rather than started.
+  // /onboarding, so the click is retried until the URL actually leaves.
+  //
+  // What is no longer here is a second wait for the bounce to settle. Save and
+  // exit used to land on /dashboard and be redirected straight back, because
+  // nothing but the eighth stage opened the account gate; the helper had to
+  // wait out the round trip or have its next `goto` aborted mid-navigation.
+  // The button now opens the gate it always claimed to, so leaving is one
+  // navigation and waiting for it to finish is the whole story.
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     await page.getByRole("button", { name: "Save and exit" }).click();
     try {
-      await page.waitForURL((url) => !url.pathname.startsWith("/onboarding"), {
-        timeout: 15_000
-      });
+      await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
       break;
     } catch (error) {
       if (attempt === 3) throw error;
     }
   }
-  // Settled, not merely started. Save and exit navigates to /dashboard, which
-  // redirects back to /onboarding while setup is unfinished - so the URL leaves
-  // and returns, and a caller that navigates the moment it leaves has its own
-  // navigation interrupted by the bounce. Waiting for the round trip to finish
-  // is what makes the next `goto` the only navigation in flight.
-  await page.waitForLoadState("networkidle").catch(() => undefined);
 
   const db = admin();
   const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });

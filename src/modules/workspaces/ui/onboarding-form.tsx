@@ -167,7 +167,37 @@ export function OnboardingForm({
     return true;
   }
 
-  async function enterSandbox() {
+  /**
+   * Saves, opens the account gate, and leaves for the dashboard.
+   *
+   * Both footer actions that leave this screen go through here, because both
+   * have to do the same three things and only one of them used to.
+   *
+   * ## Why leaving has to open the gate
+   *
+   * `/dashboard` redirects to `/onboarding` while `onboarding_states`
+   * .auth_completed_at is null, and the only thing that set it was Enter
+   * Sandbox on the eighth stage. So Save and exit saved, navigated to
+   * `/dashboard`, and was bounced straight back to the stage it came from:
+   * there was no way out of setup short of walking all eight steps, and the
+   * button named itself after something it could not do. `signUp` in
+   * `tests/e2e/support/workspace.ts` carried a retry loop and a networkidle
+   * wait to survive that bounce, and `/admin`'s spec had to write
+   * `auth_completed_at` through the service role because the product could
+   * not.
+   *
+   * The gate is not "all eight stages are done" - the function behind it is
+   * `complete_auth_onboarding` and the step it records is `auth-complete`. It
+   * means the account is set up enough to use the application, which is
+   * exactly what somebody pressing Save and exit is asserting. Nothing is lost
+   * by honouring it: `current_step`, `completed_steps`, `skipped_steps` and
+   * `stage_data` are all untouched, `/onboarding` has no redirect of its own
+   * and rehydrates from that state, and the dashboard already carries the
+   * Launch checklist marked Resumable. Every stage is skippable too, so a
+   * person could always reach the dashboard with nothing configured - the old
+   * behaviour did not protect the setup, it just made one button lie.
+   */
+  async function saveAndLeave() {
     // Every failure here used to be silent: a rejected save was ignored, a
     // failed completion produced no message, and a thrown request left the
     // button looking inert. The user saw a click that did nothing.
@@ -184,16 +214,6 @@ export function OnboardingForm({
       // A full navigation rather than router.push: finishing onboarding
       // changes what every server component renders, and a client-side push
       // can serve a cached RSC payload that still shows the setup state.
-      window.location.assign("/dashboard");
-    } catch {
-      setStatus(t("system.errorDetail"));
-    }
-  }
-
-  /** Leaves the setup without marking it complete; the rail keeps the place. */
-  async function saveAndExit() {
-    try {
-      if (!(await save("save"))) return;
       window.location.assign("/dashboard");
     } catch {
       setStatus(t("system.errorDetail"));
@@ -463,7 +483,7 @@ export function OnboardingForm({
           <button
             type="button"
             className="button-muted action-exit"
-            onClick={() => void saveAndExit()}
+            onClick={() => void saveAndLeave()}
           >
             {t("common.exit")}
           </button>
@@ -471,7 +491,7 @@ export function OnboardingForm({
             type="button"
             className="action-continue"
             onClick={() =>
-              void (index === stages.length - 1 ? enterSandbox() : save("complete", true))
+              void (index === stages.length - 1 ? saveAndLeave() : save("complete", true))
             }
           >
             {index === stages.length - 1 ? t("onboarding.enter") : t("common.next")}
