@@ -3178,6 +3178,183 @@ main {
   cursor: not-allowed;
 }
 
+.btn-primary {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--brand-700);
+  background: var(--brand-700);
+}
+
+.btn-ghost {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Whole-screen system surfaces: waiting, 404, and the error boundary.    */
+/*                                                                        */
+/* These three render in place of the page, and the workspace shell        */
+/* belongs to the page rather than to a layout - so none of them can       */
+/* borrow the rail or the topbar. They own the viewport instead.           */
+/* ---------------------------------------------------------------------- */
+
+.brand-splash {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(20px, 5vw, 48px);
+  background: var(--canvas);
+}
+
+.brand-splash-inner {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.brand-splash-inner strong {
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-splash-inner span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.brand-spinner {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 104px;
+  block-size: 104px;
+  margin-block-end: 24px;
+}
+
+/* The track and the arc are two rings on the same box: only the arc turns,
+   so the circle stays legible at every frame instead of blinking in and out. */
+.brand-spinner::before,
+.brand-spinner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.brand-spinner::before {
+  border-color: var(--line);
+}
+
+.brand-spinner::after {
+  border-block-start-color: var(--blue);
+  border-inline-end-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  animation: brand-spin 900ms linear infinite;
+}
+
+.brand-spinner-mark {
+  inline-size: 52px;
+  block-size: auto;
+}
+
+@keyframes brand-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The global reduce rule stops the rotation, which would leave the arc
+     parked at an arbitrary angle and reading as a spinner that has hung.
+     Closing the ring makes the still frame deliberate. */
+  .brand-spinner::after {
+    border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+  }
+}
+
+.system-notice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  inline-size: min(100%, 460px);
+  padding: clamp(24px, 4vw, 34px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.system-notice .brand-lockup {
+  margin-block-end: 14px;
+  padding: 0;
+}
+
+.system-notice-code {
+  margin: 0;
+  color: var(--tertiary);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.system-notice h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.system-notice-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.system-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block-start: 8px;
+}
+
+/* The error boundary is the one of the three that reports a fault, so it is
+   the only one that carries the accent the product uses to say so. */
+.system-notice-alert {
+  border-inline-start: 4px solid var(--amber);
+}
+
+/* The subscription gate. A settings card that holds three short things, so it
+   sizes to them: without this the CTA is a grid item stretched edge to edge,
+   which reads as a banner rather than as the one action on offer. */
+.entitlement-block {
+  gap: 10px;
+  max-inline-size: 560px;
+}
+
+.entitlement-block p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.entitlement-block .btn {
+  justify-self: start;
+  margin-block-start: 6px;
+}
+
 /* Status / feedback banner */
 
 .status-banner {

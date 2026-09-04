@@ -47,7 +47,7 @@ export function EntitlementBlocked({
   status: SubscriptionStatus;
 }) {
   return (
-    <section className="settings-card" role="status">
+    <section className="settings-card entitlement-block" role="status">
       <h2>{localized(locale, "Subscription required", "Abonelik gerekli", "اشتراک لازم است")}</h2>
       <p>{statusCopy(locale, status)}</p>
       <Link href="/settings/billing" className="btn btn-primary">

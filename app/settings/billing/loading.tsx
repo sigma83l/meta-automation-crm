@@ -1,14 +1,7 @@
-import { EmptyState } from "@/src/components/ui/empty-state";
+import { BrandLoading } from "@/src/components/ui/brand-loading";
+import { getRequestPreferences } from "@/src/lib/i18n/server";
 
-export default function BillingSettingsLoading() {
-  return (
-    <main className="content" aria-busy="true">
-      <section className="panel">
-        <EmptyState
-          title="Loading billing…"
-          description="Reading subscription and payment method status."
-        />
-      </section>
-    </main>
-  );
+export default async function BillingSettingsLoading() {
+  const { t } = await getRequestPreferences();
+  return <BrandLoading label={t("common.loading")} detail={t("nav.billing")} />;
 }
