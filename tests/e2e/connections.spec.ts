@@ -12,6 +12,14 @@ test("connects isolated WhatsApp and Instagram sandbox assets with live warning"
   await page.goto("/connections");
   await expect(page.getByText("LIVE_MULTI_BUSINESS_BLOCKED_BY_META")).toBeVisible();
   await expect(page.getByText(/Sandbox is complete and sends nothing/)).toBeVisible();
+  // The warning states a policy code with no break opportunity in it, and a
+  // word the page cannot break sets a floor under how narrow the page may be.
+  // Past the device width Chrome does not overflow, it zooms the whole page out
+  // and widens the layout viewport to match - so the usual
+  // `scrollWidth <= innerWidth` check stays true while every control on the
+  // page is drawn 7% off from where the browser accepts a tap. Asserting the
+  // layout viewport is still the device width is what catches that.
+  expect(await page.evaluate(() => window.innerWidth)).toBe(page.viewportSize()?.width);
   await page.getByRole("button", { name: "Connect sandbox" }).first().click();
   await expect(page.getByText("WhatsApp Sandbox")).toBeVisible();
   // Connecting refreshes the panel, which replaces both cards. Waiting for the
@@ -22,10 +30,8 @@ test("connects isolated WhatsApp and Instagram sandbox assets with live warning"
   // actions are the signal that the refresh has settled.
   await expect(page.getByRole("button", { name: "Check health" })).toBeVisible();
   // Scoped to the card it belongs to, rather than "whichever Connect sandbox
-  // is left". At 443px the cards stack, so the surviving button sits low in the
-  // viewport and Playwright scrolls before clicking; an unscoped locator
-  // resolves once and then clicks a coordinate the re-render has moved, which
-  // is reported as a pointer interception rather than as a stale locator.
+  // is left", so the assertion below is about Instagram and not about whichever
+  // card happens to be second.
   const instagram = page.locator("article.connection-card", {
     has: page.getByText("instagram", { exact: true })
   });

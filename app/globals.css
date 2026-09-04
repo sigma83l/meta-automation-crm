@@ -2014,6 +2014,11 @@ main {
   padding: 14px;
   color: var(--ink);
   line-height: 1.55;
+  /* These boxes carry machine policy codes - LIVE_MULTI_BUSINESS_BLOCKED_BY_META
+     is 35 characters with no break opportunity in it. `anywhere` rather than
+     `break-word` because only `anywhere` lowers the element's min-content width,
+     and it is the min-content width that decides how narrow the page may be. */
+  overflow-wrap: anywhere;
 }
 .credential-row {
   display: flex;
