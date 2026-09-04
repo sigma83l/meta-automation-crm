@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 import { isFeatureEnabled } from "@/src/modules/features/server/gate";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
@@ -8,10 +10,29 @@ import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  const [{ client, workspace }, { locale, t }] = await Promise.all([
-    createMetaRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
+  // Every other paid route catches this; analytics was the one that did not,
+  // so a lapsed subscription reached the generic error boundary and was
+  // reported as "the workspace view could not be loaded - retry after checking
+  // the connection". Nothing about that is true: the connection is fine, and
+  // retrying cannot resolve it. The workspace and status ride along on the
+  // error precisely so the page can say what actually happened.
+  let client: Awaited<ReturnType<typeof createMetaRuntime>>["client"];
+  let workspace: Awaited<ReturnType<typeof createMetaRuntime>>["workspace"];
+  try {
+    ({ client, workspace } = await createMetaRuntime());
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="analytics" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
 
   // Checked before the six counts run, not after. A page that gathers the
   // numbers and then declines to render them has already done the work and
