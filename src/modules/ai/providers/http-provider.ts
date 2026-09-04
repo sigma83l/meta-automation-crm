@@ -64,6 +64,17 @@ export type HttpAiProviderOptions = Readonly<{
   timeoutMs: number;
   /** Injected so tests exercise the real parsing without a network. */
   fetcher?: typeof fetch;
+  /**
+   * Replaces the built system prompt for the reply call only.
+   *
+   * Exists for the local prompt lab, which has to be able to try a wording
+   * against the real transport, the real schema and the real citation filter -
+   * a prompt validated anywhere else has not been validated. Nothing in the
+   * product sets it: the turn runtime passes it only when a developer typed
+   * one, and classification keeps its own prompt either way, since the two
+   * answer different questions.
+   */
+  systemPromptOverride?: string;
 }>;
 
 /**
@@ -229,7 +240,10 @@ export function createHttpAiProvider(options: HttpAiProviderOptions): AiProvider
     },
 
     async generateStructuredReply(input: AiReplyInput): Promise<Result<StructuredReply>> {
-      const called = await call(buildSystemPrompt(input), buildUserPrompt(input));
+      const called = await call(
+        options.systemPromptOverride ?? buildSystemPrompt(input),
+        buildUserPrompt(input)
+      );
       if (!called.ok) return called;
 
       usage = dialect.extractUsage(called.value, model);

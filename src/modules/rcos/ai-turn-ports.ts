@@ -103,7 +103,14 @@ export function formatApprovedAmount(amountMinor: number, currency: string): str
   return `${(amountMinor / 100).toFixed(2)} ${currency}`;
 }
 
-function replyInput(event: TurnEvent, context: TurnContext): AiReplyInput {
+/**
+ * The exact input one turn hands a model.
+ *
+ * Exported because the prompt lab has to build the same value the ports build.
+ * A second mapping would drift, and the first symptom would be a lab that
+ * disagrees with production about what the model was told.
+ */
+export function buildReplyInput(event: TurnEvent, context: TurnContext): AiReplyInput {
   return {
     workspaceId: event.workspaceId,
     conversationId: event.conversationId,
@@ -178,7 +185,7 @@ export function createAiTurnPorts(
         return UNCERTAIN;
       }
 
-      const classified = await provider.value.classifyTurn(replyInput(event, context));
+      const classified = await provider.value.classifyTurn(buildReplyInput(event, context));
       dependencies.onCall?.({
         role: "utility",
         model: model.value,
@@ -279,7 +286,9 @@ export function createAiTurnPorts(
         return { text: "", citedRefs: [], claimsCompletion: false };
       }
 
-      const generated = await provider.value.generateStructuredReply(replyInput(event, context));
+      const generated = await provider.value.generateStructuredReply(
+        buildReplyInput(event, context)
+      );
       dependencies.onCall?.({
         role,
         model: model.value,

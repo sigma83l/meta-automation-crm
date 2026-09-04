@@ -50,7 +50,7 @@ const TRANSCRIPT_ROWS = MAX_RECENT_TURN_PAIRS * 2;
  */
 const MEMORY_ROWS = 24;
 
-type ProfileRow = Readonly<{
+export type ProfileRow = Readonly<{
   primary_language: string;
   fallback_language: string;
   forbidden_claims: string[] | null;
@@ -80,10 +80,16 @@ type RoleProviders = Readonly<{
  * A role with no configured model gets no provider, which is the same absence
  * `resolveModel` reports, reached from the other side. Both lead to a handoff.
  */
-async function providersForWorkspace(
+/**
+ * Exported for the prompt lab, which needs the same provider a turn would get -
+ * platform key or the workspace's own BYOK credential, per role - rather than
+ * one built from the environment and assumed to match.
+ */
+export async function providersForWorkspace(
   admin: SupabaseClient,
   workspaceId: string,
-  mode: AiMode
+  mode: AiMode,
+  overrides?: TurnRuntimeOverrides
 ): Promise<RoleProviders> {
   const env = getServerEnvironment();
 
@@ -138,6 +144,9 @@ async function providersForWorkspace(
   }
 
   const forModel = (model: string): AiProvider | undefined => {
+    const promptOverride = overrides?.systemPrompt
+      ? { systemPromptOverride: overrides.systemPrompt }
+      : {};
     const set: Partial<AiProviderSet> = {
       ...(platformKey
         ? {
@@ -145,7 +154,8 @@ async function providersForWorkspace(
               dialect: DIALECTS[env.platformAiProvider],
               apiKey: platformKey,
               model,
-              timeoutMs: env.aiProviderTimeoutMs
+              timeoutMs: env.aiProviderTimeoutMs,
+              ...promptOverride
             })
           }
         : {}),
@@ -155,7 +165,8 @@ async function providersForWorkspace(
               dialect: DIALECTS[byok.provider],
               apiKey: byok.apiKey,
               model,
-              timeoutMs: env.aiProviderTimeoutMs
+              timeoutMs: env.aiProviderTimeoutMs,
+              ...promptOverride
             })
           }
         : {})
@@ -164,9 +175,10 @@ async function providersForWorkspace(
     return selected.ok ? selected.value : undefined;
   };
 
-  const utility = env.aiModels.utility ? forModel(env.aiModels.utility) : undefined;
-  const primary = env.aiModels.primary ? forModel(env.aiModels.primary) : undefined;
-  const escalation = env.aiModels.escalation ? forModel(env.aiModels.escalation) : undefined;
+  const models = { ...env.aiModels, ...overrides?.models };
+  const utility = models.utility ? forModel(models.utility) : undefined;
+  const primary = models.primary ? forModel(models.primary) : undefined;
+  const escalation = models.escalation ? forModel(models.escalation) : undefined;
 
   return {
     ...(utility ? { utility } : {}),
@@ -183,7 +195,7 @@ async function providersForWorkspace(
  * cited and approved. The transcript is bounded by the context budget's own
  * limit rather than an arbitrary number.
  */
-async function loadTurnContext(
+export async function loadTurnContext(
   admin: SupabaseClient,
   event: TurnEvent,
   profile: ProfileRow,
@@ -290,6 +302,30 @@ async function loadTurnContext(
 export type TurnRuntime = Readonly<{ ports: TurnPorts }>;
 
 /**
+ * Opt-in seams for the local prompt lab. Nothing in the product passes these.
+ *
+ * They exist so a developer can try a model, a prompt, a policy or a different
+ * set of approved knowledge against the real engine rather than against a copy
+ * of it. A copy is the thing to avoid here: the value of running a turn in a
+ * lab is entirely that it is the same turn, so the alternative - a second
+ * wiring that assembles the same ports slightly differently - would answer a
+ * question nobody asked.
+ *
+ * `context` receives what the workspace actually has and returns what this run
+ * should use, so an override is always visibly a departure from the real
+ * configuration rather than a value with no origin.
+ */
+export type TurnRuntimeOverrides = Readonly<{
+  models?: Readonly<{ utility?: string; primary?: string; escalation?: string }>;
+  systemPrompt?: string;
+  context?(loaded: TurnContext): TurnContext;
+  /** Every model call this turn made, in order. */
+  onCall?(record: ModelCallRecord): void;
+  /** The composed reply, which is otherwise only persisted when it is sent. */
+  onDraft?(reply: Readonly<{ text: string; citedRefs: readonly string[] }>): void;
+}>;
+
+/**
  * Everything `runTurn` needs for one event, or nothing.
  *
  * Returns undefined only when the workspace has no business profile — meaning
@@ -300,7 +336,8 @@ export type TurnRuntime = Readonly<{ ports: TurnPorts }>;
 export async function createTurnRuntime(
   admin: SupabaseClient,
   event: TurnEvent,
-  subject: TurnSubject
+  subject: TurnSubject,
+  overrides?: TurnRuntimeOverrides
 ): Promise<TurnRuntime | undefined> {
   const env = getServerEnvironment();
   const { data: profileRow } = await admin
@@ -320,17 +357,23 @@ export async function createTurnRuntime(
   // escalation keywords and composed against another.
   let context: Promise<TurnContext> | undefined;
   const contextFor = (turn: TurnEvent) => {
-    context ??= loadTurnContext(admin, turn, profile, subject.customerId);
+    context ??= loadTurnContext(admin, turn, profile, subject.customerId).then((loaded) =>
+      overrides?.context ? overrides.context(loaded) : loaded
+    );
     return context;
   };
 
-  const providers = await providersForWorkspace(admin, event.workspaceId, mode);
+  const providers = await providersForWorkspace(admin, event.workspaceId, mode, overrides);
   const drafts = createDraftRegistry();
   // Collected per turn and handed to observe(). Without this an empty draft is
   // reported identically whether no model was configured, the provider refused
   // the key, or the model answered and asked for a person - three causes with
   // three different owners, arriving as one reason code.
   const calls: ModelCallRecord[] = [];
+  const recordCall = (record: ModelCallRecord) => {
+    calls.push(record);
+    overrides?.onCall?.(record);
+  };
 
   const aiPorts = createAiTurnPorts({
     // Possibly empty. No provider at all is a legitimate state — an
@@ -339,7 +382,7 @@ export async function createTurnRuntime(
     providers,
     models: env.aiModels,
     loadContext: contextFor,
-    onCall: (record) => void calls.push(record)
+    onCall: recordCall
   });
 
   const decisionContext = async (turn: TurnEvent): Promise<DecisionContext> => {
@@ -375,6 +418,7 @@ export async function createTurnRuntime(
         // engine does not pass it, so this is where the draft is captured.
         const reply = await aiPorts.compose(turn, decision);
         drafts.record(turn.eventId, reply);
+        overrides?.onDraft?.(reply);
         return reply;
       }
     }
