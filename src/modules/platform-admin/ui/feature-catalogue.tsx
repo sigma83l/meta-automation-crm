@@ -59,7 +59,7 @@ export function FeatureCatalogue({
             )}
           </p>
           <div className="crm-table-panel">
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("Feature", "Özellik", "قابلیت")}</th>
@@ -76,7 +76,9 @@ export function FeatureCatalogue({
                     <td>
                       <strong>{entry.displayName}</strong>
                       <small>{entry.description}</small>
-                      <small dir="ltr">{entry.key}</small>
+                      <small className="admin-key" dir="ltr">
+                        {entry.key}
+                      </small>
                     </td>
                     <td>
                       {entry.defaultEnabled
@@ -87,7 +89,7 @@ export function FeatureCatalogue({
                       const explicit = plan.defaults[entry.key];
                       const enabled = explicit ?? entry.defaultEnabled;
                       return (
-                        <td key={plan.id}>
+                        <td className="admin-plan-cell" key={plan.id}>
                           <span
                             className={enabled ? "status-pill" : "status-pill status-pill-warning"}
                           >
@@ -121,7 +123,9 @@ export function FeatureCatalogue({
                         </td>
                       );
                     })}
-                    <td>{overrideCounts[entry.key] ?? 0}</td>
+                    <td>
+                      <span className="admin-num">{overrideCounts[entry.key] ?? 0}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

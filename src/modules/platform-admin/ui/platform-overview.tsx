@@ -75,7 +75,7 @@ export function PlatformOverviewPanel({
           <div className="panel-heading">
             <h2>{text("Inventory", "Envanter", "فهرست")}</h2>
           </div>
-          <div className="metric-grid">
+          <div className="metric-grid admin-inventory">
             <div className="summary-card">
               <span className="eyebrow">
                 {text("Workspaces", "Çalışma alanları", "فضاهای کاری")}
@@ -94,13 +94,30 @@ export function PlatformOverviewPanel({
                 {count(overview?.users.disabled)} {text("suspended", "askıda", "معلق")}
               </small>
             </div>
-            {Object.entries(overview?.subscriptions ?? {}).map(([status, total]) => (
-              <div className="summary-card" key={status}>
-                <span className="eyebrow">{text("Subscriptions", "Abonelikler", "اشتراک‌ها")}</span>
-                <strong>{total}</strong>
-                <small dir="ltr">{status}</small>
-              </div>
-            ))}
+            {/*
+              One card, not one per status. Mapping the status map straight to
+              cards produced a row of tiles all captioned "Subscriptions", each
+              holding a different number and a raw status word underneath — so
+              the caption identified none of them and the reader had to compare
+              the small print to tell what they were counting. The total is the
+              figure that belongs beside Workspaces and People; the split goes
+              underneath, in the same place the other two cards put theirs.
+            */}
+            <div className="summary-card">
+              <span className="eyebrow">{text("Subscriptions", "Abonelikler", "اشتراک‌ها")}</span>
+              <strong>
+                {overview
+                  ? String(
+                      Object.values(overview.subscriptions).reduce((sum, total) => sum + total, 0)
+                    )
+                  : "—"}
+              </strong>
+              <small dir="ltr">
+                {Object.entries(overview?.subscriptions ?? {})
+                  .map(([status, total]) => `${total} ${status}`)
+                  .join(" · ") || "—"}
+              </small>
+            </div>
           </div>
         </section>
 
@@ -121,7 +138,10 @@ export function PlatformOverviewPanel({
                   <strong>{grant.workspaceName}</strong>
                   <span>{grant.reason}</span>
                   <small>
-                    {text("until", "bitiş", "تا")} {new Date(grant.expiresAt).toLocaleTimeString()}
+                    {text("until", "bitiş", "تا")}{" "}
+                    <time dateTime={grant.expiresAt}>
+                      {new Date(grant.expiresAt).toLocaleTimeString()}
+                    </time>
                   </small>
                 </li>
               ))}

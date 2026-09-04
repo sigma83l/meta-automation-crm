@@ -20,11 +20,17 @@ export function AuditLog({
   role,
   events,
   grants,
+  workspaceNames,
   renderedAt
 }: {
   role: PlatformAdminRole;
   events: readonly PlatformAuditRow[];
   grants: readonly ImpersonationGrant[];
+  /**
+   * Names for the workspaces the ledger references, resolved at read time.
+   * An id absent from this map belongs to a workspace that no longer exists.
+   */
+  workspaceNames: Readonly<Record<string, string>>;
   /**
    * The instant the server rendered this, against which a window counts as
    * still open. Passed in rather than read here so the answer is fixed for the
@@ -39,7 +45,7 @@ export function AuditLog({
   return (
     <AdminShell active="audit" role={role}>
       <div className="content">
-        <section className="panel">
+        <section className="panel crm-table-panel">
           <div className="panel-heading">
             <h2>{text("Customer views", "Müşteri görüntülemeleri", "مشاهده‌های مشتری")}</h2>
           </div>
@@ -48,7 +54,7 @@ export function AuditLog({
               <strong>{text("Nobody has opened one", "Kimse açmadı", "کسی بازش نکرده است")}</strong>
             </div>
           ) : (
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
@@ -68,7 +74,11 @@ export function AuditLog({
                         </Link>
                       </td>
                       <td>{grant.reason}</td>
-                      <td>{new Date(grant.createdAt).toLocaleString()}</td>
+                      <td>
+                        <time dateTime={grant.createdAt}>
+                          {new Date(grant.createdAt).toLocaleString()}
+                        </time>
+                      </td>
                       <td>
                         <span className={live ? "status-pill status-pill-warning" : "status-pill"}>
                           {live
@@ -97,7 +107,7 @@ export function AuditLog({
               </strong>
             </div>
           ) : (
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("When", "Zaman", "زمان")}</th>
@@ -109,15 +119,28 @@ export function AuditLog({
               <tbody>
                 {events.map((event) => (
                   <tr key={event.id}>
-                    <td>{new Date(event.occurredAt).toLocaleString()}</td>
                     <td>
-                      <strong dir="ltr">{event.action}</strong>
+                      <time dateTime={event.occurredAt}>
+                        {new Date(event.occurredAt).toLocaleString()}
+                      </time>
+                    </td>
+                    <td>
+                      <strong className="admin-key" dir="ltr">
+                        {event.action}
+                      </strong>
                       <small dir="ltr">{event.actorRole}</small>
                     </td>
                     <td>
                       {event.targetWorkspaceId ? (
                         <Link href={`/admin/workspaces/${event.targetWorkspaceId}`}>
-                          {text("Workspace", "Çalışma alanı", "فضای کاری")}
+                          {/*
+                            The workspace's name, or — when it has since been
+                            deleted — a short form of the reference the ledger
+                            actually holds. Both beat the word "Workspace",
+                            which every row used to say.
+                          */}
+                          {workspaceNames[event.targetWorkspaceId] ??
+                            `${event.targetWorkspaceId.slice(0, 8)}…`}
                         </Link>
                       ) : (
                         "—"

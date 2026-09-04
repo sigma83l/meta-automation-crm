@@ -40,6 +40,7 @@ export function WorkspaceDetailPanel({
     <AdminShell
       active="workspaces"
       role={role}
+      title={workspace.name}
       impersonating={grant ? { workspaceName: workspace.name, expiresAt: grant.expiresAt } : null}
     >
       <div className="content">
@@ -160,64 +161,66 @@ export function WorkspaceDetailPanel({
                 "هر فضای کاری فقط یک دوره آزمایشی دارد. تمدید مهلت همان دوره را جابه‌جا می‌کند و دوره دوم نمی‌دهد."
               )}
             </p>
-            <ReasonAction
-              endpoint="billing"
-              body={{ action: "extend_trial", workspaceId: workspace.id }}
-              label={text("Extend trial", "Denemeyi uzat", "تمدید دوره آزمایشی")}
-              fields={[
-                {
-                  key: "days",
-                  kind: "number",
-                  label: text("Days", "Gün", "روز"),
-                  defaultValue: "7",
-                  min: 1,
-                  max: 90
-                }
-              ]}
-            />
-            <ReasonAction
-              endpoint="billing"
-              body={{ action: "set_status", workspaceId: workspace.id }}
-              label={text("Set status", "Durumu ayarla", "تنظیم وضعیت")}
-              fields={[
-                {
-                  key: "status",
-                  kind: "select",
-                  label: text("Status", "Durum", "وضعیت"),
-                  defaultValue: "active",
-                  options: [
-                    { value: "active", label: "active" },
-                    { value: "past_due", label: "past_due" },
-                    { value: "suspended", label: "suspended" },
-                    { value: "canceled", label: "canceled" }
-                  ]
-                }
-              ]}
-            />
-            {plans.length > 0 ? (
+            <div className="admin-action-row">
               <ReasonAction
                 endpoint="billing"
-                body={{ action: "set_plan", workspaceId: workspace.id }}
-                label={text("Move to plan", "Plana taşı", "انتقال به طرح")}
+                body={{ action: "extend_trial", workspaceId: workspace.id }}
+                label={text("Extend trial", "Denemeyi uzat", "تمدید دوره آزمایشی")}
                 fields={[
                   {
-                    key: "planId",
-                    kind: "select",
-                    label: text("Plan", "Plan", "طرح"),
-                    defaultValue: plans[0]!.id,
-                    options: plans.map((plan) => ({ value: plan.id, label: plan.displayName }))
+                    key: "days",
+                    kind: "number",
+                    label: text("Days", "Gün", "روز"),
+                    defaultValue: "7",
+                    min: 1,
+                    max: 90
                   }
                 ]}
               />
-            ) : null}
+              <ReasonAction
+                endpoint="billing"
+                body={{ action: "set_status", workspaceId: workspace.id }}
+                label={text("Set status", "Durumu ayarla", "تنظیم وضعیت")}
+                fields={[
+                  {
+                    key: "status",
+                    kind: "select",
+                    label: text("Status", "Durum", "وضعیت"),
+                    defaultValue: "active",
+                    options: [
+                      { value: "active", label: "active" },
+                      { value: "past_due", label: "past_due" },
+                      { value: "suspended", label: "suspended" },
+                      { value: "canceled", label: "canceled" }
+                    ]
+                  }
+                ]}
+              />
+              {plans.length > 0 ? (
+                <ReasonAction
+                  endpoint="billing"
+                  body={{ action: "set_plan", workspaceId: workspace.id }}
+                  label={text("Move to plan", "Plana taşı", "انتقال به طرح")}
+                  fields={[
+                    {
+                      key: "planId",
+                      kind: "select",
+                      label: text("Plan", "Plan", "طرح"),
+                      defaultValue: plans[0]!.id,
+                      options: plans.map((plan) => ({ value: plan.id, label: plan.displayName }))
+                    }
+                  ]}
+                />
+              ) : null}
+            </div>
           </section>
         ) : null}
 
-        <section className="panel">
+        <section className="panel crm-table-panel">
           <div className="panel-heading">
             <h2>{text("Features", "Özellikler", "قابلیت‌ها")}</h2>
           </div>
-          <table className="analytics-table">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th>{text("Feature", "Özellik", "قابلیت")}</th>
@@ -245,7 +248,7 @@ export function WorkspaceDetailPanel({
                     {flag.overrideReason ? <small>{flag.overrideReason}</small> : null}
                   </td>
                   {canFeatures ? (
-                    <td>
+                    <td className="admin-actions-cell">
                       <ReasonAction
                         endpoint="features"
                         body={{
@@ -279,59 +282,72 @@ export function WorkspaceDetailPanel({
           </table>
         </section>
 
-        <section className="panel">
+        <section className="panel crm-table-panel">
           <div className="panel-heading">
             <h2>{text("People", "Kişiler", "افراد")}</h2>
           </div>
-          <table className="analytics-table">
-            <thead>
-              <tr>
-                <th>{text("Person", "Kişi", "شخص")}</th>
-                <th>{text("Role", "Rol", "نقش")}</th>
-                <th>{text("Status", "Durum", "وضعیت")}</th>
-                {canLifecycle ? <th>{text("Actions", "İşlemler", "اقدامات")}</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {detail.members.map((member) => (
-                <tr key={member.userId}>
-                  <td>
-                    <strong>{member.displayName ?? text("Unnamed", "İsimsiz", "بدون نام")}</strong>
-                    <small dir="ltr">{maskedEmails[member.userId] ?? "—"}</small>
-                  </td>
-                  <td dir="ltr">{member.role ?? "—"}</td>
-                  <td dir="ltr">{member.status}</td>
-                  {canLifecycle ? (
-                    <td>
-                      <ReasonAction
-                        endpoint="users"
-                        body={{
-                          action: "set_role",
-                          workspaceId: workspace.id,
-                          userId: member.userId
-                        }}
-                        label={text("Set role", "Rolü ayarla", "تنظیم نقش")}
-                        fields={[
-                          {
-                            key: "role",
-                            kind: "select",
-                            label: text("Role", "Rol", "نقش"),
-                            defaultValue: member.role ?? "viewer",
-                            options: [
-                              { value: "owner", label: "owner" },
-                              { value: "admin", label: "admin" },
-                              { value: "operator", label: "operator" },
-                              { value: "viewer", label: "viewer" }
-                            ]
-                          }
-                        ]}
-                      />
-                    </td>
-                  ) : null}
+          {/*
+            An empty table renders as four headings over nothing, which reads as
+            a failed query rather than as a workspace with nobody in it. Every
+            other table in the console guards this; this one did not.
+          */}
+          {detail.members.length === 0 ? (
+            <div className="empty-state">
+              <strong>{text("Nobody here yet", "Henüz kimse yok", "هنوز کسی نیست")}</strong>
+            </div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>{text("Person", "Kişi", "شخص")}</th>
+                  <th>{text("Role", "Rol", "نقش")}</th>
+                  <th>{text("Status", "Durum", "وضعیت")}</th>
+                  {canLifecycle ? <th>{text("Actions", "İşlemler", "اقدامات")}</th> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {detail.members.map((member) => (
+                  <tr key={member.userId}>
+                    <td>
+                      <strong>
+                        {member.displayName ?? text("Unnamed", "İsimsiz", "بدون نام")}
+                      </strong>
+                      <small dir="ltr">{maskedEmails[member.userId] ?? "—"}</small>
+                    </td>
+                    <td dir="ltr">{member.role ?? "—"}</td>
+                    <td dir="ltr">{member.status}</td>
+                    {canLifecycle ? (
+                      <td>
+                        <ReasonAction
+                          endpoint="users"
+                          body={{
+                            action: "set_role",
+                            workspaceId: workspace.id,
+                            userId: member.userId
+                          }}
+                          label={text("Set role", "Rolü ayarla", "تنظیم نقش")}
+                          fields={[
+                            {
+                              key: "role",
+                              kind: "select",
+                              label: text("Role", "Rol", "نقش"),
+                              defaultValue: member.role ?? "viewer",
+                              options: [
+                                { value: "owner", label: "owner" },
+                                { value: "admin", label: "admin" },
+                                { value: "operator", label: "operator" },
+                                { value: "viewer", label: "viewer" }
+                              ]
+                            }
+                          ]}
+                        />
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
 
         <section className="panel">
@@ -352,9 +368,15 @@ export function WorkspaceDetailPanel({
             <ul className="activity-list">
               {detail.recentAudit.map((event) => (
                 <li key={event.id}>
-                  <strong dir="ltr">{event.action}</strong>
+                  <strong className="admin-key" dir="ltr">
+                    {event.action}
+                  </strong>
                   <span>{String(event.safeDetails.reason ?? "")}</span>
-                  <small>{new Date(event.occurredAt).toLocaleString()}</small>
+                  <small>
+                    <time dateTime={event.occurredAt}>
+                      {new Date(event.occurredAt).toLocaleString()}
+                    </time>
+                  </small>
                 </li>
               ))}
             </ul>

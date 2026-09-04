@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { useI18n } from "@/src/lib/i18n/client";
 
@@ -34,9 +34,27 @@ export type ActionField = Readonly<{
  * is the point: an action added later cannot forget the reason box, because
  * there is no other way to post.
  *
- * `confirmLabel` arms the irreversible-feeling ones (suspension, revocation) so
- * they take two deliberate presses. Not a modal: the row stays on screen, so
- * the person can re-read which account they are about to act on.
+ * ## Why the form is closed until asked for
+ *
+ * It used to render expanded, always. That is defensible for a page holding one
+ * action and indefensible for a directory: `/admin/users` lists a hundred
+ * people, each row carried two reason boxes and two buttons, and the screen
+ * became four hundred controls and eleven thousand pixels of scroll — a wall of
+ * red destructive buttons at rest, with the columns that identify _who_ each
+ * row is squeezed into the left third. Nobody can scan that, and a control that
+ * cannot be scanned is a control that gets pressed on the wrong row.
+ *
+ * So an action is a single quiet trigger until somebody chooses it, and the
+ * reason field, the extra fields and the confirm button appear in place, in the
+ * row, where the account being acted on is still on screen. The requirement is
+ * unchanged — there is still no way to post without a reason — and the resting
+ * state is now legible.
+ *
+ * Destructive actions keep their two deliberate presses (`confirmLabel`), and
+ * the danger colour lives on the *confirm* button rather than on the trigger.
+ * A directory painting every row's trigger red spends the strongest signal the
+ * palette has on a state where nothing has happened yet; by the time the colour
+ * appears here, the person has opened the form and typed a reason.
  */
 export function ReasonAction({
   endpoint,
@@ -59,10 +77,29 @@ export function ReasonAction({
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(fields.map((field) => [field.key, field.defaultValue ?? ""]))
   );
+  const [open, setOpen] = useState(false);
   const [armed, setArmed] = useState(false);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const id = `${endpoint}-${label}`.replace(/[^a-zA-Z0-9]+/g, "-");
+  const reasonRef = useRef<HTMLInputElement | null>(null);
+  /**
+   * Unique per instance, which the old id was not.
+   *
+   * It was derived from the endpoint and the label, so every row of a directory
+   * calling the same endpoint produced the *same* id — and `htmlFor` resolves
+   * to the first match in the document, so on `/admin/users` ninety-nine of a
+   * hundred reason boxes had a label pointing at somebody else's row. The
+   * screen-reader label existed and did nothing. `useId` is stable across
+   * hydration, which a counter or a random value would not be.
+   */
+  const id = useId();
+
+  const close = () => {
+    setOpen(false);
+    setArmed(false);
+    setMessage(null);
+    setReason("");
+  };
 
   const submit = async () => {
     if (reason.trim().length < 3) {
@@ -73,6 +110,7 @@ export function ReasonAction({
           "دلیلی با حداقل ۳ نویسه بنویسید."
         )
       );
+      reasonRef.current?.focus();
       return;
     }
     if (confirmLabel && !armed) {
@@ -95,6 +133,7 @@ export function ReasonAction({
     setArmed(false);
     if (result.ok) {
       setReason("");
+      setOpen(false);
       // The server rendered this row; re-ask it rather than patching local state,
       // so what is on screen after the action is what the database actually says.
       router.refresh();
@@ -104,78 +143,101 @@ export function ReasonAction({
   };
 
   return (
-    <div className="admin-action">
-      {fields.map((field) => (
-        <span className="admin-action-field" key={field.key}>
-          <label className="sr-only" htmlFor={`${id}-${field.key}`}>
-            {field.label}
-          </label>
-          {field.kind === "select" ? (
-            <select
-              id={`${id}-${field.key}`}
-              value={values[field.key] ?? ""}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, [field.key]: event.target.value }))
-              }
-            >
-              {(field.options ?? []).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : field.kind === "number" ? (
-            <input
-              id={`${id}-${field.key}`}
-              type="number"
-              inputMode="numeric"
-              min={field.min}
-              max={field.max}
-              placeholder={field.label}
-              value={values[field.key] ?? ""}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, [field.key]: event.target.value }))
-              }
-            />
-          ) : (
-            <input
-              id={`${id}-${field.key}`}
-              type="text"
-              placeholder={field.label}
-              value={values[field.key] ?? ""}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, [field.key]: event.target.value }))
-              }
-            />
-          )}
-        </span>
-      ))}
-      <label className="sr-only" htmlFor={`${id}-reason`}>
-        {text("Reason", "Gerekçe", "دلیل")}
-      </label>
-      <input
-        id={`${id}-reason`}
-        value={reason}
-        onChange={(event) => setReason(event.target.value)}
-        placeholder={text("Reason (recorded)", "Gerekçe (kaydedilir)", "دلیل (ثبت می‌شود)")}
-      />
+    <div className={open ? "admin-action is-open" : "admin-action"}>
       <button
         type="button"
-        className={variant === "danger" ? "btn btn-danger" : "btn"}
-        onClick={submit}
-        disabled={working}
+        className={variant === "danger" ? "admin-action-trigger is-danger" : "admin-action-trigger"}
+        aria-expanded={open}
+        aria-controls={`${id}-form`}
+        onClick={() => {
+          if (open) {
+            close();
+            return;
+          }
+          setOpen(true);
+          // The reason is the only required field, so it is where the caret
+          // belongs; without this the person has opened a form and still has to
+          // go find its first input.
+          requestAnimationFrame(() => reasonRef.current?.focus());
+        }}
       >
-        {working
-          ? text("Working…", "Çalışıyor…", "در حال انجام…")
-          : armed && confirmLabel
-            ? confirmLabel
-            : label}
+        {open ? text("Cancel", "Vazgeç", "لغو") : label}
       </button>
-      {message ? (
-        <p className="form-status admin-action-error" role="alert">
-          {message}
-        </p>
-      ) : null}
+
+      <div className="admin-action-form" id={`${id}-form`} hidden={!open}>
+        {fields.map((field) => (
+          <span className="admin-action-field" key={field.key}>
+            <label className="sr-only" htmlFor={`${id}-${field.key}`}>
+              {field.label}
+            </label>
+            {field.kind === "select" ? (
+              <select
+                id={`${id}-${field.key}`}
+                value={values[field.key] ?? ""}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                }
+              >
+                {(field.options ?? []).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : field.kind === "number" ? (
+              <input
+                id={`${id}-${field.key}`}
+                type="number"
+                inputMode="numeric"
+                min={field.min}
+                max={field.max}
+                placeholder={field.label}
+                value={values[field.key] ?? ""}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                }
+              />
+            ) : (
+              <input
+                id={`${id}-${field.key}`}
+                type="text"
+                placeholder={field.label}
+                value={values[field.key] ?? ""}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                }
+              />
+            )}
+          </span>
+        ))}
+        <label className="sr-only" htmlFor={`${id}-reason`}>
+          {text("Reason", "Gerekçe", "دلیل")}
+        </label>
+        <input
+          id={`${id}-reason`}
+          ref={reasonRef}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder={text("Reason (recorded)", "Gerekçe (kaydedilir)", "دلیل (ثبت می‌شود)")}
+        />
+        <button
+          type="button"
+          className={variant === "danger" ? "btn btn-danger" : "btn"}
+          onClick={submit}
+          disabled={working}
+        >
+          {working
+            ? text("Working…", "Çalışıyor…", "در حال انجام…")
+            : armed && confirmLabel
+              ? confirmLabel
+              : label}
+        </button>
+        {message ? (
+          <p className="form-status admin-action-error" role="alert">
+            {message}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

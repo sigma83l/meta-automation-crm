@@ -40,38 +40,52 @@ export function SystemPanel({
               "خاموش، یک قابلیت را فوراً همه‌جا متوقف می‌کند. روشن فقط این مانع را برمی‌دارد — دروازه محیط، تأیید و فهرست مجاز همچنان تصمیم می‌گیرند؛ هیچ‌چیز اینجا نمی‌تواند ارسال زنده را آغاز کند."
             )}
           </div>
-          {switches.map((entry) => (
-            <div className="settings-card" key={entry.key}>
-              <div>
-                <strong dir="ltr">{entry.key}</strong>
+          {/*
+            One row per switch. These were full-width cards a paragraph tall
+            apiece, which made a list of eight booleans two thousand pixels of
+            scrolling; the state pill now sits beside the name it qualifies
+            instead of below the sentence describing it.
+          */}
+          <div className="admin-switch-list">
+            {switches.map((entry) => (
+              <div className="admin-switch" key={entry.key}>
+                <span className="admin-switch-name">
+                  <strong className="admin-key" dir="ltr">
+                    {entry.key}
+                  </strong>
+                  <span
+                    className={entry.enabled ? "status-pill" : "status-pill status-pill-warning"}
+                  >
+                    {entry.enabled
+                      ? text("Permitted", "İzinli", "مجاز")
+                      : text("Blocked", "Engelli", "مسدود")}
+                  </span>
+                </span>
                 <p>{entry.description}</p>
-                <small>
+                <span className="admin-switch-when">
                   {text("Changed", "Değiştirildi", "تغییر یافته")}{" "}
-                  {new Date(entry.updatedAt).toLocaleString()}
-                </small>
+                  <time dateTime={entry.updatedAt}>
+                    {new Date(entry.updatedAt).toLocaleString()}
+                  </time>
+                </span>
+                <ReasonAction
+                  endpoint="switches"
+                  body={{ key: entry.key, enabled: !entry.enabled }}
+                  label={
+                    entry.enabled
+                      ? text("Block everywhere", "Her yerde engelle", "مسدودسازی همه‌جا")
+                      : text("Remove the block", "Engeli kaldır", "برداشتن مسدودی")
+                  }
+                  {...(entry.enabled
+                    ? {
+                        confirmLabel: text("Confirm block", "Engeli onayla", "تأیید مسدودسازی"),
+                        variant: "danger" as const
+                      }
+                    : {})}
+                />
               </div>
-              <span className={entry.enabled ? "status-pill" : "status-pill status-pill-warning"}>
-                {entry.enabled
-                  ? text("Permitted", "İzinli", "مجاز")
-                  : text("Blocked", "Engelli", "مسدود")}
-              </span>
-              <ReasonAction
-                endpoint="switches"
-                body={{ key: entry.key, enabled: !entry.enabled }}
-                label={
-                  entry.enabled
-                    ? text("Block everywhere", "Her yerde engelle", "مسدودسازی همه‌جا")
-                    : text("Remove the block", "Engeli kaldır", "برداشتن مسدودی")
-                }
-                {...(entry.enabled
-                  ? {
-                      confirmLabel: text("Confirm block", "Engeli onayla", "تأیید مسدودسازی"),
-                      variant: "danger" as const
-                    }
-                  : {})}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </section>
 
         <section className="panel">
@@ -107,7 +121,7 @@ export function SystemPanel({
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel crm-table-panel">
           <div className="panel-heading">
             <h2>{text("Failed automation steps", "Başarısız adımlar", "گام‌های ناموفق")}</h2>
           </div>
@@ -123,7 +137,7 @@ export function SystemPanel({
               <strong>{text("Queue is clear", "Kuyruk temiz", "صف خالی است")}</strong>
             </div>
           ) : (
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
@@ -139,11 +153,17 @@ export function SystemPanel({
                       <Link href={`/admin/workspaces/${row.workspaceId}`}>{row.workspaceName}</Link>
                     </td>
                     <td>
-                      <strong dir="ltr">{row.errorCode}</strong>
+                      <strong className="admin-key" dir="ltr">
+                        {row.errorCode}
+                      </strong>
                       <small>{row.safeSummary}</small>
                     </td>
-                    <td>{new Date(row.createdAt).toLocaleString()}</td>
                     <td>
+                      <time dateTime={row.createdAt}>
+                        {new Date(row.createdAt).toLocaleString()}
+                      </time>
+                    </td>
+                    <td className="admin-actions-cell">
                       <ReasonAction
                         endpoint="ops"
                         body={{ action: "acknowledge_dead_letter", id: row.id }}

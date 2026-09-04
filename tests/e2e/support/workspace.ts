@@ -73,6 +73,12 @@ export async function signUp(page: Page, label: string): Promise<Owner> {
       if (attempt === 3) throw error;
     }
   }
+  // Settled, not merely started. Save and exit navigates to /dashboard, which
+  // redirects back to /onboarding while setup is unfinished - so the URL leaves
+  // and returns, and a caller that navigates the moment it leaves has its own
+  // navigation interrupted by the bounce. Waiting for the round trip to finish
+  // is what makes the next `goto` the only navigation in flight.
+  await page.waitForLoadState("networkidle").catch(() => undefined);
 
   const db = admin();
   const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });

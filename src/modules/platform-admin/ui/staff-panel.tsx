@@ -53,7 +53,7 @@ export function StaffPanel({
   return (
     <AdminShell active="staff" role={role}>
       <div className="content">
-        <section className="panel">
+        <section className="panel crm-table-panel">
           <div className="panel-heading">
             <h2>{text("Staff access", "Personel erişimi", "دسترسی کارکنان")}</h2>
           </div>
@@ -64,7 +64,7 @@ export function StaffPanel({
               "همه افراد این فهرست می‌توانند داده هر مشتری را بخوانند. کمترین نقشی را بدهید که کار را انجام دهد."
             )}
           </div>
-          <table className="analytics-table">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th>{text("Person", "Kişi", "شخص")}</th>
@@ -95,7 +95,7 @@ export function StaffPanel({
                     </span>
                   </td>
                   <td>{member.grantedReason}</td>
-                  <td>
+                  <td className="admin-actions-cell">
                     <ReasonAction
                       endpoint="staff"
                       body={{ action: "grant", userId: member.userId }}

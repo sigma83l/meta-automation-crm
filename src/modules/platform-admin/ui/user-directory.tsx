@@ -61,7 +61,7 @@ export function UserDirectory({
               </strong>
             </div>
           ) : (
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("Person", "Kişi", "شخص")}</th>
@@ -83,10 +83,34 @@ export function UserDirectory({
                         {user.workspaceName}
                       </Link>
                     </td>
-                    <td dir="ltr">{user.role ?? "—"}</td>
-                    <td dir="ltr">{user.status}</td>
+                    <td>
+                      <span className="admin-key" dir="ltr">
+                        {user.role ?? "—"}
+                      </span>
+                    </td>
+                    <td>
+                      {/*
+                        The same pill the workspace directory uses for the same
+                        fact. This column rendered the raw enum in lower case,
+                        so one directory said "Active" in a green pill and the
+                        other said "active" in body text — and a reader crossing
+                        between them cannot tell whether that is two states or
+                        two spellings.
+                      */}
+                      <span
+                        className={
+                          user.status === "active"
+                            ? "status-pill"
+                            : "status-pill status-pill-warning"
+                        }
+                      >
+                        {user.status === "active"
+                          ? text("Active", "Etkin", "فعال")
+                          : text("Suspended", "Askıda", "معلق")}
+                      </span>
+                    </td>
                     {canLifecycle ? (
-                      <td>
+                      <td className="admin-actions-cell">
                         {user.status === "active" ? (
                           <ReasonAction
                             endpoint="users"

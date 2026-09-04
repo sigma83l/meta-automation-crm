@@ -274,6 +274,34 @@ export async function searchUsersByEmail(
 }
 
 /** Masked addresses for a known set of accounts, for the rows already on screen. */
+/**
+ * Workspace names for a set of ids, for screens that hold a reference rather
+ * than a row.
+ *
+ * The audit ledger stores `target_workspace_id` and nothing else, which is
+ * correct — a ledger that copied the name would keep asserting the old one
+ * after a rename. But the console then rendered the literal word "Workspace" as
+ * the link text on every line, so the column that says *who was acted on*
+ * distinguished no row from any other. Resolving the names at read time gives
+ * the reviewer the answer and keeps the ledger a ledger.
+ *
+ * One query for the whole page, and a missing id is simply absent from the map:
+ * a workspace deleted since the line was written has no name to report, and the
+ * caller shows the reference instead of inventing one.
+ */
+export async function workspaceNamesFor(
+  runtime: PlatformAdminRuntime,
+  workspaceIds: readonly string[]
+): Promise<Readonly<Record<string, string>>> {
+  const unique = [...new Set(workspaceIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  const { data, error } = await runtime.db.from("workspaces").select("id,name").in("id", unique);
+  if (error) return {};
+  const names: Record<string, string> = {};
+  for (const row of data ?? []) names[String(row.id)] = String(row.name);
+  return names;
+}
+
 export async function maskedEmailsFor(
   runtime: PlatformAdminRuntime,
   userIds: readonly string[]

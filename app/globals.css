@@ -1624,20 +1624,37 @@ main {
 .setup-list,
 .activity-list {
   display: grid;
+  /* Zeroed for the `<ul>` callers. The user-agent sheet indents a list by 40px
+     of `padding-inline-start`, which `display: grid` does not remove — so the
+     platform overview's grants and the workspace detail's audit rows sat inset
+     from every other row in the console for no reason anybody chose. */
+  margin: 0;
+  padding: 0;
 }
 
+/* `li` alongside `article` because both markups occur.
+   These rules described `article` only, and a caller that reached for the
+   semantically correct `<ul><li>` — the platform overview's list of open
+   customer views — got no rules at all: an unstyled list item whose `strong`,
+   `span` and `small` ran together into one unspaced line. Naming both shapes
+   is cheaper than a parallel class, and keeps the list markup honest. */
 .setup-list article,
-.activity-list article {
+.setup-list > li,
+.activity-list article,
+.activity-list > li {
   min-height: 74px;
   display: flex;
   align-items: center;
   gap: 13px;
   padding: 13px 20px;
   border-bottom: 1px solid var(--line);
+  list-style: none;
 }
 
 .setup-list article:last-child,
-.activity-list article:last-child {
+.setup-list > li:last-child,
+.activity-list article:last-child,
+.activity-list > li:last-child {
   border-bottom: 0;
 }
 
@@ -1654,9 +1671,21 @@ main {
 }
 
 .setup-list article > div span,
-.activity-list article > div span {
+.activity-list article > div span,
+.activity-list > li > span {
   color: var(--muted);
   font-size: 0.7rem;
+}
+
+/* The trailing detail of a list row — a time, a state — sits at the inline end
+   rather than butted against the text before it. */
+.activity-list > li > small {
+  margin-inline-start: auto;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+  white-space: nowrap;
 }
 
 .step,
@@ -3330,16 +3359,96 @@ main {
    area is what it says: the rail names the scope, and the banner names the
    customer. */
 
-.admin-scope-card strong {
+/* The rail carries five bands now — logo, scope, destinations, the recording
+   note, the way out — where the shared rule declares four. Without this the
+   fifth lands outside the grid and the note and the exit link stack on top of
+   each other at the bottom. */
+.admin-shell .control-rail {
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 16px;
+}
+
+/* The scope, as a sentence rather than a captioned box.
+   "Scope / All workspaces / Platform owner" spent three lines and a bordered
+   card on two facts, one of which was the word "Scope". Two lines, no box: the
+   fact is what matters and the rail has already established it is a rail. */
+.admin-scope {
+  display: grid;
+  gap: 2px;
+  padding-inline: 7px;
+}
+
+.admin-scope strong {
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  /* A workspace name never appears here, but the role and the scope are
+     translated strings sitting in a rail that flips direction, so isolation
+     keeps them from re-ordering around neighbouring punctuation. */
   unicode-bidi: isolate;
 }
 
-.admin-safety .status-light {
-  background: var(--amber);
+.admin-scope span {
+  color: #8fa7b1;
+  font-size: 0.71rem;
 }
 
+/* The icon slot. The shared `.nav-glyph` is a bordered 28px box with a
+   monospace face, built to hold two capital letters; an icon needs the box and
+   none of the type. Scoped to this shell so the tenant rail keeps its own
+   glyphs until that surface is redesigned on its own terms. */
+.admin-shell .nav-glyph {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+}
+
+.admin-shell nav a:hover .nav-glyph,
+.admin-shell nav a[aria-current="page"] .nav-glyph {
+  color: currentColor;
+}
+
+/* The standing note that everything here is recorded.
+   Kept — unlike the environment chips this console used to echo, it is a live
+   warning about what the person is about to do rather than a restatement of
+   where they are — but quieter than the three-line block it replaces. */
+.admin-recorded {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 9px 0;
+  border-block-start: 1px solid rgba(255, 255, 255, 0.11);
+  color: #8fa7b1;
+  font-size: 0.71rem;
+  line-height: 1.35;
+}
+
+.admin-recorded .status-light {
+  flex: none;
+  border-color: rgba(242, 169, 59, 0.3);
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(242, 169, 59, 0.09);
+}
+
+/* The way back to the person's own tenant. It was `.topbar-link`, which is
+   styled for a light top bar and rendered as near-invisible grey on the dark
+   rail. */
 .admin-exit {
-  margin-top: auto;
+  padding-inline: 9px;
+  color: #a8bbc3;
+  font-size: 0.73rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-exit:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 /* Not dismissible, and it holds its place in the flow rather than floating, so
@@ -3366,32 +3475,98 @@ main {
   font-size: 0.85rem;
 }
 
+/* ---------------------------------------------------------------------------
+   Actions.
+
+   A reason-gated action is a closed trigger until somebody chooses it. The
+   expanded form used to be the resting state, which put four hundred controls
+   on `/admin/users` — see the comment in `reason-action.tsx` for why that had
+   to change. These rules only have to make the two states read correctly: a
+   trigger that looks like a control and not like a paragraph, and a form that
+   is visibly attached to the row it will act on.
+   --------------------------------------------------------------------------- */
+
 .admin-action {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin-block: 0;
+}
+
+.admin-action-trigger {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-action-trigger:hover {
+  border-color: var(--ink);
+  background: var(--surface-raised);
+}
+
+/* Destructive intent named in the text colour, not in a filled box. The
+   confirm button inside the form carries the full danger treatment, so the
+   strongest signal in the palette is spent at the moment of consequence rather
+   than on a hundred rows where nothing has happened. */
+.admin-action-trigger.is-danger {
+  color: var(--danger);
+}
+
+.admin-action-trigger.is-danger:hover {
+  border-color: var(--danger);
+}
+
+.admin-action.is-open .admin-action-trigger {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.admin-action-form {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-block: 8px;
+  /* Wide enough that the reason box is usable, and allowed to shrink inside a
+     narrow table cell rather than forcing the column open. */
+  width: min(100%, 34rem);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
 }
 
-.admin-action input,
-.admin-action select {
-  min-height: 40px;
+/* `hidden` has to win against the flex display above it, or the closed form
+   stays on screen and in the tab order. */
+.admin-action-form[hidden] {
+  display: none;
+}
+
+.admin-action-form input,
+.admin-action-form select {
+  min-height: 36px;
   padding-inline: 10px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 /* The reason box earns the remaining width: it is the field people actually
    type into, and the numeric and select fields beside it are a few characters
    wide at most. */
-.admin-action > input:last-of-type {
-  flex: 1 1 12rem;
-  min-width: 8rem;
+.admin-action-form > input:last-of-type {
+  flex: 1 1 11rem;
+  min-width: 7rem;
 }
 
 .admin-action-field {
@@ -3410,7 +3585,20 @@ main {
 }
 
 .admin-grant-form .admin-action {
+  justify-items: stretch;
+}
+
+/* Several actions on one panel read as a toolbar, not a column of buttons.
+   Each `ReasonAction` is its own grid, so three siblings — extend a trial, set
+   a status, move a plan — stacked one per line down the left edge of the
+   Subscription panel. Wrapping is retained so an opened form can take the row
+   to itself. */
+.admin-action-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
+  gap: 8px;
+  padding: 0 20px 16px;
 }
 
 /* The destructive variant. Reads as a warning in both themes because both
@@ -3437,14 +3625,369 @@ main {
   color: var(--ink);
 }
 
-.admin-shell .analytics-table small {
+/* ---------------------------------------------------------------------------
+   Tables.
+
+   These are real <table> elements with three to eight columns, and they used to
+   borrow `.analytics-table` — which is `display: grid` with a hardcoded
+   three-column template that only matches `[role="row"]`. On a real table that
+   grid discards the native layout and nothing matches `tr`/`th`/`td`, so every
+   cell became an anonymous grid item in one implicit column: the audit log's
+   eight headings rendered as a single run-on line. Native table layout is the
+   right tool for a table, so this uses it, and the analytics grid goes back to
+   describing only the div-based markup it was written for.
+   --------------------------------------------------------------------------- */
+.admin-table {
+  width: 100%;
+  /* Never below the width its content needs. The panel scrolls instead, which
+     is what `.admin-shell .crm-table-panel` is for - an eight-column audit row
+     squeezed to fit is unreadable in a different way from one that is off
+     screen, and only one of those is recoverable by scrolling. */
+  min-width: min-content;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.admin-table th,
+.admin-table td {
+  /* Logical, not left: `fa` renders this console RTL like every other route. */
+  text-align: start;
+  vertical-align: middle;
+  padding: 10px 14px;
+  border-block-start: 1px solid var(--line);
+}
+
+.admin-table thead th {
+  /* The heading row opens the table; a rule above it would double the panel's
+     own border. */
+  border-block-start: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  /* Headings are short labels and read as one line; the cells below them wrap. */
+  white-space: nowrap;
+}
+
+/* The row under the cursor, so the eye can hold a line across eight columns.
+   A directory is read across, and at a hundred rows the horizontal tracking is
+   the thing that fails first. */
+.admin-table tbody tr:hover {
+  background: var(--surface-raised);
+}
+
+.admin-table small {
   display: block;
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+/* A name is the row's identity, not a call to action. Every one of them was
+   rendering as underlined link blue, which made the first column of a
+   hundred-row directory a wall of underlines and spent the link colour on the
+   least surprising destination in the console. Weight identifies it; the
+   underline returns on hover, where it belongs. */
+.admin-table a {
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-table a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+/* Counts, dates and machine keys.
+   Tabular figures so digits line up down a column, and isolation so a Latin
+   identifier such as `standard_monthly` or an ISO timestamp keeps its own
+   direction inside a Persian row instead of re-ordering around the
+   punctuation next to it. */
+.admin-table :is(td, th) :is(time, code, .admin-key),
+.admin-table .admin-num {
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.admin-key {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95em;
+  unicode-bidi: isolate;
+}
+
+/* A cell holding an action keeps the trigger on its own line and lets the
+   opened form use the width of the cell. */
+.admin-table td .admin-action {
+  margin: 0;
+}
+
+/* Two actions on a row sit beside each other, not stacked.
+   Each `ReasonAction` is its own grid — the trigger above its form — so two of
+   them in one cell stacked into a two-line column and made every directory row
+   half again as tall for no gain. Side by side, and wrapping only when one of
+   them is opened and needs the width. */
+.admin-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The plan columns of the feature catalogue are a stack by nature: a state
+   pill, whether it was inherited, and the control to change it. */
+.admin-plan-cell {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
 }
 
 /* Every wide table in the console scrolls inside its own panel rather than
    pushing the page sideways. */
 .admin-shell .crm-table-panel {
   overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Overview.
+   --------------------------------------------------------------------------- */
+
+/* The attention figures are links, and a link inside `.metric-grid` inherits
+   nothing from `.metric-grid article` — so they rendered as four underlined
+   blue hyperlinks with the count underlined too, which is the one shape a
+   dashboard tile must not have. They are cards that happen to navigate. */
+.admin-shell .metric-grid a.summary-card {
+  min-height: 118px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.admin-shell .metric-grid a.summary-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 18px 38px -32px rgba(36, 59, 195, 0.7);
+}
+
+.admin-shell .metric-grid a.summary-card:hover .eyebrow {
+  color: var(--blue);
+}
+
+.admin-shell .metric-grid .summary-card {
+  align-content: space-between;
+}
+
+.admin-shell .metric-grid .summary-card strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-shell .metric-grid .summary-card small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+/* Three inventory cards in a four-column grid left a quarter of the row empty,
+   which reads as a tile that failed to load rather than as a deliberate stop.
+   The attention row above genuinely has four. */
+.admin-shell .admin-inventory {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Signing out is not the most important thing on this screen, and
+   `.topbar button` painted it solid blue — so on every console page the
+   loudest element was the one that throws the session away. Secondary
+   treatment; the label still says exactly what it does. */
+.admin-shell .topbar-actions button {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.admin-shell .topbar-actions button:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--surface-raised);
+}
+
+/* ---------------------------------------------------------------------------
+   Global switches.
+
+   Eight switches rendered as eight full-width blocks — heading, sentence,
+   timestamp, state pill, then a reason field and a button on their own row —
+   came to two thousand pixels for what is a list of eight booleans. A switch is
+   one row: what it is, what it does, where it stands, and how to move it.
+   --------------------------------------------------------------------------- */
+.admin-switch-list {
+  display: grid;
+}
+
+.admin-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px 16px;
+  padding: 14px 20px;
+  border-block-start: 1px solid var(--line);
+}
+
+.admin-switch:first-child {
+  border-block-start: 0;
+}
+
+.admin-switch-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-switch-name strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-switch p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.admin-switch-when {
+  grid-column: 1;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.admin-switch .admin-action {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  justify-items: end;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive.
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 1050px) {
+  /* The collapsed 76px rail shows destinations and nothing else. The shared
+     rule hides `.workspace-card`, which this shell no longer renders, so its
+     own bands have to be named here — a stale selector in a media query is a
+     silent failure, and the visible symptom would be a scope line and an exit
+     link overflowing a 76px column. */
+  .admin-scope,
+  .admin-recorded span,
+  .admin-exit {
+    display: none;
+  }
+
+  .admin-shell .control-rail {
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .admin-recorded {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* Language and theme stay reachable. The shared rule hides the top bar's
+     preference controls below 1050px, which leaves a staff member on a tablet
+     with no way to change either — and this console is read on tablets. The
+     tenant shell has the same gap and its own pending fix; this scopes the
+     answer to the surface being designed rather than pre-empting that. */
+  .admin-shell .topbar .preference-controls {
+    display: flex;
+  }
+
+  /* And the bar has to be able to hold them. `.topbar` is a nowrap flex row, so
+     restoring two selects beside the heading simply pushed the cluster past the
+     viewport — 290px of controls in 354px of usable width, with the title
+     already occupying part of it — and every console page gained a horizontal
+     page scrollbar. Wrapping is the whole fix: the cluster drops to its own
+     line when the title leaves it no room, and the bar grows a row instead of
+     the document growing a column. */
+  .admin-shell .topbar {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .admin-shell .topbar-actions {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-shell .control-rail {
+    grid-template-rows: auto;
+  }
+
+  .admin-recorded,
+  .admin-exit {
+    display: none;
+  }
+
+  /* Seven destinations, not the tenant bar's five, and they must not be
+     squeezed to nothing: the strip scrolls sideways inside itself before any
+     label becomes unreadable. */
+  .admin-mobile-nav {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(66px, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .admin-mobile-nav a {
+    gap: 4px;
+    align-content: center;
+    padding-inline: 4px;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .admin-mobile-nav a span {
+    /* One line per label, so a two-word destination cannot make the bar twice
+       as tall as its neighbours. */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-switch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-switch .admin-action {
+    grid-column: 1;
+    grid-row: auto;
+    justify-items: start;
+  }
+}
+
+/* The inventory row follows the same steps down as every other metric grid;
+   these have to come after the rule above them, which is scoped tightly enough
+   to have beaten the shared breakpoints. */
+@media (max-width: 1050px) {
+  .admin-shell .admin-inventory {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-shell .admin-inventory {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

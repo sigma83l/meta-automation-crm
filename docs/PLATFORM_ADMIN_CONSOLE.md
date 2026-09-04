@@ -190,6 +190,87 @@ mutation control, each server module validates 3–400 characters, and the ledge
 stores what was typed. An action added later cannot forget the reason box,
 because there is no other way to post.
 
+## How it looks, and why
+
+The console is styled from the same semantic tokens as the rest of the product
+and has no palette of its own — a route that recoloured itself to announce
+"admin area" would be the route-specific authorization colour the UI rules
+forbid, and colour is the first signal a screenshot, a colour-blind reader or
+`forced-colors` loses. What marks this area is what it _says_: the rail names
+the scope, and the banner names the customer.
+
+Four decisions are worth keeping written down, because each replaced something
+that looked reasonable in isolation and failed at the sizes real data reaches.
+
+**A reason-gated action is closed until it is chosen.** `ReasonAction` renders a
+single quiet trigger; the reason field, the extra fields and the confirm button
+appear in place when somebody presses it. It used to render expanded, always,
+which is fine on a page with one action and untenable in a directory:
+`/admin/users` at a hundred people carried two reason boxes and two buttons per
+row — four hundred controls, eleven thousand pixels of scroll, and a resting
+state of solid red destructive buttons with the columns identifying _who_ each
+row is squeezed into the left third. The requirement is unchanged; there is
+still no way to post without a reason. Destructive actions keep their two
+deliberate presses, and the danger colour now lives on the confirm button
+rather than the trigger, so the palette's strongest signal is spent at the
+moment of consequence rather than on rows where nothing has happened.
+
+**The rail carries identity and destinations.** A logo, the scope
+("All workspaces" and the role holding it) as one line, seven icon links, the
+standing note that every action is recorded, and the way back to the person's
+own tenant. The two-letter codes (`PL`, `WS`, `FF`, `SY`) are gone: nobody knows
+them, they carried nothing the adjacent label did not, and under RTL they read
+as debris on the wrong side of it. The recording note stays — unlike a chip
+repeating an environment name it is a live warning about what the reader is
+about to do, and it is the console's half of the bargain the ledger enforces.
+
+**Every table is a table, in a panel that scrolls.** Native table layout, one
+heading per column, logical `text-align: start`, tabular figures down numeric
+columns, machine identifiers bidi-isolated, and the row under the cursor
+highlighted so the eye can hold a line across eight columns. Names are set in
+weight rather than link blue: a directory whose first column is a hundred
+underlines has spent the link colour on its least surprising destination.
+
+**The console has its own bottom navigation below 760px.** It had none — the
+seven sections were reachable only by typing URLs, and staff read this console
+from a phone exactly when something is on fire.
+
+### Visual evidence
+
+`tests/e2e/admin-visual-matrix.spec.ts` renders all seven sections at
+EN/TR/FA × Light/Dark × 1440/1024/390 — 144 frames — against deliberately
+hostile seeded state: a workspace name at the 80-character ceiling the table
+allows, a Persian name that breaks a column in the other direction, a suspended
+tenant beside an active one, an unrecovered dead letter, an open impersonation
+grant, and a populated ledger. It asserts what a machine can decide (no
+horizontal page overflow, exactly one `h1`, no unlabelled control, no failed
+image, correct `dir`/`lang`/`theme`) and writes every frame to disk for the
+review it cannot perform. Craft still needs a person; what this guarantees is
+that the person is looking at a complete set.
+
+Five defects were found by building that matrix rather than by reading the code:
+
+1. **Every reason box past the first had a label pointing at another row.**
+   `ReasonAction` derived its DOM `id` from the endpoint and the label, so every
+   row of a directory calling the same endpoint produced the same `id` — and
+   `htmlFor` resolves to the first match in the document. The screen-reader
+   label existed and did nothing, 198 times on one page. Now `useId`.
+2. **The overview's list of open customer views ran together into one
+   unspaced line.** `.activity-list` styled `article` children only, and both
+   this list and the workspace detail's audit list reach for the semantically
+   correct `<ul><li>` — which matched no rule at all. The same class of bug as
+   the `.analytics-table` one below it, and now both shapes are named.
+3. **The People table pushed the page sideways at 390px.** Its status column was
+   clipped and its actions column was off-screen entirely.
+4. **Four dashboard tiles rendered as underlined blue hyperlinks**, counts
+   included: a link inside `.metric-grid` inherits nothing from
+   `.metric-grid article`.
+5. **The audit ledger's Target column said "Workspace" on every row.** The
+   ledger correctly stores only a reference; the console now resolves names at
+   read time (`workspaceNamesFor`), so a reviewer can tell the rows apart, and a
+   workspace deleted since shows a short form of the reference rather than an
+   invented name.
+
 ## Coverage
 
 | Test                                              | Proves                                                                    |
@@ -199,6 +280,8 @@ because there is no other way to post.
 | `tests/unit/platform-admin-actions.test.ts`       | Write-path guards, bounds, ledger contents, session revocation            |
 | `tests/unit/feature-gate.test.ts`                 | The gate fails closed on every failure shape                              |
 | `tests/unit/feature-gate-routes.test.ts`          | 403 vs 503 stay distinguishable                                           |
+| `tests/e2e/admin-console.spec.ts`                 | 404 for non-staff, column alignment in both directions, the rail's door   |
+| `tests/e2e/admin-visual-matrix.spec.ts`           | 144 rendered cells: overflow, headings, labels, direction, theme, locale  |
 
 The migration test runs as `authenticated` with a settable `auth.uid()`. That
 role switch is load-bearing: PGlite connects as a superuser, and a superuser

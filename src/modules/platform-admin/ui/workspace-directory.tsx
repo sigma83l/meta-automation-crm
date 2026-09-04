@@ -59,7 +59,7 @@ export function WorkspaceDirectory({
               </p>
             </div>
           ) : (
-            <table className="analytics-table">
+            <table className="admin-table">
               <thead>
                 <tr>
                   <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
