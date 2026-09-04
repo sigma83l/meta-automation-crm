@@ -15,7 +15,13 @@ const protectedPrefixes = [
   // through `current_platform_admin()` before rendering anything. Middleware
   // knows only that somebody is signed in — it deliberately does not try to
   // decide who is staff, since that answer belongs to the database.
-  "/admin"
+  "/admin",
+  // The local-only AI lab. It resolves a workspace to read that workspace's
+  // approved knowledge, so an anonymous visit throws rather than renders -
+  // listing it here turns that into the sign-in redirect every other
+  // workspace route gives. On any deployment the route 404s before this
+  // matters; see src/modules/ai-lab/dev-only.ts.
+  "/dev"
 ];
 
 export async function proxy(request: NextRequest) {

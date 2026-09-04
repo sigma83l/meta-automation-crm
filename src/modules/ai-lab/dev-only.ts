@@ -29,3 +29,44 @@ export function devOnlyEnabled(): boolean {
   if (process.env.VERCEL) return false;
   return process.env.NODE_ENV !== "production";
 }
+
+/**
+ * Whether the database this process is pointed at is a local one.
+ *
+ * The guard above answers "is this a developer's machine". It does not answer
+ * "is this a developer's *data*", and in this repo those come apart: the
+ * committed `.env.local` points at the live Supabase project with a service
+ * role key, so a plain `pnpm dev` is a local server on the production
+ * database. The lab's pipeline mode writes - a customer, a conversation,
+ * inbound messages, turn records, remembered facts - and every one of those
+ * would land in the real CRM, under a synthetic name, indistinguishable from
+ * a real record to anyone who did not know the lab existed.
+ *
+ * So the lab requires both. `pnpm dev:local` supplies the local database; the
+ * E2E wrapper already did, which is the only reason testing this was safe.
+ *
+ * The hostname is compared exactly rather than by substring: `localhost` as a
+ * prefix would accept `localhost.example.com`, which is a remote host.
+ */
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
+export function localDatabaseOnly(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return false;
+  try {
+    return LOCAL_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** The database the lab would talk to, for a message that has to name it. */
+export function configuredDatabaseHost(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return "unset";
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "unreadable";
+  }
+}

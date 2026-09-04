@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { labRunSchema } from "@/src/modules/ai-lab/contracts";
-import { devOnlyEnabled } from "@/src/modules/ai-lab/dev-only";
+import {
+  configuredDatabaseHost,
+  devOnlyEnabled,
+  localDatabaseOnly
+} from "@/src/modules/ai-lab/dev-only";
 import { runLabTurn } from "@/src/modules/ai-lab/server/lab-runner";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { resolveTrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
@@ -13,6 +17,16 @@ export async function POST(request: NextRequest) {
   // Before anything else, including reading the body: on a production build
   // this route is indistinguishable from one that was never written.
   if (!devOnlyEnabled()) return new NextResponse(null, { status: 404 });
+
+  // A local server on the production database is the default here, not an
+  // exotic misconfiguration - see localDatabaseOnly. Refused before the body is
+  // read, because the write happens on the way to answering.
+  if (!localDatabaseOnly()) {
+    return NextResponse.json(
+      { error: "LAB_REQUIRES_LOCAL_DATABASE", host: configuredDatabaseHost() },
+      { status: 409 }
+    );
+  }
 
   const rejected = requireCsrf(request);
   if (rejected) return rejected;

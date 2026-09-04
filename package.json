@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node scripts/with-supabase-env.mjs pnpm next dev",
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",

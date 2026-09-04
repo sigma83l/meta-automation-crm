@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { devOnlyEnabled } from "@/src/modules/ai-lab/dev-only";
+import {
+  configuredDatabaseHost,
+  devOnlyEnabled,
+  localDatabaseOnly
+} from "@/src/modules/ai-lab/dev-only";
 import { loadLabDefaults } from "@/src/modules/ai-lab/server/lab-runner";
 import { AiLabConsole } from "@/src/modules/ai-lab/ui/ai-lab-console";
 import { resolveTrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
@@ -15,6 +19,29 @@ export default async function AiLabPage() {
   // Deliberately not entitlement-gated. The lab is for working on the assistant
   // itself, and a lapsed subscription is a billing state, not a reason a
   // developer cannot see why a prompt produces the reply it produces.
+  // Explained rather than 404'd: the developer is on the right machine and has
+  // the wrong database, and a blank 404 would send them looking for a bug in
+  // the route.
+  if (!localDatabaseOnly()) {
+    return (
+      <main className="brand-splash">
+        <section className="system-notice system-notice-alert">
+          <p className="system-notice-code">AI LAB</p>
+          <h1>This is pointed at {configuredDatabaseHost()}</h1>
+          <p className="system-notice-detail">
+            The lab writes as it runs — a customer, a conversation, messages, turn records and
+            remembered facts — so it only runs against a local database. The committed{" "}
+            <code>.env.local</code> names the live Supabase project, which is why a plain{" "}
+            <code>pnpm dev</code> lands here.
+          </p>
+          <p className="system-notice-detail">
+            Run <code>pnpm db:start</code> once, then <code>pnpm dev:local</code>.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   const workspace = await resolveTrustedWorkspace(await createSupabaseServerClient());
   const admin = await createSupabaseAdminClient();
   const defaults = await loadLabDefaults(admin, workspace);
