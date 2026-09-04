@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 import {
   launchEmbeddedSignup,
   preloadEmbeddedSignup,
@@ -94,6 +95,13 @@ export function ConnectionsPanel({
   const { text } = useI18n();
   const [status, setStatus] = useState(initialNotice);
   const [busy, setBusy] = useState("");
+  /**
+   * Every control below acts through an `onClick`, and both handlers finish by
+   * reloading the page - so the moment someone is most likely to reach for the
+   * next control is the moment the new document has not hydrated yet. See
+   * useHydrated for why that click would otherwise vanish without a trace.
+   */
+  const ready = useHydrated();
 
   /** Health, reauthorize and disconnect: a plain call, then re-read the page. */
   async function run(method: string, body: unknown) {
@@ -253,7 +261,7 @@ export function ConnectionsPanel({
               </div>
               <div className="connection-actions">
                 {!canManage ? null : !item || item.status === "disconnected" ? (
-                  <button disabled={busy === channel} onClick={() => connect(channel)}>
+                  <button disabled={!ready || busy === channel} onClick={() => connect(channel)}>
                     {busy === channel
                       ? text("Connecting…", "Bağlanıyor…", "در حال اتصال…")
                       : liveMode
@@ -262,14 +270,21 @@ export function ConnectionsPanel({
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => run("PATCH", { channel, action: "health" })}>
+                    <button
+                      disabled={!ready}
+                      onClick={() => run("PATCH", { channel, action: "health" })}
+                    >
                       {text("Check health", "Sağlığı kontrol et", "بررسی سلامت")}
                     </button>
-                    <button onClick={() => run("PATCH", { channel, action: "reauthorize" })}>
+                    <button
+                      disabled={!ready}
+                      onClick={() => run("PATCH", { channel, action: "reauthorize" })}
+                    >
                       {text("Reauthorize", "Yeniden yetkilendir", "مجوزدهی دوباره")}
                     </button>
                     <button
                       className="button-muted"
+                      disabled={!ready}
                       onClick={() => run("PATCH", { channel, action: "disconnect" })}
                     >
                       {text("Disconnect", "Bağlantıyı kes", "قطع اتصال")}
