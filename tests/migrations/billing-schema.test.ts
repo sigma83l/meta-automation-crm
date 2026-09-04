@@ -22,7 +22,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // Applied in order, because the later one redefines the transition function.
 const migrationPaths = [
   "20260730010000_billing_subscriptions.sql",
-  "20260815130000_account_lifecycle_states.sql"
+  "20260815130000_account_lifecycle_states.sql",
+  // Repairs check_and_record_trial_fingerprint, which the first migration
+  // defined with an ambiguous RETURNING clause.
+  "20260905000000_fix_trial_fingerprint_ambiguity.sql"
 ].map((name) => fileURLToPath(new URL(`../../supabase/migrations/${name}`, import.meta.url)));
 const preludePath = fileURLToPath(new URL("./prelude.sql", import.meta.url));
 
@@ -310,5 +313,79 @@ describe("privilege layer", () => {
       `select has_table_privilege('authenticated','private.trial_fraud_signals','SELECT') as granted`
     );
     expect(result.rows[0]!.granted).toBe(false);
+  });
+});
+
+/**
+ * The trial fingerprint ledger.
+ *
+ * This function shipped unable to run at all: its OUT parameters are named
+ * `first_seen_workspace_id` and `first_seen_at`, and the inserting CTE returned
+ * columns of those names unqualified, so every call was rejected with 42702
+ * before a row was touched. Nothing caught it, because the only caller is card
+ * registration - trials are granted at provisioning without a card - and the
+ * failure surfaced to a person as "Something went wrong. Please try again."
+ *
+ * So the first assertion here is simply that calling it works. The rest pin the
+ * behaviour that made it worth having.
+ */
+describe("check_and_record_trial_fingerprint", () => {
+  const hash = (seed: string) => seed.repeat(64).slice(0, 64);
+
+  it("records a fingerprint it has not seen, and says it is new", async () => {
+    const workspace = await newWorkspace("fingerprint-first");
+    const result = await db.query<{
+      is_new: boolean;
+      first_seen_workspace_id: string;
+    }>("select * from public.check_and_record_trial_fingerprint($1, $2)", [hash("a"), workspace]);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]!.is_new).toBe(true);
+    expect(result.rows[0]!.first_seen_workspace_id).toBe(workspace);
+  });
+
+  it("reports a card that already claimed a trial, and keeps the first claimant", async () => {
+    const first = await newWorkspace("fingerprint-owner");
+    const second = await newWorkspace("fingerprint-repeat");
+    await db.query("select * from public.check_and_record_trial_fingerprint($1, $2)", [
+      hash("b"),
+      first
+    ]);
+
+    const repeat = await db.query<{
+      is_new: boolean;
+      first_seen_workspace_id: string;
+    }>("select * from public.check_and_record_trial_fingerprint($1, $2)", [hash("b"), second]);
+
+    expect(repeat.rows[0]!.is_new).toBe(false);
+    // The point of the ledger: the card belongs to whoever presented it first,
+    // so a second workspace cannot inherit a trial by presenting the same card.
+    expect(repeat.rows[0]!.first_seen_workspace_id).toBe(first);
+  });
+
+  it("counts repeat presentations of the same card", async () => {
+    const workspace = await newWorkspace("fingerprint-counted");
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await db.query("select * from public.check_and_record_trial_fingerprint($1, $2)", [
+        hash("c"),
+        workspace
+      ]);
+    }
+    const counted = await db.query<{ occurrence_count: number }>(
+      "select occurrence_count from private.trial_fraud_signals where fingerprint_hash = $1",
+      [hash("c")]
+    );
+    // One insert plus two bumps.
+    expect(Number(counted.rows[0]!.occurrence_count)).toBe(3);
+  });
+
+  it("refuses anything that is not a sha256 digest", async () => {
+    const workspace = await newWorkspace("fingerprint-invalid");
+    await expect(
+      db.query("select * from public.check_and_record_trial_fingerprint($1, $2)", [
+        "not-a-digest",
+        workspace
+      ])
+    ).rejects.toThrow(/invalid fingerprint hash/);
   });
 });

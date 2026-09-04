@@ -35,7 +35,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL(`/settings/billing?status=${outcome.outcome}`, request.url)
     );
-  } catch {
+  } catch (error) {
+    // Logged, not swallowed. This catch turns every failure into one
+    // indistinguishable `status=error` in the browser, and for as long as it
+    // also discarded the cause, the server had nothing to say either - a
+    // registration that could never succeed looked identical to a declined
+    // card. The message only: a provider error body can echo the request.
+    console.error("BILLING_CALLBACK_FAILED", {
+      cause: error instanceof Error ? error.message : "unknown"
+    });
     return NextResponse.redirect(new URL("/settings/billing?status=error", request.url));
   }
 }

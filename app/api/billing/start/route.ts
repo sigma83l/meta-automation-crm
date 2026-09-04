@@ -14,7 +14,13 @@ export async function POST(request: NextRequest) {
     const userIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "0.0.0.0";
     const { redirectUrl, state } = await startCardRegistration(workspace, returnUrl, userIp);
     return NextResponse.json({ redirectUrl, state });
-  } catch {
+  } catch (error) {
+    // See the callback route: the client is told only that it failed, but the
+    // server must record why, or a misconfiguration is indistinguishable from
+    // a refusal.
+    console.error("BILLING_START_FAILED", {
+      cause: error instanceof Error ? error.message : "unknown"
+    });
     return NextResponse.json({ error: "BILLING_START_FAILED" }, { status: 400 });
   }
 }
