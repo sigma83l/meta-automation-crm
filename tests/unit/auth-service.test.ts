@@ -164,3 +164,74 @@ describe("AuthService", () => {
     expect(repo.signup).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The password rules, which are two rules and not one.
+ *
+ * `password_requirements = "lower_upper_letters_digits"` in
+ * supabase/config.toml is enforced by the provider, and until this was checked
+ * here first the provider's refusal reached the person as "Email or password
+ * could not be accepted" - naming neither the field nor the rule, under a hint
+ * that promised only "At least 12 characters".
+ */
+describe("password requirements", () => {
+  const service = () =>
+    new AuthService(
+      repository(),
+      new FakeCaptchaProvider(),
+      new MemoryRateLimiter(50, 60_000),
+      false
+    );
+
+  const signupWith = (password: string) =>
+    service().signup({ email: "owner@example.test", password, businessName: "Acme Test" }, context);
+
+  it("names the missing character class instead of failing generically", async () => {
+    const cases = [
+      ["ALLUPPERCASE123", /lowercase/i],
+      ["alllowercase123", /uppercase/i],
+      ["NoDigitsInHere", /digit/i]
+    ] as const;
+
+    for (const [password, expected] of cases) {
+      const result = await signupWith(password);
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error.code).toBe("AUTH_PASSWORD_TOO_WEAK");
+      expect(result.error.message).toMatch(expected);
+    }
+  });
+
+  it("accepts a password that satisfies every class", async () => {
+    await expect(signupWith("Rellooma2026Test")).resolves.toMatchObject({ ok: true });
+  });
+
+  // A failure elsewhere in the form must not be reported as a password problem.
+  it("does not blame the password for a bad email", async () => {
+    const result = await service().signup(
+      { email: "not-an-email", password: "Rellooma2026Test", businessName: "Acme Test" },
+      context
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("applies the stronger rule when a password is being set by reset", async () => {
+    const result = await service().resetPassword("nodigitsanywhere");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("AUTH_PASSWORD_TOO_WEAK");
+  });
+
+  /**
+   * The rule at the door stays weaker on purpose. Strengthening it would lock
+   * out every account created before the stronger rule existed - an outage, not
+   * a security gain, since the credential has already been accepted.
+   */
+  it("still lets an existing weak password log in", async () => {
+    await expect(
+      service().login({ email: "owner@example.test", password: "alllowercasenodigits" }, context)
+    ).resolves.toMatchObject({ ok: true });
+  });
+});

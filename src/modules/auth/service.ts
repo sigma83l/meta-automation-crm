@@ -13,10 +13,42 @@ import type {
 } from "./contracts";
 
 const email = z.string().trim().email().max(254);
+
+/**
+ * What an existing account may present at the door.
+ *
+ * Deliberately weaker than `newPassword` below. Strengthening this would lock
+ * out every account created before the stronger rule existed, which is a
+ * self-inflicted outage rather than a security gain - the credential has
+ * already been accepted, and refusing to let its owner in does not make it
+ * stronger.
+ */
 const password = z.string().min(12).max(128);
+
+/**
+ * What a password may be when it is being set.
+ *
+ * Mirrors `password_requirements = "lower_upper_letters_digits"` in
+ * supabase/config.toml. It has to be stated twice - once by the provider that
+ * enforces it and once here - because the provider's refusal arrives as a
+ * generic 422 that the form can only report as "email or password could not be
+ * accepted", naming neither the field nor the rule. Checking first means the
+ * person is told what is actually required.
+ */
+const newPassword = password
+  .refine((value) => /[a-z]/.test(value), {
+    error: "Password needs at least one lowercase letter."
+  })
+  .refine((value) => /[A-Z]/.test(value), {
+    error: "Password needs at least one uppercase letter."
+  })
+  .refine((value) => /[0-9]/.test(value), {
+    error: "Password needs at least one digit."
+  });
+
 const signupSchema = z.object({
   email,
-  password,
+  password: newPassword,
   businessName: z.string().trim().min(2).max(80)
 });
 const credentialsSchema = z.object({ email, password });
@@ -41,7 +73,7 @@ export class AuthService {
       );
     }
     const parsed = signupSchema.safeParse(input);
-    if (!parsed.success) return invalidInput();
+    if (!parsed.success) return weakPassword(parsed.error) ?? invalidInput();
     if (
       this.signupEmailAllowlist.length > 0 &&
       !this.signupEmailAllowlist.includes(parsed.data.email.toLowerCase())
@@ -74,8 +106,10 @@ export class AuthService {
   }
 
   async resetPassword(passwordInput: string): Promise<Result<void>> {
-    const parsed = password.safeParse(passwordInput);
-    if (!parsed.success) return invalidInput();
+    // The setting rule, not the door rule: choosing a new password is exactly
+    // the moment the stronger requirement applies.
+    const parsed = newPassword.safeParse(passwordInput);
+    if (!parsed.success) return weakPassword(parsed.error) ?? invalidInput();
     return this.repository.resetPassword(parsed.data);
   }
 
@@ -94,4 +128,25 @@ export class AuthService {
 
 function invalidInput<T>(): Result<T> {
   return err(appError("VALIDATION_ERROR", "Check the highlighted information and try again."));
+}
+
+/**
+ * Turns a failed password rule into an error that names it.
+ *
+ * Returns undefined when nothing about the password was wrong, so the caller
+ * falls back to the generic message: a rejected email or business name must not
+ * be reported as a password problem. The message is carried through rather than
+ * mapped to a fixed string, because "needs a digit" and "needs an uppercase
+ * letter" are different instructions and collapsing them tells the person to
+ * guess.
+ */
+function weakPassword<T>(error: z.ZodError): Result<T> | undefined {
+  // An empty path is the reset flow, which parses the password on its own; the
+  // signup flow parses an object, so there the password issue is the one keyed
+  // to that field. Both are the password; neither is the email.
+  const issue = error.issues.find(
+    (candidate) => candidate.path.length === 0 || candidate.path[0] === "password"
+  );
+  if (!issue) return undefined;
+  return err(appError("AUTH_PASSWORD_TOO_WEAK", issue.message));
 }

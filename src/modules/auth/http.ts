@@ -33,6 +33,13 @@ function publicError(error: AppError) {
   };
   return {
     code: error.code,
-    message: messages[error.code] ?? "The request could not be completed."
+    // A weak password carries its own message, because the whole point is to
+    // say which rule was missed - "needs a digit" and "needs an uppercase
+    // letter" are different instructions. The strings come from this module's
+    // own schema, never from user input or a provider.
+    message:
+      error.code === "AUTH_PASSWORD_TOO_WEAK"
+        ? error.message
+        : (messages[error.code] ?? "The request could not be completed.")
   };
 }
