@@ -54,7 +54,21 @@ const serverEnvironmentSchema = z.object({
   PLATFORM_GEMINI_API_KEY: optionalNonEmpty,
   PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
   PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
-  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
+  /**
+   * 45s, raised from 15s on measurement.
+   *
+   * The configured Gemini models think before answering - a trivial prompt
+   * returns in 8-10s with more reasoning tokens than answer tokens - so 15s
+   * left barely 1.5x headroom on the *simplest* possible call. A real turn
+   * carries approved FAQ, prices, remembered facts and a transcript, and the
+   * reply schema permits 4000 output tokens.
+   *
+   * The cost of being wrong is asymmetric and was pointing the wrong way. A
+   * timeout is not an error the customer sees; it degrades to a handoff, so a
+   * tight bound quietly converts answerable questions into work for a person,
+   * and it does it worst under exactly the load where that hurts.
+   */
+  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(45000),
   // Model identifiers per router role. Optional: an unconfigured role fails at
   // the point of use, naming the role, rather than blocking a deployment that
   // never reaches it. See src/modules/rcos/model-registry.ts.
