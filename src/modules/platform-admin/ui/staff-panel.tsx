@@ -96,33 +96,68 @@ export function StaffPanel({
                   </td>
                   <td>{member.grantedReason}</td>
                   <td className="admin-actions-cell">
-                    <ReasonAction
-                      endpoint="staff"
-                      body={{ action: "grant", userId: member.userId }}
-                      label={text("Change role", "Rolü değiştir", "تغییر نقش")}
-                      fields={[
-                        {
-                          key: "role",
-                          kind: "select",
-                          label: text("Role", "Rol", "نقش"),
-                          defaultValue: member.role,
-                          options: [
-                            { value: "platform_support", label: "platform_support" },
-                            { value: "platform_admin", label: "platform_admin" },
-                            { value: "platform_owner", label: "platform_owner" }
-                          ]
-                        }
-                      ]}
-                    />
+                    {/*
+                      A revoked row gets one control, and it says what it does.
+                      This used to be the same "Change role" trigger as an active
+                      row, and posting it restored the person's access as a side
+                      effect of the upsert — a quiet reinstatement of the right
+                      to read every customer, worded as an edit. Now it is its
+                      own action, with the two deliberate presses the other
+                      consequential controls have.
+                    */}
                     {member.status === "active" ? (
+                      <>
+                        <ReasonAction
+                          endpoint="staff"
+                          body={{ action: "grant", userId: member.userId }}
+                          label={text("Change role", "Rolü değiştir", "تغییر نقش")}
+                          fields={[
+                            {
+                              key: "role",
+                              kind: "select",
+                              label: text("Role", "Rol", "نقش"),
+                              defaultValue: member.role,
+                              options: [
+                                { value: "platform_support", label: "platform_support" },
+                                { value: "platform_admin", label: "platform_admin" },
+                                { value: "platform_owner", label: "platform_owner" }
+                              ]
+                            }
+                          ]}
+                        />
+                        <ReasonAction
+                          endpoint="staff"
+                          body={{ action: "revoke", userId: member.userId }}
+                          label={text("Revoke access", "Erişimi kaldır", "لغو دسترسی")}
+                          confirmLabel={text("Confirm revoke", "Kaldırmayı onayla", "تأیید لغو")}
+                          variant="danger"
+                        />
+                      </>
+                    ) : (
                       <ReasonAction
                         endpoint="staff"
-                        body={{ action: "revoke", userId: member.userId }}
-                        label={text("Revoke access", "Erişimi kaldır", "لغو دسترسی")}
-                        confirmLabel={text("Confirm revoke", "Kaldırmayı onayla", "تأیید لغو")}
-                        variant="danger"
+                        body={{ action: "reinstate", userId: member.userId }}
+                        label={text("Reinstate access", "Erişimi geri ver", "بازگرداندن دسترسی")}
+                        confirmLabel={text(
+                          "Confirm reinstate",
+                          "Geri vermeyi onayla",
+                          "تأیید بازگرداندن"
+                        )}
+                        fields={[
+                          {
+                            key: "role",
+                            kind: "select",
+                            label: text("Role", "Rol", "نقش"),
+                            defaultValue: member.role,
+                            options: [
+                              { value: "platform_support", label: "platform_support" },
+                              { value: "platform_admin", label: "platform_admin" },
+                              { value: "platform_owner", label: "platform_owner" }
+                            ]
+                          }
+                        ]}
                       />
-                    ) : null}
+                    )}
                   </td>
                 </tr>
               ))}

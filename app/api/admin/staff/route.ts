@@ -12,10 +12,18 @@ export async function POST(request: NextRequest) {
     const userId = requiredString(body, "userId");
     const reason = requiredString(body, "reason");
 
-    if (action === "grant") {
+    if (action === "grant" || action === "reinstate") {
       const role = requiredString(body, "role") as PlatformAdminRole;
       if (!platformAdminRoles.includes(role)) throw new Error("Unknown staff role.");
-      await setStaffRole(runtime, { userId, role, reason });
+      // Bringing back a revoked account is its own action rather than a flag on
+      // this one, so that restoring cross-tenant access is a thing somebody
+      // chose rather than a side effect of editing a role.
+      await setStaffRole(runtime, {
+        userId,
+        role,
+        reason,
+        ...(action === "reinstate" ? { reinstate: true } : {})
+      });
       return { action, role };
     }
     if (action === "revoke") {

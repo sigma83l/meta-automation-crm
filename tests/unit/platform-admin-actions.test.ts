@@ -18,7 +18,7 @@ import { setSwitch } from "@/src/modules/platform-admin/server/switches";
 import { requeueOutboxEvent } from "@/src/modules/platform-admin/server/ops";
 import { maskedEmailsFor, searchUsersByEmail } from "@/src/modules/platform-admin/server/directory";
 import { OUTBOX_ATTEMPT_CEILING, OUTBOX_RETRY_GRANT } from "@/src/lib/inngest/outbox-policy";
-import { revokeStaff } from "@/src/modules/platform-admin/server/staff";
+import { revokeStaff, setStaffRole } from "@/src/modules/platform-admin/server/staff";
 import {
   PlatformAdminError,
   type PlatformAdminRuntime
@@ -328,6 +328,117 @@ describe("staff revocation", () => {
     const rows = database.rows("platform_admins");
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.user_id === "staff-2")!.status).toBe("disabled");
+  });
+});
+
+describe("staff role changes", () => {
+  /**
+   * The gap this closes: revocation refused to remove the last owner, but a role
+   * change reached the same dead end and did not check. The staff table renders
+   * "Change role" on every row including your own, so the last owner was one
+   * form submission from an installation nobody can administer — recoverable
+   * only by rerunning the bootstrap script with the service-role key.
+   */
+  it("refuses to demote the last active owner, including the caller", async () => {
+    const { runtime, database } = runtimeWith({
+      profiles: [{ id: "staff-1", workspace_id: "w1" }],
+      platform_admins: [{ user_id: "staff-1", role: "platform_owner", status: "active" }]
+    });
+    await expect(
+      setStaffRole(runtime, {
+        userId: "staff-1",
+        role: "platform_support",
+        reason: "stepping back"
+      })
+    ).rejects.toThrow(/platform owner/);
+    expect(database.rows("platform_admins")[0]!.role).toBe("platform_owner");
+    expect(ledger(database)).toHaveLength(0);
+  });
+
+  it("allows the demotion once a second owner exists", async () => {
+    const { runtime, database } = runtimeWith({
+      profiles: [{ id: "staff-1", workspace_id: "w1" }],
+      platform_admins: [
+        { user_id: "staff-1", role: "platform_owner", status: "active" },
+        { user_id: "staff-2", role: "platform_owner", status: "active" }
+      ]
+    });
+    await setStaffRole(runtime, {
+      userId: "staff-1",
+      role: "platform_support",
+      reason: "handing over"
+    });
+    const rows = database.rows("platform_admins");
+    expect(rows.find((row) => row.user_id === "staff-1")!.role).toBe("platform_support");
+    // A change, not a first grant, and the ledger says which.
+    expect(ledger(database)[0]!.action).toBe("staff.role_changed");
+    expect(ledger(database)[0]!.safe_details).toMatchObject({
+      previous_role: "platform_owner",
+      role: "platform_support"
+    });
+  });
+
+  it("refuses to bring a revoked account back as a side effect of a role edit", async () => {
+    const { runtime, database } = runtimeWith({
+      profiles: [{ id: "staff-2", workspace_id: "w1" }],
+      platform_admins: [
+        { user_id: "staff-1", role: "platform_owner", status: "active" },
+        { user_id: "staff-2", role: "platform_admin", status: "disabled" }
+      ]
+    });
+    await expect(
+      setStaffRole(runtime, { userId: "staff-2", role: "platform_admin", reason: "tidying up" })
+    ).rejects.toThrow(/revoked/);
+    expect(database.rows("platform_admins").find((row) => row.user_id === "staff-2")!.status).toBe(
+      "disabled"
+    );
+  });
+
+  it("reinstates when that is what was asked for, and says so in the ledger", async () => {
+    const { runtime, database } = runtimeWith({
+      profiles: [{ id: "staff-2", workspace_id: "w1" }],
+      platform_admins: [
+        { user_id: "staff-1", role: "platform_owner", status: "active" },
+        { user_id: "staff-2", role: "platform_admin", status: "disabled" }
+      ]
+    });
+    await setStaffRole(runtime, {
+      userId: "staff-2",
+      role: "platform_support",
+      reason: "back from leave",
+      reinstate: true
+    });
+    const row = database.rows("platform_admins").find((entry) => entry.user_id === "staff-2")!;
+    expect(row.status).toBe("active");
+    expect(row.role).toBe("platform_support");
+    expect(ledger(database)[0]!.action).toBe("staff.reinstated");
+  });
+
+  it("still refuses a role this build does not know", async () => {
+    const { runtime } = runtimeWith({
+      profiles: [{ id: "staff-2", workspace_id: "w1" }],
+      platform_admins: [{ user_id: "staff-1", role: "platform_owner", status: "active" }]
+    });
+    await expect(
+      setStaffRole(runtime, {
+        userId: "staff-2",
+        role: "platform_root" as PlatformAdminRole,
+        reason: "typo"
+      })
+    ).rejects.toThrow(/Unknown staff role/);
+  });
+
+  it("refuses a caller who is not an owner", async () => {
+    const { runtime } = runtimeWith(
+      {
+        profiles: [{ id: "staff-2", workspace_id: "w1" }],
+        platform_admins: [{ user_id: "staff-1", role: "platform_admin", status: "active" }]
+      },
+      "platform_admin"
+    );
+    await expect(
+      setStaffRole(runtime, { userId: "staff-2", role: "platform_owner", reason: "promotion" })
+    ).rejects.toBeInstanceOf(PlatformAdminError);
   });
 });
 

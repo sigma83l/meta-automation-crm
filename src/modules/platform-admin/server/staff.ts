@@ -31,6 +31,32 @@ export async function listStaff(runtime: PlatformAdminRuntime): Promise<readonly
 }
 
 /**
+ * Refuses a change that would leave the installation with no active owner.
+ *
+ * Shared by revocation and role changes because both reach the same state by
+ * different routes, and only one of them used to check. An installation with no
+ * `platform_owner` cannot grant one back: `/admin/staff` is owner-only, so the
+ * way out is rerunning the bootstrap script against production with the
+ * service-role key, which is exactly the credential the console exists to avoid
+ * needing.
+ */
+async function assertAnOwnerRemains(
+  runtime: PlatformAdminRuntime,
+  userId: string,
+  options: Readonly<{ message: string }>
+) {
+  const { data: owners } = await runtime.db
+    .from("platform_admins")
+    .select("user_id")
+    .eq("role", "platform_owner")
+    .eq("status", "active");
+  const isOwner = (owners ?? []).some((row) => row.user_id === userId);
+  if (!isOwner) return;
+  const remaining = (owners ?? []).filter((row) => row.user_id !== userId);
+  if (remaining.length === 0) throw new Error(options.message);
+}
+
+/**
  * Grant or change staff access.
  *
  * Restricted to `platform_owner`, and that is the whole point of having three
@@ -38,10 +64,30 @@ export async function listStaff(runtime: PlatformAdminRuntime): Promise<readonly
  * submission away from promoting themselves to the role that can suspend
  * customers. `assertPlatformCapability` enforces it, and the ledger records who
  * granted what to whom.
+ *
+ * Two things this refuses, both of which it used to allow because only
+ * `revokeStaff` was guarding the same states:
+ *
+ *   * Demoting the last active owner — including yourself, which the staff
+ *     table's own "Change role" control makes a single form submission away.
+ *     `revokeStaff` has always refused to remove that person; demoting them
+ *     reaches the identical dead end and now refuses identically.
+ *   * Silently reinstating somebody whose access was revoked. The row is
+ *     disabled rather than deleted, so an upsert that set `status: 'active'`
+ *     turned a role edit into a restoration of cross-tenant access, recorded
+ *     as `staff.granted` like any other edit. Reinstatement is still available
+ *     — it is just its own decision, with its own word on the button and its
+ *     own line in the ledger.
  */
 export async function setStaffRole(
   runtime: PlatformAdminRuntime,
-  input: Readonly<{ userId: string; role: PlatformAdminRole; reason: string }>
+  input: Readonly<{
+    userId: string;
+    role: PlatformAdminRole;
+    reason: string;
+    /** Say so explicitly to bring a revoked account back. */
+    reinstate?: boolean;
+  }>
 ) {
   assertPlatformCapability(runtime.admin, "staff");
   const reason = requireReason(input.reason);
@@ -53,6 +99,22 @@ export async function setStaffRole(
     .eq("id", input.userId)
     .maybeSingle();
   if (!profile) throw new Error("That account does not exist.");
+
+  const { data: existing } = await runtime.db
+    .from("platform_admins")
+    .select("role,status")
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  const wasRevoked = existing?.status === "disabled";
+  if (wasRevoked && input.reinstate !== true) {
+    throw new Error("That person's access was revoked. Reinstate it explicitly to restore it.");
+  }
+
+  if (input.role !== "platform_owner") {
+    await assertAnOwnerRemains(runtime, input.userId, {
+      message: "At least one active platform owner must remain."
+    });
+  }
 
   const { error } = await runtime.db.from("platform_admins").upsert(
     {
@@ -68,9 +130,16 @@ export async function setStaffRole(
   if (error) throw new Error("Staff grant failed.");
 
   await recordPlatformAudit(runtime, {
-    action: "staff.granted",
+    // Three different events, not one. A reviewer scanning the ledger for how
+    // somebody came to hold cross-tenant access should not have to infer it
+    // from the role field of a line that says "granted" either way.
+    action: wasRevoked ? "staff.reinstated" : existing ? "staff.role_changed" : "staff.granted",
     targetUserId: input.userId,
-    safeDetails: { role: input.role, reason }
+    safeDetails: {
+      role: input.role,
+      ...(existing ? { previous_role: String(existing.role) } : {}),
+      reason
+    }
   });
 }
 
@@ -89,15 +158,9 @@ export async function revokeStaff(
   assertPlatformCapability(runtime.admin, "staff");
   const reason = requireReason(input.reason);
 
-  const { data: owners } = await runtime.db
-    .from("platform_admins")
-    .select("user_id")
-    .eq("role", "platform_owner")
-    .eq("status", "active");
-  const remainingOwners = (owners ?? []).filter((row) => row.user_id !== input.userId);
-  if ((owners ?? []).some((row) => row.user_id === input.userId) && remainingOwners.length === 0) {
-    throw new Error("At least one active platform owner must remain.");
-  }
+  await assertAnOwnerRemains(runtime, input.userId, {
+    message: "At least one active platform owner must remain."
+  });
 
   const { error } = await runtime.db
     .from("platform_admins")
