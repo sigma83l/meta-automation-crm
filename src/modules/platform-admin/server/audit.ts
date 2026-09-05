@@ -55,6 +55,57 @@ export async function recordPlatformAudit(
   if (error) throw new Error(`Platform audit write failed: ${error.code ?? "unknown"}`);
 }
 
+/**
+ * How long one recorded view stands for before another is written.
+ *
+ * Without this every refresh, every back button and every action's
+ * `router.refresh()` would add a line, and a ledger somebody has to page
+ * through to find the four lines that matter is a ledger nobody reads. Fifteen
+ * minutes collapses one sitting into one line while still separating two
+ * visits.
+ */
+const VIEW_LEDGER_WINDOW_MS = 15 * 60_000;
+
+/**
+ * Records that a staff member read a customer's workspace.
+ *
+ * The ledger recorded every mutation and no reads at all, so the question it
+ * could not answer was the one an affected customer actually asks: who looked
+ * at my data? Impersonation grants seemed to answer it and did not — they gate
+ * nothing, so opening one is voluntary, and a staff member who never opens one
+ * left no trace anywhere.
+ *
+ * **Fails closed.** If the line cannot be written the read does not happen,
+ * which is the same bargain the rest of this module makes: cross-tenant power
+ * is only defensible while it is accountable, and a console that keeps serving
+ * customer data after its ledger has stopped accepting entries is exactly the
+ * state the ledger exists to prevent. The blast radius is one screen — the
+ * overview, the queues and the switches carry no tenant data and are unaffected.
+ */
+export async function recordWorkspaceView(
+  runtime: PlatformAdminRuntime,
+  workspaceId: string
+): Promise<void> {
+  const since = new Date(Date.now() - VIEW_LEDGER_WINDOW_MS).toISOString();
+  const { data, error: readError } = await runtime.db
+    .from("platform_admin_audit_events")
+    .select("id")
+    .eq("actor_id", runtime.admin.userId)
+    .eq("action", "workspace.viewed")
+    .eq("target_workspace_id", workspaceId)
+    .gte("occurred_at", since)
+    .limit(1);
+  // A failed read is not a licence to skip the write. Falling through records a
+  // line that may duplicate a recent one, which costs a row; the alternative
+  // costs the record.
+  if (!readError && (data ?? []).length > 0) return;
+
+  await recordPlatformAudit(runtime, {
+    action: "workspace.viewed",
+    targetWorkspaceId: workspaceId
+  });
+}
+
 export async function listPlatformAudit(
   runtime: PlatformAdminRuntime,
   options: Readonly<{ workspaceId?: string; actorId?: string; limit?: number }> = {}

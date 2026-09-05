@@ -421,6 +421,11 @@ class FakeQuery implements PromiseLike<FakeResult> {
         const prepared: FakeRow = {
           id: row.id ?? this.database.nextId(),
           created_at: row.created_at ?? new Date().toISOString(),
+          // The audit ledger stamps its own instant rather than reusing
+          // `created_at`, and code that filters on it — "has this reader already
+          // been recorded in the last quarter hour?" — matched nothing here
+          // while working against the real column default.
+          occurred_at: row.occurred_at ?? new Date().toISOString(),
           ...row
         };
         const existing =

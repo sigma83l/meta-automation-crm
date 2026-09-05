@@ -37,10 +37,16 @@ const GRANT_COLUMNS = "id,admin_id,workspace_id,reason,expires_at,revoked_at,cre
  *
  * A grant mints no session and changes nobody's `auth.uid()`. It records that a
  * named person is about to read a named workspace, for a stated reason, until a
- * stated instant — and the console's workspace reads check for a live grant
- * before showing tenant data behind a banner. Because no write path anywhere
- * consults a grant, "read-only" is a property of the code's shape rather than a
- * rule somebody has to keep remembering.
+ * stated instant, and while one is open the workspace screen carries a banner
+ * naming the customer. Because no write path anywhere consults a grant,
+ * "read-only" is a property of the code's shape rather than a rule somebody has
+ * to keep remembering.
+ *
+ * What a grant is **not** is a gate. The console's workspace reads do not
+ * require one — this comment used to claim they did, and they never have. What
+ * records a cross-tenant read is `recordWorkspaceView`, which every workspace
+ * detail render calls whether or not a grant is open; a grant is the stronger,
+ * deliberate statement of intent that sits on top of that.
  */
 export async function openImpersonation(
   runtime: PlatformAdminRuntime,

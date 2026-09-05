@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createFakeSupabase, type FakeRow } from "@/tests/fixtures/fake-supabase";
 import type { PlatformAdminRole } from "@/src/modules/platform-admin/contracts";
-import { recordPlatformAudit } from "@/src/modules/platform-admin/server/audit";
+import {
+  recordPlatformAudit,
+  recordWorkspaceView
+} from "@/src/modules/platform-admin/server/audit";
 import { extendTrial } from "@/src/modules/platform-admin/server/billing-overrides";
 import { setWorkspaceFeatureOverride } from "@/src/modules/platform-admin/server/feature-flags";
 import { openImpersonation } from "@/src/modules/platform-admin/server/impersonation";
@@ -322,6 +325,62 @@ describe("staff revocation", () => {
     const rows = database.rows("platform_admins");
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.user_id === "staff-2")!.status).toBe("disabled");
+  });
+});
+
+describe("recording that a customer's workspace was read", () => {
+  /**
+   * The ledger recorded every mutation and no reads, so the question it could
+   * not answer was the one an affected customer asks first. Impersonation
+   * grants looked like the answer and were not: they gate nothing, so a staff
+   * member who never opened one left no trace at all.
+   */
+  it("writes a line naming the actor and the workspace", async () => {
+    const { runtime, database } = runtimeWith({ platform_admin_audit_events: [] });
+    await recordWorkspaceView(runtime, "ws-1");
+    const row = ledger(database)[0]!;
+    expect(row.action).toBe("workspace.viewed");
+    expect(row.actor_id).toBe("staff-1");
+    expect(row.target_workspace_id).toBe("ws-1");
+  });
+
+  it("collapses one sitting into one line", async () => {
+    const { runtime, database } = runtimeWith({ platform_admin_audit_events: [] });
+    await recordWorkspaceView(runtime, "ws-1");
+    await recordWorkspaceView(runtime, "ws-1");
+    await recordWorkspaceView(runtime, "ws-1");
+    expect(ledger(database)).toHaveLength(1);
+  });
+
+  it("writes again for a different workspace, and for a different reader", async () => {
+    const { runtime, database } = runtimeWith({ platform_admin_audit_events: [] });
+    await recordWorkspaceView(runtime, "ws-1");
+    await recordWorkspaceView(runtime, "ws-2");
+    expect(ledger(database)).toHaveLength(2);
+
+    const second: PlatformAdminRuntime = Object.freeze({
+      ...runtime,
+      admin: Object.freeze({ userId: "staff-9", role: "platform_support" as PlatformAdminRole })
+    });
+    await recordWorkspaceView(second, "ws-1");
+    expect(ledger(database)).toHaveLength(3);
+  });
+
+  it("writes again once the window has passed", async () => {
+    const { runtime, database } = runtimeWith({
+      platform_admin_audit_events: [
+        {
+          id: 1,
+          actor_id: "staff-1",
+          action: "workspace.viewed",
+          target_workspace_id: "ws-1",
+          occurred_at: new Date(Date.now() - 60 * 60_000).toISOString()
+        }
+      ]
+    });
+    await recordWorkspaceView(runtime, "ws-1");
+    // A visit an hour later is a separate visit, and the ledger should say so.
+    expect(ledger(database)).toHaveLength(2);
   });
 });
 
