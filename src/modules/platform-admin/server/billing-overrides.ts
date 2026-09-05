@@ -64,7 +64,21 @@ export async function setSubscriptionStatus(
   });
 }
 
-/** Move a workspace onto a different plan without changing its status. */
+/**
+ * Move a workspace onto a different plan without changing its status.
+ *
+ * Through `platform_set_workspace_plan`, which moves `plan_id` and nothing
+ * else. This used to express the plan change as a transition to the status the
+ * workspace was already in, so that the state machine would carry the new plan
+ * along — and that failed for every trialing workspace, because
+ * 'trialing' -> 'trialing' is an illegal transition and `trial_consumed_at` is
+ * already set. Since a workspace is provisioned into 'trialing', that was every
+ * customer who had not yet converted.
+ *
+ * A plan change is not a status transition, so it no longer pretends to be one.
+ * The state machine still owns status, both trial columns and every deadline;
+ * none of them are reachable from here.
+ */
 export async function setWorkspacePlan(
   runtime: PlatformAdminRuntime,
   input: Readonly<{ workspaceId: string; planId: string; reason: string }>
@@ -75,7 +89,7 @@ export async function setWorkspacePlan(
   const [{ data: current }, { data: plan }] = await Promise.all([
     runtime.db
       .from("workspace_subscriptions")
-      .select("status,plan_id,trial_ends_at,current_period_ends_at")
+      .select("status,plan_id")
       .eq("workspace_id", input.workspaceId)
       .maybeSingle(),
     runtime.db
@@ -86,13 +100,11 @@ export async function setWorkspacePlan(
   ]);
   if (!current) throw new Error("Workspace has no subscription record.");
   if (!plan) throw new Error("Unknown plan.");
+  if (plan.active !== true) throw new Error("That plan is retired and cannot be assigned.");
 
-  const { data, error } = await runtime.db.rpc("transition_workspace_subscription", {
+  const { data, error } = await runtime.db.rpc("platform_set_workspace_plan", {
     trusted_workspace_id: input.workspaceId,
-    trusted_new_status: String(current.status),
-    trusted_plan_id: input.planId,
-    trusted_trial_ends_at: (current.trial_ends_at as string | null) ?? null,
-    trusted_current_period_ends_at: (current.current_period_ends_at as string | null) ?? null
+    trusted_plan_id: input.planId
   });
   if (error || data !== true) throw new Error("Plan change failed.");
 

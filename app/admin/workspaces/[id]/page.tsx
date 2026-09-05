@@ -43,7 +43,14 @@ export default async function AdminWorkspacePage({ params }: { params: Promise<{
   await recordWorkspaceView(runtime, id);
 
   const [plans, maskedEmails, grant] = await Promise.all([
-    listPlans(runtime).catch(() => []),
+    // Assignable plans only. A retired catalogue entry is a plan a workspace may
+    // still sit on — that is what grandfathering is — but moving somebody onto
+    // one is a decision the catalogue has already made against, and
+    // `platform_set_workspace_plan` refuses it. Offering it in the select would
+    // make that refusal a surprise rather than a rule.
+    listPlans(runtime)
+      .then((rows) => rows.filter((plan) => plan.active))
+      .catch(() => []),
     maskedEmailsFor(
       runtime,
       detail.members.map((member) => member.userId)

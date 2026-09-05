@@ -347,6 +347,82 @@ describe("trial extension", () => {
   });
 });
 
+describe("plan changes", () => {
+  /**
+   * The regression this function exists for.
+   *
+   * The console used to move a plan by asking for a transition to the status the
+   * workspace was already in, which the state machine refuses for a trialing
+   * workspace — and every workspace is provisioned into a trial, so the console's
+   * plan control failed for every customer who had not yet converted.
+   */
+  it("moves the plan of a trialing workspace, which a status transition cannot", async () => {
+    const plans = await db.query<{ id: string }>(
+      `insert into public.subscription_plans (plan_key, display_name, price_minor_units)
+       values ('console_target_monthly', 'Console target', 199900) returning id;`
+    );
+    const target = plans.rows[0]!.id;
+
+    await db.exec(`
+      update public.workspace_subscriptions
+      set status = 'trialing',
+          trial_ends_at = now() + interval '6 days',
+          trial_consumed_at = now() - interval '1 day'
+      where workspace_id = '${workspaceA}';
+    `);
+
+    // What the old implementation did, kept here so the reason for the separate
+    // function stays visible: the state machine is still right to refuse this.
+    await expect(
+      db.exec(`
+        select public.transition_workspace_subscription(
+          '${workspaceA}'::uuid, 'trialing', '${target}'::uuid, now() + interval '6 days', null, null
+        );
+      `)
+    ).rejects.toThrow(/already consumed its trial/);
+
+    const moved = await db.query<{ ok: boolean }>(
+      `select public.platform_set_workspace_plan('${workspaceA}', '${target}') as ok;`
+    );
+    expect(moved.rows[0]?.ok).toBe(true);
+
+    // The plan moved and nothing else did. A plan change that quietly ended a
+    // trial, or restarted one, would be the state machine by another route.
+    const after = await db.query<{
+      plan_id: string;
+      status: string;
+      trial_ends_at: string | null;
+      trial_consumed_at: string | null;
+    }>(
+      `select plan_id, status, trial_ends_at, trial_consumed_at
+       from public.workspace_subscriptions where workspace_id = '${workspaceA}';`
+    );
+    expect(after.rows[0]?.plan_id).toBe(target);
+    expect(after.rows[0]?.status).toBe("trialing");
+    expect(after.rows[0]?.trial_ends_at).not.toBeNull();
+    expect(after.rows[0]?.trial_consumed_at).not.toBeNull();
+  });
+
+  it("refuses an unknown plan and a retired one", async () => {
+    await expect(
+      db.exec(
+        `select public.platform_set_workspace_plan(
+           '${workspaceA}', '00000000-0000-0000-0000-0000000000ff');`
+      )
+    ).rejects.toThrow(/unknown plan/);
+
+    const retired = await db.query<{ id: string }>(
+      `insert into public.subscription_plans (plan_key, display_name, price_minor_units, active)
+       values ('console_retired_monthly', 'Retired', 9900, false) returning id;`
+    );
+    await expect(
+      db.exec(
+        `select public.platform_set_workspace_plan('${workspaceA}', '${retired.rows[0]!.id}');`
+      )
+    ).rejects.toThrow(/not active/);
+  });
+});
+
 describe("impersonation grants", () => {
   it("refuses a window that ends before it starts", async () => {
     await expect(
