@@ -6,6 +6,7 @@ import { useI18n } from "@/src/lib/i18n/client";
 
 import type { ImpersonationGrant, PlatformAdminRole, PlatformOverview } from "../contracts";
 import { AdminShell } from "./admin-shell";
+import { ReasonAction } from "./reason-action";
 
 /**
  * The platform overview.
@@ -19,11 +20,20 @@ import { AdminShell } from "./admin-shell";
 export function PlatformOverviewPanel({
   role,
   overview,
-  liveGrants
+  liveGrants,
+  grantHolders
 }: {
   role: PlatformAdminRole;
   overview: PlatformOverview | null;
   liveGrants: readonly ImpersonationGrant[];
+  /**
+   * Who holds each open window, by staff user id.
+   *
+   * The list named the customer being read and never the person reading them,
+   * which is the half an owner scanning this panel actually needs: "somebody is
+   * inside Acme right now" is not something anybody can act on.
+   */
+  grantHolders: Readonly<Record<string, string>>;
 }) {
   const { text } = useI18n();
   // An em dash rather than 0 when the read failed: reporting an empty queue on
@@ -138,11 +148,26 @@ export function PlatformOverviewPanel({
                   <strong>{grant.workspaceName}</strong>
                   <span>{grant.reason}</span>
                   <small>
-                    {text("until", "bitiş", "تا")}{" "}
+                    {text("opened by", "açan", "باز شده توسط")}{" "}
+                    {grantHolders[grant.adminId] ??
+                      text("a staff member", "bir personel", "یکی از کارکنان")}{" "}
+                    · {text("until", "bitiş", "تا")}{" "}
                     <time dateTime={grant.expiresAt}>
                       {new Date(grant.expiresAt).toLocaleTimeString()}
                     </time>
                   </small>
+                  {/*
+                    Every close used to be scoped to the caller's own grants, so
+                    this list showed an owner a window they could not shut. The
+                    server decides who may end somebody else's; this offers it,
+                    and a support role reaching for a colleague's window is
+                    refused there rather than here.
+                  */}
+                  <ReasonAction
+                    endpoint="impersonation"
+                    body={{ action: "close_grant", grantId: grant.id }}
+                    label={text("Close this view", "Bu görüntülemeyi kapat", "بستن این مشاهده")}
+                  />
                 </li>
               ))}
             </ul>

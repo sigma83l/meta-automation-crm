@@ -9,7 +9,10 @@ import {
 } from "@/src/modules/platform-admin/server/audit";
 import { extendTrial } from "@/src/modules/platform-admin/server/billing-overrides";
 import { setWorkspaceFeatureOverride } from "@/src/modules/platform-admin/server/feature-flags";
-import { openImpersonation } from "@/src/modules/platform-admin/server/impersonation";
+import {
+  closeImpersonationGrant,
+  openImpersonation
+} from "@/src/modules/platform-admin/server/impersonation";
 import { setMembershipRole, setUserStatus } from "@/src/modules/platform-admin/server/lifecycle";
 import { setSwitch } from "@/src/modules/platform-admin/server/switches";
 import { requeueOutboxEvent } from "@/src/modules/platform-admin/server/ops";
@@ -325,6 +328,69 @@ describe("staff revocation", () => {
     const rows = database.rows("platform_admins");
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.user_id === "staff-2")!.status).toBe("disabled");
+  });
+});
+
+describe("closing a viewing window", () => {
+  const openGrant = (adminId: string) => ({
+    id: "grant-1",
+    admin_id: adminId,
+    workspace_id: "ws-1",
+    reason: "customer reported a missing report",
+    expires_at: new Date(Date.now() + 20 * 60_000).toISOString(),
+    revoked_at: null
+  });
+
+  it("lets the holder close their own", async () => {
+    const { runtime, database } = runtimeWith({
+      platform_impersonation_grants: [openGrant("staff-1")]
+    });
+    await closeImpersonationGrant(runtime, "grant-1");
+    expect(database.rows("platform_impersonation_grants")[0]!.revoked_at).not.toBeNull();
+    expect(ledger(database)[0]!.safe_details).toMatchObject({ closed_own_grant: true });
+  });
+
+  /**
+   * The gap: every close was scoped to the caller's own `admin_id`, so the
+   * overview showed an owner a live window into a customer that only the person
+   * inside it could end.
+   */
+  it("lets an owner close somebody else's", async () => {
+    const { runtime, database } = runtimeWith({
+      platform_impersonation_grants: [openGrant("staff-2")]
+    });
+    await closeImpersonationGrant(runtime, "grant-1");
+    expect(database.rows("platform_impersonation_grants")[0]!.revoked_at).not.toBeNull();
+    const line = ledger(database)[0]!;
+    expect(line.actor_id).toBe("staff-1");
+    // The holder, so the ledger records both halves of who did what to whom.
+    expect(line.target_user_id).toBe("staff-2");
+    expect(line.safe_details).toMatchObject({ closed_own_grant: false });
+  });
+
+  it("refuses a support role reaching for a colleague's window", async () => {
+    const { runtime, database } = runtimeWith(
+      { platform_impersonation_grants: [openGrant("staff-2")] },
+      "platform_support"
+    );
+    await expect(closeImpersonationGrant(runtime, "grant-1")).rejects.toBeInstanceOf(
+      PlatformAdminError
+    );
+    expect(database.rows("platform_impersonation_grants")[0]!.revoked_at).toBeNull();
+  });
+
+  it("still lets a support role close their own", async () => {
+    const { runtime, database } = runtimeWith(
+      { platform_impersonation_grants: [openGrant("staff-1")] },
+      "platform_support"
+    );
+    await closeImpersonationGrant(runtime, "grant-1");
+    expect(database.rows("platform_impersonation_grants")[0]!.revoked_at).not.toBeNull();
+  });
+
+  it("says so rather than reporting a close that did nothing", async () => {
+    const { runtime } = runtimeWith({ platform_impersonation_grants: [] });
+    await expect(closeImpersonationGrant(runtime, "grant-1")).rejects.toThrow(/not open/);
   });
 });
 

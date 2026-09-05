@@ -120,6 +120,61 @@ export async function closeImpersonation(runtime: PlatformAdminRuntime, workspac
 }
 
 /**
+ * Close somebody else's open window.
+ *
+ * Every close used to be scoped to the caller's own `admin_id`, so a live grant
+ * could be seen by an owner on the overview and ended by nobody but the person
+ * holding it. That is the wrong way round: the overview lists these precisely so
+ * that a window left open, or one opened by somebody who should not have, can be
+ * shut — and the person who most needs to shut it is not the person who opened
+ * it.
+ *
+ * Ending another staff member's window is a staff-management act, not a support
+ * one, so it takes the `staff` capability rather than `impersonate`: the same
+ * role that can revoke the access outright can end a session it is being used
+ * for, and a support hire still cannot reach across to a colleague's window.
+ * Closing your own needs nothing extra, and goes through the same path so that
+ * one ledger action covers both.
+ */
+export async function closeImpersonationGrant(
+  runtime: PlatformAdminRuntime,
+  grantId: string
+): Promise<number> {
+  assertPlatformCapability(runtime.admin, "impersonate");
+
+  const { data: grant } = await runtime.db
+    .from("platform_impersonation_grants")
+    .select("id,admin_id,workspace_id")
+    .eq("id", grantId)
+    .maybeSingle();
+  if (!grant) throw new Error("That viewing window is not open.");
+
+  const isOwnGrant = String(grant.admin_id) === runtime.admin.userId;
+  if (!isOwnGrant) assertPlatformCapability(runtime.admin, "staff");
+
+  const now = new Date().toISOString();
+  const { data } = await runtime.db
+    .from("platform_impersonation_grants")
+    .update({ revoked_at: now })
+    .eq("id", grantId)
+    .is("revoked_at", null)
+    .gt("expires_at", now)
+    .select("id");
+  const revoked = data?.length ?? 0;
+  if (revoked === 0) throw new Error("That viewing window has already closed.");
+
+  await recordPlatformAudit(runtime, {
+    action: "impersonation.closed",
+    targetWorkspaceId: String(grant.workspace_id),
+    // Named, because "closed by somebody else" and "closed by the holder" are
+    // different events and the ledger's `actor_id` only records the first half.
+    targetUserId: String(grant.admin_id),
+    safeDetails: { revoked, closed_own_grant: isOwnGrant }
+  });
+  return revoked;
+}
+
+/**
  * The grant this admin currently holds on a workspace, if any.
  *
  * Expiry is applied in the query rather than by a sweep, so a window closes on

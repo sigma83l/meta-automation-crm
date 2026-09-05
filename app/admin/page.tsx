@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { loadPlatformOverview } from "@/src/modules/platform-admin/server/directory";
+import {
+  loadPlatformOverview,
+  maskedEmailsFor
+} from "@/src/modules/platform-admin/server/directory";
 import { listActiveImpersonations } from "@/src/modules/platform-admin/server/impersonation";
 import {
   createPlatformAdminRuntime,
@@ -25,7 +28,30 @@ export default async function AdminOverviewPage() {
     loadPlatformOverview(runtime).catch(() => null),
     listActiveImpersonations(runtime).catch(() => [])
   ]);
+
+  // Who is holding each open window. A display name where the profile has one,
+  // the masked address otherwise — the same pair the staff screen shows, since
+  // this is the same question asked from the other end.
+  const holderIds = [...new Set(grants.map((grant) => grant.adminId))];
+  const [holderEmails, holderProfiles] = await Promise.all([
+    maskedEmailsFor(runtime, holderIds),
+    holderIds.length
+      ? runtime.db.from("profiles").select("id,display_name").in("id", holderIds)
+      : Promise.resolve({ data: [] })
+  ]);
+  const holderNames = new Map(
+    (holderProfiles.data ?? []).map((row) => [String(row.id), row.display_name as string | null])
+  );
+  const grantHolders = Object.fromEntries(
+    holderIds.map((id) => [id, holderNames.get(id) ?? holderEmails[id] ?? id])
+  );
+
   return (
-    <PlatformOverviewPanel role={runtime.admin.role} overview={overview} liveGrants={grants} />
+    <PlatformOverviewPanel
+      role={runtime.admin.role}
+      overview={overview}
+      liveGrants={grants}
+      grantHolders={grantHolders}
+    />
   );
 }
