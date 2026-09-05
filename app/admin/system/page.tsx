@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 
-import { listDeadLetters, loadOutboxHealth } from "@/src/modules/platform-admin/server/ops";
+import {
+  listDeadLetters,
+  listStuckOutboxEvents,
+  loadOutboxHealth
+} from "@/src/modules/platform-admin/server/ops";
 import {
   createPlatformAdminRuntime,
   PlatformAdminError
@@ -21,10 +25,11 @@ export default async function AdminSystemPage() {
     throw error;
   }
 
-  const [switches, deadLetters, outbox] = await Promise.all([
+  const [switches, deadLetters, outbox, stuckOutbox] = await Promise.all([
     listSwitches(runtime),
     listDeadLetters(runtime, { limit: 50 }),
-    loadOutboxHealth(runtime)
+    loadOutboxHealth(runtime),
+    listStuckOutboxEvents(runtime, { limit: 50 })
   ]);
 
   return (
@@ -33,6 +38,7 @@ export default async function AdminSystemPage() {
       switches={switches}
       deadLetters={deadLetters}
       outbox={outbox}
+      stuckOutbox={stuckOutbox}
     />
   );
 }

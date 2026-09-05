@@ -18,6 +18,7 @@ import { projectMetaMessage } from "@/src/modules/integrations/meta/message-proj
 import { createTurnRuntime } from "@/src/modules/rcos/turn-runtime";
 import { runTurn, type TurnEvent } from "@/src/modules/rcos/turn-engine";
 import { inngest } from "./client";
+import { OUTBOX_ATTEMPT_CEILING } from "./outbox-policy";
 
 /**
  * The safety net for events the webhook could not dispatch.
@@ -51,7 +52,7 @@ export const relayMetaOutbox = inngest.createFunction(
         .from("provider_event_outbox")
         .select("id,workspace_id,payload,attempts")
         .is("emitted_at", null)
-        .lt("attempts", 10)
+        .lt("attempts", OUTBOX_ATTEMPT_CEILING)
         .order("created_at")
         .limit(100);
       if (error) throw new Error("OUTBOX_READ_FAILED");
@@ -265,7 +266,7 @@ export const relayBillingOutbox = inngest.createFunction(
         .from("billing_provider_event_outbox")
         .select("id,workspace_id,payload,attempts")
         .is("emitted_at", null)
-        .lt("attempts", 10)
+        .lt("attempts", OUTBOX_ATTEMPT_CEILING)
         .order("created_at")
         .limit(100);
       if (error) throw new Error("BILLING_OUTBOX_READ_FAILED");

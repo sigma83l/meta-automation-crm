@@ -9,7 +9,9 @@ import { setWorkspaceFeatureOverride } from "@/src/modules/platform-admin/server
 import { openImpersonation } from "@/src/modules/platform-admin/server/impersonation";
 import { setMembershipRole, setUserStatus } from "@/src/modules/platform-admin/server/lifecycle";
 import { setSwitch } from "@/src/modules/platform-admin/server/switches";
+import { requeueOutboxEvent } from "@/src/modules/platform-admin/server/ops";
 import { maskedEmailsFor, searchUsersByEmail } from "@/src/modules/platform-admin/server/directory";
+import { OUTBOX_ATTEMPT_CEILING, OUTBOX_RETRY_GRANT } from "@/src/lib/inngest/outbox-policy";
 import { revokeStaff } from "@/src/modules/platform-admin/server/staff";
 import {
   PlatformAdminError,
@@ -395,6 +397,64 @@ describe("looking an account up by address", () => {
     // Found everything it was asked for on page three, so it stopped there
     // rather than walking the remaining thousand accounts.
     expect(listUsers).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("outbox retry", () => {
+  /**
+   * The defect this covers: the relay claims only rows below the attempt
+   * ceiling, so a requeue that cleared `emitted_at` and left `attempts` alone
+   * moved nothing at all — and the only rows the console surfaced were the ones
+   * already past that ceiling. The action reported success and wrote a ledger
+   * line for a requeue that had not happened.
+   */
+  it("brings a stopped row back under the relay's ceiling", async () => {
+    const { runtime, database } = runtimeWith({
+      provider_event_outbox: [{ id: "evt-1", workspace_id: "ws-1", attempts: 12, emitted_at: null }]
+    });
+    await requeueOutboxEvent(runtime, { id: "evt-1", reason: "provider recovered" });
+
+    const row = database.rows("provider_event_outbox")[0]!;
+    expect(row.emitted_at).toBeNull();
+    expect(Number(row.attempts)).toBeLessThan(OUTBOX_ATTEMPT_CEILING);
+    // Bounded, not reset: a permanently failing row gets a few more tries and
+    // then stops again, rather than looping forever.
+    expect(Number(row.attempts)).toBe(OUTBOX_ATTEMPT_CEILING - OUTBOX_RETRY_GRANT);
+
+    expect(ledger(database)[0]!.action).toBe("ops.outbox_requeued");
+    expect(ledger(database)[0]!.safe_details).toMatchObject({ attempts_was: 12, attempts: 7 });
+  });
+
+  it("never spends a row's remaining attempts on its behalf", async () => {
+    // A row that has failed twice still has eight tries left. Cutting it down to
+    // the retry grant would make the button that was meant to help it a demotion.
+    const { runtime, database } = runtimeWith({
+      provider_event_outbox: [
+        { id: "evt-2", workspace_id: "ws-1", attempts: 2, emitted_at: "2026-09-01T00:00:00.000Z" }
+      ]
+    });
+    await requeueOutboxEvent(runtime, { id: "evt-2", reason: "wrongly marked emitted" });
+    const row = database.rows("provider_event_outbox")[0]!;
+    expect(Number(row.attempts)).toBe(2);
+    expect(row.emitted_at).toBeNull();
+  });
+
+  it("refuses an id that is not there rather than reporting a requeue", async () => {
+    const { runtime, database } = runtimeWith({ provider_event_outbox: [] });
+    await expect(
+      requeueOutboxEvent(runtime, { id: "missing", reason: "chasing a ghost" })
+    ).rejects.toThrow(/Unknown outbox event/);
+    expect(ledger(database)).toHaveLength(0);
+  });
+
+  it("refuses a role without operations authority", async () => {
+    const { runtime } = runtimeWith(
+      { provider_event_outbox: [{ id: "evt-3", workspace_id: "ws-1", attempts: 11 }] },
+      "platform_support"
+    );
+    await expect(
+      requeueOutboxEvent(runtime, { id: "evt-3", reason: "support poking at it" })
+    ).rejects.toBeInstanceOf(PlatformAdminError);
   });
 });
 

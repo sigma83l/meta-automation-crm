@@ -165,6 +165,15 @@ export type DeadLetterRow = Readonly<{
   createdAt: string;
 }>;
 
+/** An outbox row past the relay's attempt ceiling: stopped, and waiting on a person. */
+export type StuckOutboxRow = Readonly<{
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  attempts: number;
+  createdAt: string;
+}>;
+
 export type OutboxHealth = Readonly<{
   pendingOutbox: number;
   exhaustedOutbox: number;

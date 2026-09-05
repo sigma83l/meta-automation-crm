@@ -4,7 +4,13 @@ import Link from "next/link";
 
 import { useI18n } from "@/src/lib/i18n/client";
 
-import type { DeadLetterRow, OutboxHealth, PlatformAdminRole, PlatformSwitch } from "../contracts";
+import type {
+  DeadLetterRow,
+  OutboxHealth,
+  PlatformAdminRole,
+  PlatformSwitch,
+  StuckOutboxRow
+} from "../contracts";
 import { AdminShell } from "./admin-shell";
 import { ReasonAction } from "./reason-action";
 
@@ -12,12 +18,15 @@ export function SystemPanel({
   role,
   switches,
   deadLetters,
-  outbox
+  outbox,
+  stuckOutbox
 }: {
   role: PlatformAdminRole;
   switches: readonly PlatformSwitch[];
   deadLetters: readonly DeadLetterRow[];
   outbox: OutboxHealth;
+  /** The rows behind the "past retry limit" count, so it can be acted on. */
+  stuckOutbox: readonly StuckOutboxRow[];
 }) {
   const { text } = useI18n();
 
@@ -106,9 +115,9 @@ export function SystemPanel({
               <strong>{outbox.exhaustedOutbox}</strong>
               <small>
                 {text(
-                  "These stop on their own and need a person",
-                  "Bunlar kendiliğinden durur ve bir kişi gerektirir",
-                  "این‌ها خودبه‌خود متوقف می‌شوند و به رسیدگی نیاز دارند"
+                  "These stop on their own and are listed below",
+                  "Bunlar kendiliğinden durur ve aşağıda listelenir",
+                  "این‌ها خودبه‌خود متوقف می‌شوند و در پایین فهرست شده‌اند"
                 )}
               </small>
             </div>
@@ -120,6 +129,64 @@ export function SystemPanel({
             </div>
           </div>
         </section>
+
+        {/*
+          The rows behind the "past retry limit" tile.
+          The panel used to report that number and stop, so the one queue it
+          named as needing a person offered that person nothing to press — the
+          requeue endpoint existed but reached no screen. A retry here grants a
+          few fresh attempts rather than resetting the counter, which is what
+          keeps a permanently failing row from looping forever.
+        */}
+        {stuckOutbox.length > 0 ? (
+          <section className="panel crm-table-panel">
+            <div className="panel-heading">
+              <h2>{text("Stopped deliveries", "Durmuş teslimler", "تحویل‌های متوقف‌شده")}</h2>
+            </div>
+            <p className="section-note">
+              {text(
+                "The relay has given up on these. Retrying grants a few more attempts; each send carries the same event id, so one that did go out is discarded rather than delivered twice.",
+                "Aktarıcı bunlardan vazgeçti. Yeniden denemek birkaç hak daha verir; her gönderim aynı olay kimliğini taşır, bu yüzden gerçekte gitmiş olan biri iki kez teslim edilmez, elenir.",
+                "رله از این‌ها منصرف شده است. تلاش دوباره چند فرصت تازه می‌دهد؛ هر ارسال همان شناسه رویداد را دارد، پس موردی که واقعاً رفته باشد دوباره تحویل نمی‌شود."
+              )}
+            </p>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
+                  <th>{text("Attempts", "Deneme", "تلاش‌ها")}</th>
+                  <th>{text("Waiting since", "Bekliyor", "در انتظار از")}</th>
+                  <th>{text("Action", "İşlem", "اقدام")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stuckOutbox.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <Link href={`/admin/workspaces/${row.workspaceId}`}>{row.workspaceName}</Link>
+                      <small className="admin-key" dir="ltr">
+                        {row.id}
+                      </small>
+                    </td>
+                    <td className="admin-num">{row.attempts}</td>
+                    <td>
+                      <time dateTime={row.createdAt}>
+                        {new Date(row.createdAt).toLocaleString()}
+                      </time>
+                    </td>
+                    <td className="admin-actions-cell">
+                      <ReasonAction
+                        endpoint="ops"
+                        body={{ action: "requeue_outbox", id: row.id }}
+                        label={text("Retry delivery", "Yeniden dene", "تلاش دوباره")}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
 
         <section className="panel crm-table-panel">
           <div className="panel-heading">
