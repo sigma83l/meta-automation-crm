@@ -1,5 +1,7 @@
 import "server-only";
 
+import { subscriptionStatuses } from "@/src/modules/billing/contracts";
+
 import type {
   PlatformOverview,
   PlatformUserRow,
@@ -41,6 +43,30 @@ async function countOf(
   return count ?? 0;
 }
 
+/**
+ * Counts a table by a column's values, asking the database for each count.
+ *
+ * The alternative — selecting every row and tallying in JavaScript — is what
+ * this replaced, and it was wrong in a way that never surfaced: PostgREST caps
+ * an unbounded select at its `max-rows` setting, so past that many rows the
+ * panel would have reported a total quietly smaller than the truth, with no
+ * error and nothing on screen to suggest it. A head request per value is a few
+ * more round trips and cannot be short.
+ */
+async function countByValue(
+  runtime: PlatformAdminRuntime,
+  table: string,
+  column: string,
+  values: readonly string[]
+): Promise<Record<string, number>> {
+  const counts = await Promise.all(
+    values.map(
+      async (value) => [value, await countOf(runtime, table, { [column]: value })] as const
+    )
+  );
+  return Object.fromEntries(counts.filter(([, total]) => total > 0));
+}
+
 export async function loadPlatformOverview(
   runtime: PlatformAdminRuntime
 ): Promise<PlatformOverview> {
@@ -59,12 +85,20 @@ export async function loadPlatformOverview(
     countOf(runtime, "workspaces", { status: "active" }),
     countOf(runtime, "profiles"),
     countOf(runtime, "profiles", { status: "active" }),
-    runtime.db.from("workspace_subscriptions").select("status"),
+    countByValue(runtime, "workspace_subscriptions", "status", subscriptionStatuses),
     runtime.db
       .from("automation_dead_letters")
       .select("*", { count: "exact", head: true })
       .is("recovered_at", null),
-    runtime.db.from("meta_connections").select("status,last_health_status"),
+    // "Needs attention" is anything not both connected and healthy, which is
+    // one head count subtracted from another rather than a scan. The two
+    // columns disagree often enough to matter: a connection can sit at 'active'
+    // with an expired token, which is precisely the state a customer reports as
+    // "it stopped working" and no single column names.
+    Promise.all([
+      countOf(runtime, "meta_connections"),
+      countOf(runtime, "meta_connections", { status: "active", last_health_status: "healthy" })
+    ]),
     // Both states that are waiting on us. `awaiting_customer` is not: the ball
     // is with the customer there, and counting it would put a number on this
     // panel that nobody in the room can act on — which is the one thing the
@@ -76,19 +110,8 @@ export async function loadPlatformOverview(
     listActiveImpersonations(runtime)
   ]);
 
-  const bySubscriptionStatus: Record<string, number> = {};
-  for (const row of subscriptions.data ?? []) {
-    const status = String(row.status);
-    bySubscriptionStatus[status] = (bySubscriptionStatus[status] ?? 0) + 1;
-  }
-
-  // "Needs attention" is anything not both connected and healthy. The two
-  // columns disagree often enough to matter: a connection can sit at 'active'
-  // with an expired token, which is precisely the state a customer reports as
-  // "it stopped working" and no single column names.
-  const needingAttention = (
-    (connections.data ?? []) as { status: string; last_health_status: string }[]
-  ).filter((row) => row.status !== "active" || row.last_health_status !== "healthy").length;
+  const [connectionsTotal, connectionsHealthy] = connections;
+  const needingAttention = Math.max(connectionsTotal - connectionsHealthy, 0);
 
   return {
     workspaces: {
@@ -97,7 +120,7 @@ export async function loadPlatformOverview(
       disabled: workspacesTotal - workspacesActive
     },
     users: { total: usersTotal, active: usersActive, disabled: usersTotal - usersActive },
-    subscriptions: bySubscriptionStatus,
+    subscriptions,
     attention: {
       unrecoveredDeadLetters: deadLetters.count ?? 0,
       connectionsNeedingAttention: needingAttention,
@@ -246,6 +269,47 @@ export async function listUsers(
   return decorateProfiles(runtime, (data ?? []) as ProfileRow[]);
 }
 
+/** The most rows GoTrue will return in one page. */
+const AUTH_PAGE_SIZE = 1000;
+
+/**
+ * The most pages either scan will walk before giving up.
+ *
+ * A ceiling rather than an unbounded loop, because both of these run inside a
+ * page render: a directory large enough to need more than this needs a cursor
+ * and a different screen, not a request that takes a minute. What matters is
+ * that reaching the ceiling is reported rather than absorbed — see below.
+ */
+const AUTH_PAGE_LIMIT = 50;
+
+/**
+ * Walks `auth.users` a page at a time, stopping as soon as `done` says so.
+ *
+ * Both callers used to read page one and stop — at 200 accounts for the search
+ * and 1000 for the mask lookup — which produced no error and no empty state,
+ * just an answer computed from part of the directory. This exists so that the
+ * paging is written once and the ceiling is a named thing both can report on.
+ */
+async function scanAuthUsers(
+  runtime: PlatformAdminRuntime,
+  visit: (users: readonly { id: string; email?: string | undefined }[]) => void,
+  done: () => boolean = () => false
+): Promise<{ exhaustive: boolean }> {
+  for (let page = 1; page <= AUTH_PAGE_LIMIT; page += 1) {
+    const { data, error } = await runtime.db.auth.admin.listUsers({
+      page,
+      perPage: AUTH_PAGE_SIZE
+    });
+    if (error) throw new Error("Account lookup failed.");
+    const users = data.users ?? [];
+    visit(users);
+    // A short page is the last page: GoTrue fills a page until it runs out.
+    if (users.length < AUTH_PAGE_SIZE) return { exhaustive: true };
+    if (done()) return { exhaustive: true };
+  }
+  return { exhaustive: false };
+}
+
 /**
  * Find an account by the address the customer gave you.
  *
@@ -253,6 +317,13 @@ export async function listUsers(
  * goes through the admin auth API. The full address is used for matching and
  * then dropped: what comes back is the profile, and the console renders the
  * masked form.
+ *
+ * It reads every page, not the first one. Reading only the first meant that
+ * past a couple of hundred accounts an address that existed came back as "no
+ * results" — the worst possible answer for the console's primary lookup, since
+ * a support conversation continues on the belief that the account is not there.
+ * If the directory outgrows even the page ceiling this refuses out loud rather
+ * than returning a partial scan as though it were a complete one.
  */
 export async function searchUsersByEmail(
   runtime: PlatformAdminRuntime,
@@ -260,11 +331,18 @@ export async function searchUsersByEmail(
 ): Promise<readonly PlatformUserRow[]> {
   const needle = email.trim().toLowerCase();
   if (needle.length < 3) return [];
-  const { data, error } = await runtime.db.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (error) throw new Error("Account lookup failed.");
-  const matched = data.users
-    .filter((user) => (user.email ?? "").toLowerCase().includes(needle))
-    .map((user) => user.id);
+
+  const matched: string[] = [];
+  const { exhaustive } = await scanAuthUsers(runtime, (users) => {
+    for (const user of users) {
+      if ((user.email ?? "").toLowerCase().includes(needle)) matched.push(user.id);
+    }
+  });
+  if (!exhaustive && matched.length === 0) {
+    throw new Error(
+      "There are too many accounts to search by address. Narrow the search or use the user id."
+    );
+  }
   if (matched.length === 0) return [];
   const { data: profiles } = await runtime.db
     .from("profiles")
@@ -273,7 +351,6 @@ export async function searchUsersByEmail(
   return decorateProfiles(runtime, (profiles ?? []) as ProfileRow[]);
 }
 
-/** Masked addresses for a known set of accounts, for the rows already on screen. */
 /**
  * Workspace names for a set of ids, for screens that hold a reference rather
  * than a row.
@@ -302,17 +379,39 @@ export async function workspaceNamesFor(
   return names;
 }
 
+/**
+ * Masked addresses for a known set of accounts, for the rows already on screen.
+ *
+ * Pages until every wanted id is found rather than reading the first thousand
+ * accounts and stopping: the rows on screen are ordered by creation date, so the
+ * accounts most likely to be missed by a single page were the newest ones — the
+ * people a support console is most often looking at. An id that is genuinely
+ * absent stays absent from the map and the column renders an em dash, which is
+ * the honest answer and the one the callers already handle.
+ */
 export async function maskedEmailsFor(
   runtime: PlatformAdminRuntime,
   userIds: readonly string[]
 ): Promise<Readonly<Record<string, string>>> {
   if (userIds.length === 0) return {};
   const wanted = new Set(userIds);
-  const { data, error } = await runtime.db.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) return {};
   const masked: Record<string, string> = {};
-  for (const user of data.users) {
-    if (wanted.has(user.id)) masked[user.id] = maskEmail(user.email);
+  try {
+    await scanAuthUsers(
+      runtime,
+      (users) => {
+        for (const user of users) {
+          if (wanted.has(user.id)) masked[user.id] = maskEmail(user.email);
+        }
+      },
+      // Every row on screen is accounted for; the rest of the directory is not
+      // this call's business.
+      () => Object.keys(masked).length === wanted.size
+    );
+  } catch {
+    // Unchanged on purpose: a decoration that cannot be fetched must not take
+    // the directory it decorates down with it.
+    return masked;
   }
   return masked;
 }

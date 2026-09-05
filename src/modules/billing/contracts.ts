@@ -3,16 +3,27 @@ import type { BillingActionAuthorization } from "./live-billing-gate";
 
 export type BillingProviderName = "fake" | "paytr";
 
-export type SubscriptionStatus =
-  | "incomplete"
-  | "trialing"
+/**
+ * Every state a subscription can be in, as a value rather than only a type.
+ *
+ * Code that has to enumerate them — a console counting how many workspaces sit
+ * in each — had no list to ask for, so it selected every row and tallied in
+ * JavaScript instead. The union and the array are declared together here so the
+ * two cannot drift, in the same shape `platformAdminRoles` uses.
+ */
+export const subscriptionStatuses = [
+  "incomplete",
+  "trialing",
   /** Trial ended unpaid; data preserved, bounded window to add a card. */
-  | "trial_expired_grace"
-  | "active"
-  | "past_due"
+  "trial_expired_grace",
+  "active",
+  "past_due",
   /** Access withdrawn by policy rather than billing; recoverable. */
-  | "suspended"
-  | "canceled";
+  "suspended",
+  "canceled"
+] as const;
+
+export type SubscriptionStatus = (typeof subscriptionStatuses)[number];
 
 export type BillingStatus = Readonly<{
   status: SubscriptionStatus;

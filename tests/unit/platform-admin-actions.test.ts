@@ -9,6 +9,7 @@ import { setWorkspaceFeatureOverride } from "@/src/modules/platform-admin/server
 import { openImpersonation } from "@/src/modules/platform-admin/server/impersonation";
 import { setMembershipRole, setUserStatus } from "@/src/modules/platform-admin/server/lifecycle";
 import { setSwitch } from "@/src/modules/platform-admin/server/switches";
+import { maskedEmailsFor, searchUsersByEmail } from "@/src/modules/platform-admin/server/directory";
 import { revokeStaff } from "@/src/modules/platform-admin/server/staff";
 import {
   PlatformAdminError,
@@ -319,6 +320,81 @@ describe("staff revocation", () => {
     const rows = database.rows("platform_admins");
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.user_id === "staff-2")!.status).toBe("disabled");
+  });
+});
+
+describe("looking an account up by address", () => {
+  /**
+   * Builds a fake GoTrue directory that pages the way the real one does.
+   *
+   * The bug this covers made no noise: both callers read page one and stopped,
+   * so an account past that page came back as "no such account" and a masked
+   * email column quietly became an em dash. Neither is an error state anybody
+   * would notice from the outside, which is why the paging is asserted here.
+   */
+  function directoryOf(count: number, options: Readonly<{ pageSize?: number }> = {}) {
+    const pageSize = options.pageSize ?? 1000;
+    const users = Array.from({ length: count }, (_, index) => ({
+      id: `user-${index}`,
+      email: `person${index}@example.test`
+    }));
+    const listUsers = vi.fn(({ page, perPage }: { page: number; perPage: number }) => {
+      const size = Math.min(perPage, pageSize);
+      const start = (page - 1) * size;
+      return Promise.resolve({ data: { users: users.slice(start, start + size) }, error: null });
+    });
+    return { users, listUsers };
+  }
+
+  function runtimeWithDirectory(
+    listUsers: ReturnType<typeof directoryOf>["listUsers"],
+    tables: Readonly<Record<string, readonly FakeRow[]>> = {}
+  ) {
+    const { runtime } = runtimeWith(tables);
+    const db = runtime.db as unknown as { auth: { admin: Record<string, unknown> } };
+    db.auth.admin.listUsers = listUsers;
+    return runtime;
+  }
+
+  it("finds an account that sits past the first page", async () => {
+    const { listUsers } = directoryOf(2400);
+    const runtime = runtimeWithDirectory(listUsers, {
+      profiles: [{ id: "user-2300", display_name: "Late joiner", workspace_id: "ws-1" }],
+      workspaces: [{ id: "ws-1", name: "Acme" }],
+      workspace_memberships: []
+    });
+    const found = await searchUsersByEmail(runtime, "person2300@example.test");
+    expect(found.map((row) => row.userId)).toEqual(["user-2300"]);
+    expect(listUsers.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("stops at the last page instead of asking for pages that are not there", async () => {
+    const { listUsers } = directoryOf(1500);
+    const runtime = runtimeWithDirectory(listUsers, { profiles: [] });
+    await searchUsersByEmail(runtime, "nobody@example.test");
+    // Two full-sized reads cover 1500 accounts; the second comes back short and
+    // ends the walk.
+    expect(listUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses rather than reporting an empty directory it never finished reading", async () => {
+    // 50 pages of 1000 is the ceiling; this directory is larger, so a scan that
+    // matched nothing has not proved the address is absent.
+    const { listUsers } = directoryOf(60_000);
+    const runtime = runtimeWithDirectory(listUsers, { profiles: [] });
+    await expect(searchUsersByEmail(runtime, "person59999@example.test")).rejects.toThrow(
+      /too many accounts/
+    );
+  });
+
+  it("pages far enough to mask every row on screen, and no further", async () => {
+    const { listUsers } = directoryOf(4000);
+    const runtime = runtimeWithDirectory(listUsers);
+    const masked = await maskedEmailsFor(runtime, ["user-10", "user-2500"]);
+    expect(masked["user-2500"]).toBe("p•••@example.test");
+    // Found everything it was asked for on page three, so it stopped there
+    // rather than walking the remaining thousand accounts.
+    expect(listUsers).toHaveBeenCalledTimes(3);
   });
 });
 
