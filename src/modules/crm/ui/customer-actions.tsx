@@ -87,7 +87,7 @@ export function CustomerActions({
   }
   return (
     <div className="customer-actions">
-      <form onSubmit={edit}>
+      <form method="post" onSubmit={edit}>
         <input
           name="displayName"
           defaultValue={displayName}
@@ -101,7 +101,7 @@ export function CustomerActions({
         />
         <button>{text("Save customer", "Müşteriyi kaydet", "ذخیره مشتری")}</button>
       </form>
-      <form onSubmit={upload}>
+      <form method="post" onSubmit={upload}>
         <input
           name="file"
           type="file"

@@ -116,7 +116,7 @@ export function RadarViewTabs({
         ))}
       </ul>
       {canManage && !empty ? (
-        <form onSubmit={save}>
+        <form method="post" onSubmit={save}>
           <label>
             {text("Save this view as", "Bu görünümü şu adla kaydet", "ذخیره این نما با نام")}
             <input name="name" maxLength={60} required />

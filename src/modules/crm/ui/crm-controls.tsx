@@ -119,7 +119,7 @@ export function CrmControls() {
 
   return (
     <div className="crm-control-grid">
-      <form className="crm-filter" onSubmit={filter}>
+      <form method="post" className="crm-filter" onSubmit={filter}>
         <input
           name="q"
           placeholder={text("Search name or company", "Ad veya şirket ara", "جستجوی نام یا شرکت")}
@@ -143,7 +143,7 @@ export function CrmControls() {
           {text("Export all", "Tümünü dışa aktar", "خروجی همه")}
         </button>
       </form>
-      <form className="crm-create" onSubmit={create}>
+      <form method="post" className="crm-create" onSubmit={create}>
         <strong>{text("New customer", "Yeni müşteri", "مشتری جدید")}</strong>
         {/*
           Named as well as placeheld. A placeholder is the last thing an
@@ -179,7 +179,7 @@ export function CrmControls() {
             : text("Create", "Oluştur", "ساخت")}
         </button>
       </form>
-      <form className="crm-create" onSubmit={importCsv}>
+      <form method="post" className="crm-create" onSubmit={importCsv}>
         <strong>{text("Import CSV", "CSV içe aktar", "ورود CSV")}</strong>
         <p>
           {text(
