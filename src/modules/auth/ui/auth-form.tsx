@@ -4,6 +4,7 @@ import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 
 type Mode = "signup" | "login" | "forgot-password" | "reset-password";
 type ApiResponse = {
@@ -29,6 +30,21 @@ export function AuthForm({
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const captcha = useRef<TurnstileInstance | null>(null);
+  /**
+   * Submitting is entirely an `onSubmit` handler, and this form carries
+   * credentials - so before hydration it is not merely inert, it is dangerous.
+   * A form with no method submits GET, so a click in that window navigates to
+   * `/signup?email=...&password=...`, writing the password into browser
+   * history, the server's access log and any Referer that follows.
+   *
+   * Where a Turnstile key is configured this never happened, because
+   * `captchaToken` starts empty and the button is disabled until the widget
+   * solves - which needs the JavaScript that hydration brings. That is
+   * protection by coincidence: it disappears wherever the key is absent, which
+   * is every local and preview environment, and would disappear in production
+   * the moment the key was unset. See useHydrated.
+   */
+  const ready = useHydrated();
 
   /**
    * A Turnstile token is single-use and short-lived. Once the server has
@@ -90,7 +106,16 @@ export function AuthForm({
   }
 
   return (
-    <form className="auth-form" onSubmit={submit} aria-busy={state === "loading"}>
+    <form
+      className="auth-form"
+      // Never actually used - `submit` calls preventDefault, and the button is
+      // disabled until that handler exists. It is here so that the failure mode,
+      // if this form is ever submitted without JavaScript, is a request the
+      // route does not answer rather than a credential in a URL.
+      method="post"
+      onSubmit={submit}
+      aria-busy={state === "loading"}
+    >
       {mode === "signup" ? (
         <label>
           {t("auth.businessName")}
@@ -146,7 +171,7 @@ export function AuthForm({
           {message}
         </div>
       ) : null}
-      <button type="submit" disabled={state === "loading" || !captchaToken}>
+      <button type="submit" disabled={!ready || state === "loading" || !captchaToken}>
         {state === "loading"
           ? t("auth.working")
           : t(
