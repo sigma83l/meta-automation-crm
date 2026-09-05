@@ -2,6 +2,7 @@ import "server-only";
 
 import { platformAdminRoles, type PlatformAdminRole } from "../contracts";
 import { recordPlatformAudit } from "./audit";
+import { requireReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 export type StaffRow = Readonly<{
@@ -115,12 +116,4 @@ export async function revokeStaff(
     targetUserId: input.userId,
     safeDetails: { reason }
   });
-}
-
-function requireReason(value: string) {
-  const reason = value.trim();
-  if (reason.length < 3 || reason.length > 400) {
-    throw new Error("This action needs a reason between 3 and 400 characters.");
-  }
-  return reason;
 }

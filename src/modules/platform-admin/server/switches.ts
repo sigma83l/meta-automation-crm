@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PlatformSwitch } from "../contracts";
 import { recordPlatformAudit } from "./audit";
+import { requireReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 export async function listSwitches(
@@ -35,10 +36,7 @@ export async function setSwitch(
   input: Readonly<{ key: string; enabled: boolean; reason: string }>
 ) {
   assertPlatformCapability(runtime.admin, "operations");
-  const reason = input.reason.trim();
-  if (reason.length < 3 || reason.length > 400) {
-    throw new Error("Moving a switch needs a reason between 3 and 400 characters.");
-  }
+  const reason = requireReason(input.reason);
 
   const { data, error } = await runtime.db
     .from("platform_switches")

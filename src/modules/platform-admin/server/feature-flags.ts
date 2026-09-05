@@ -2,6 +2,7 @@ import "server-only";
 
 import type { FeatureFlagState } from "../contracts";
 import { recordPlatformAudit } from "./audit";
+import { requireReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 type CatalogueRow = Readonly<{
@@ -85,10 +86,7 @@ export async function setWorkspaceFeatureOverride(
   }>
 ) {
   assertPlatformCapability(runtime.admin, "features");
-  const reason = input.reason.trim();
-  if (reason.length < 3 || reason.length > 400) {
-    throw new Error("An override needs a reason between 3 and 400 characters.");
-  }
+  const reason = requireReason(input.reason);
   // Bounded here rather than in the check constraint: the column stores an
   // instant, and a constraint on `now()` would not be immutable.
   const days = input.expiresInDays;

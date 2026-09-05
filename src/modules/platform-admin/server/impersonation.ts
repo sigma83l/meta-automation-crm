@@ -2,6 +2,7 @@ import "server-only";
 
 import { IMPERSONATION_MAX_MINUTES, type ImpersonationGrant } from "../contracts";
 import { recordPlatformAudit } from "./audit";
+import { requireLongReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 type GrantRow = Readonly<{
@@ -46,10 +47,10 @@ export async function openImpersonation(
   input: Readonly<{ workspaceId: string; reason: string; minutes: number }>
 ): Promise<ImpersonationGrant> {
   assertPlatformCapability(runtime.admin, "impersonate");
-  const reason = input.reason.trim();
-  if (reason.length < 8 || reason.length > 400) {
-    throw new Error("Viewing a customer workspace needs a reason of at least 8 characters.");
-  }
+  const reason = requireLongReason(
+    input.reason,
+    "Viewing a customer workspace needs a reason of at least 8 characters."
+  );
   if (
     !Number.isInteger(input.minutes) ||
     input.minutes < 1 ||

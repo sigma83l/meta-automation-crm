@@ -1,6 +1,7 @@
 import "server-only";
 
 import { recordPlatformAudit } from "./audit";
+import { requireReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 export const adminReachableStatuses = ["active", "past_due", "suspended", "canceled"] as const;
@@ -165,12 +166,4 @@ export async function listPlans(runtime: PlatformAdminRuntime) {
     currency: row.currency as string,
     active: row.active as boolean
   }));
-}
-
-function requireReason(value: string) {
-  const reason = value.trim();
-  if (reason.length < 3 || reason.length > 400) {
-    throw new Error("This action needs a reason between 3 and 400 characters.");
-  }
-  return reason;
 }

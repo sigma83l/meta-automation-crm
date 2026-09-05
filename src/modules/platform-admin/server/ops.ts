@@ -2,6 +2,7 @@ import "server-only";
 
 import type { DeadLetterRow, OutboxHealth } from "../contracts";
 import { recordPlatformAudit } from "./audit";
+import { requireReason } from "./reason";
 import { assertPlatformCapability, type PlatformAdminRuntime } from "./runtime";
 
 export async function listDeadLetters(
@@ -125,12 +126,4 @@ export async function loadOutboxHealth(runtime: PlatformAdminRuntime): Promise<O
     exhaustedOutbox: exhausted.count ?? 0,
     unprocessedWebhooks: webhooks.count ?? 0
   };
-}
-
-function requireReason(value: string) {
-  const reason = value.trim();
-  if (reason.length < 3 || reason.length > 400) {
-    throw new Error("This action needs a reason between 3 and 400 characters.");
-  }
-  return reason;
 }
