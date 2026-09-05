@@ -437,8 +437,13 @@ export async function loadWorkspaceDetail(
     ]);
 
   if (!workspaces) throw new Error("Workspace not found.");
+  const trialEndsAt = workspaces.trialEndsAt ? Date.parse(workspaces.trialEndsAt) : Number.NaN;
   return {
     workspace: workspaces,
+    trialInterrupted:
+      workspaces.subscriptionStatus !== "trialing" &&
+      Number.isFinite(trialEndsAt) &&
+      trialEndsAt > Date.now(),
     members,
     flags,
     usage: {

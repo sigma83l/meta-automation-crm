@@ -111,6 +111,16 @@ export type WorkspaceDetail = Readonly<{
     automations: number;
     unrecoveredDeadLetters: number;
   }>;
+  /**
+   * A trial that is still running on a workspace no longer in it.
+   *
+   * The state a suspension leaves behind, and the only one a resume applies to.
+   * Resolved here, against the server's clock, because it is the answer to a
+   * question about the data rather than about the rendering: a component that
+   * compared a deadline to `Date.now()` while rendering would be reading a
+   * different clock on the server and on hydration.
+   */
+  trialInterrupted: boolean;
   recentAudit: readonly PlatformAuditRow[];
 }>;
 

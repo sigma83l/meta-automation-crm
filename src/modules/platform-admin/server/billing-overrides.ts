@@ -38,7 +38,7 @@ export async function setSubscriptionStatus(
 
   const { data: current } = await runtime.db
     .from("workspace_subscriptions")
-    .select("status,plan_id,current_period_ends_at")
+    .select("status,plan_id,trial_ends_at,current_period_ends_at")
     .eq("workspace_id", input.workspaceId)
     .maybeSingle();
   if (!current) throw new Error("Workspace has no subscription record.");
@@ -47,7 +47,15 @@ export async function setSubscriptionStatus(
     trusted_workspace_id: input.workspaceId,
     trusted_new_status: input.status,
     trusted_plan_id: input.planId ?? null,
-    trusted_trial_ends_at: null,
+    // Carried through, not nulled. This used to pass null, which meant
+    // suspending a workspace inside its trial erased the deadline — and since
+    // 'trialing' is unreachable once `trial_consumed_at` is set, the restore
+    // that was supposed to undo the suspension could never put it back. Every
+    // other caller of this function (the renewal cron included) passes the row's
+    // own value through; the console was the one that did not. The column is
+    // only ever read while the status is 'trialing', so preserving it changes
+    // nothing for a workspace that genuinely converts.
+    trusted_trial_ends_at: (current.trial_ends_at as string | null) ?? null,
     trusted_current_period_ends_at: (current.current_period_ends_at as string | null) ?? null
   });
   if (error || data !== true) throw new Error("Subscription transition failed.");
@@ -161,6 +169,50 @@ export async function extendTrial(
     action: "billing.trial_extended",
     targetWorkspaceId: input.workspaceId,
     safeDetails: { days: input.days, new_ends_at: newEndsAt, reason }
+  });
+}
+
+/**
+ * Put back a trial that a status change interrupted.
+ *
+ * The companion to the deadline no longer being erased by `setSubscriptionStatus`:
+ * a workspace suspended mid-trial and then restored used to land on 'active'
+ * with its trial gone and no route back, because 'trialing' is unreachable once
+ * `trial_consumed_at` is set. `platform_resume_trial` owns the conditions — the
+ * trial must be consumed, its deadline must still be in the future, and the
+ * deadline does not move — so this cannot grant a trial or lengthen one.
+ */
+export async function resumeTrial(
+  runtime: PlatformAdminRuntime,
+  input: Readonly<{ workspaceId: string; reason: string }>
+) {
+  assertPlatformCapability(runtime.admin, "billing");
+  const reason = requireReason(input.reason);
+
+  const { data: current } = await runtime.db
+    .from("workspace_subscriptions")
+    .select("status,trial_ends_at")
+    .eq("workspace_id", input.workspaceId)
+    .maybeSingle();
+  if (!current) throw new Error("Workspace has no subscription record.");
+
+  const { data, error } = await runtime.db.rpc("platform_resume_trial", {
+    trusted_workspace_id: input.workspaceId
+  });
+  // The function's refusals name the actual condition ("the trial deadline has
+  // passed and cannot be resumed"), and those sentences are written for staff,
+  // so they are surfaced rather than replaced with a generic failure.
+  if (error) throw new Error(error.message || "Trial could not be resumed.");
+  if (data !== true) throw new Error("Trial could not be resumed.");
+
+  await recordPlatformAudit(runtime, {
+    action: "billing.trial_resumed",
+    targetWorkspaceId: input.workspaceId,
+    safeDetails: {
+      from: String(current.status),
+      ends_at: (current.trial_ends_at as string | null) ?? null,
+      reason
+    }
   });
 }
 

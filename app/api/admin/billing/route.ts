@@ -8,6 +8,7 @@ import {
 import {
   adminReachableStatuses,
   extendTrial,
+  resumeTrial,
   setSubscriptionStatus,
   setWorkspacePlan,
   type AdminReachableStatus
@@ -36,6 +37,10 @@ export async function POST(request: NextRequest) {
         planId: requiredString(body, "planId"),
         reason
       });
+      return { action };
+    }
+    if (action === "resume_trial") {
+      await resumeTrial(runtime, { workspaceId, reason });
       return { action };
     }
     if (action === "extend_trial") {

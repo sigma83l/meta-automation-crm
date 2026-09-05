@@ -177,6 +177,21 @@ export function WorkspaceDetailPanel({
                   }
                 ]}
               />
+              {/*
+                Only where there is something to resume: a trial whose deadline
+                has not passed, on a workspace some status change moved out of
+                it. Offering it beside "Extend trial" on a workspace already
+                trialing would be two controls for one situation, and offering
+                it on a lapsed trial would be a button whose only outcome is the
+                server explaining why not.
+              */}
+              {detail.trialInterrupted ? (
+                <ReasonAction
+                  endpoint="billing"
+                  body={{ action: "resume_trial", workspaceId: workspace.id }}
+                  label={text("Resume trial", "Denemeyi sürdür", "ازسرگیری دوره آزمایشی")}
+                />
+              ) : null}
               <ReasonAction
                 endpoint="billing"
                 body={{ action: "set_status", workspaceId: workspace.id }}

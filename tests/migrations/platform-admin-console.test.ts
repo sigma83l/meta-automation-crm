@@ -347,6 +347,89 @@ describe("trial extension", () => {
   });
 });
 
+describe("a trial interrupted by a status change", () => {
+  /**
+   * Suspension is documented as reversible, and for a trialing workspace it was
+   * not: the console passed a null deadline into every status change, so the
+   * trial was erased on the way out and 'trialing' was unreachable on the way
+   * back. This is the round trip that has to hold.
+   */
+  it("survives suspend and restore, and can be handed back", async () => {
+    await db.exec(`
+      update public.workspace_subscriptions
+      set status = 'trialing',
+          trial_ends_at = now() + interval '8 days',
+          trial_consumed_at = now() - interval '2 days',
+          grace_ends_at = null
+      where workspace_id = '${workspaceA}';
+    `);
+
+    // Suspend, then restore — carrying the row's own deadline through, as the
+    // console now does and as the renewal cron always did.
+    for (const status of ["suspended", "active"]) {
+      await db.query(`
+        select public.transition_workspace_subscription(
+          '${workspaceA}'::uuid, '${status}', null,
+          (select trial_ends_at from public.workspace_subscriptions
+             where workspace_id = '${workspaceA}'),
+          null, null
+        );
+      `);
+    }
+
+    const restored = await db.query<{ status: string; trial_ends_at: string | null }>(
+      `select status, trial_ends_at from public.workspace_subscriptions
+       where workspace_id = '${workspaceA}';`
+    );
+    expect(restored.rows[0]?.status).toBe("active");
+    // The half that used to be lost.
+    expect(restored.rows[0]?.trial_ends_at).not.toBeNull();
+
+    const resumed = await db.query<{ ok: boolean }>(
+      `select public.platform_resume_trial('${workspaceA}') as ok;`
+    );
+    expect(resumed.rows[0]?.ok).toBe(true);
+
+    const after = await db.query<{
+      status: string;
+      trial_ends_at: string;
+      trial_consumed_at: string | null;
+    }>(
+      `select status, trial_ends_at, trial_consumed_at from public.workspace_subscriptions
+       where workspace_id = '${workspaceA}';`
+    );
+    expect(after.rows[0]?.status).toBe("trialing");
+    // Resumed, not re-granted: the deadline is the one it already had and the
+    // consumption stamp is untouched, so this is still the workspace's one trial.
+    expect(new Date(after.rows[0]!.trial_ends_at).getTime()).toBe(
+      new Date(restored.rows[0]!.trial_ends_at!).getTime()
+    );
+    expect(after.rows[0]?.trial_consumed_at).not.toBeNull();
+  });
+
+  it("refuses to resume a trial that has lapsed, or one never taken", async () => {
+    await db.exec(`
+      update public.workspace_subscriptions
+      set status = 'active', trial_ends_at = now() - interval '1 day'
+      where workspace_id = '${workspaceA}';
+    `);
+    await expect(db.exec(`select public.platform_resume_trial('${workspaceA}');`)).rejects.toThrow(
+      /deadline has passed/
+    );
+
+    // A workspace that never had a trial cannot acquire one this way — this is
+    // the guard that keeps 'resume' from becoming 'grant'.
+    await db.exec(`
+      update public.workspace_subscriptions
+      set trial_consumed_at = null, trial_ends_at = now() + interval '5 days'
+      where workspace_id = '${workspaceA}';
+    `);
+    await expect(db.exec(`select public.platform_resume_trial('${workspaceA}');`)).rejects.toThrow(
+      /no trial to resume/
+    );
+  });
+});
+
 describe("plan changes", () => {
   /**
    * The regression this function exists for.
