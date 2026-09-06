@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { appError, err, ok, type Result } from "@/src/lib/result";
 
 import type { AuthOutcome, AuthRepository, Credentials, SignupInput } from "../contracts";
+import { logAuthDiagnostic } from "../diagnostics";
 
 type WorkspaceResolution = { workspace_id: string };
 
@@ -26,11 +27,34 @@ export class SupabaseAuthRepository implements AuthRepository {
         emailRedirectTo: `${this.appUrl}/auth/callback?next=/onboarding`
       }
     });
-    if (error) return mapAuthError(error.message, error.status);
-    if (emailConfirmationEnabled && !data.session) {
-      return ok({ next: "/login", confirmationRequired: true });
+    if (error) {
+      // The provider refused outright. Previously unlogged, which left the most
+      // common signup failure — an address that already exists — invisible and
+      // indistinguishable from the branches below.
+      logAuthDiagnostic("signup_rejected_by_provider", {
+        status: error.status ?? 0,
+        code: error.code ?? "none",
+        message: error.message.slice(0, 200)
+      });
+      return mapAuthError(error.message, error.status);
     }
-    if (!data.session) return unavailable();
+
+    // A user without a session is Supabase telling us the project requires
+    // email confirmation. That response is authoritative; the environment flag
+    // is a second copy of the same fact and the two can drift. When they did,
+    // this fell through to unavailable() and reported a successfully created
+    // account as unusable, with no way to tell the two apart.
+    if (!data.session) {
+      if (data.user) {
+        logAuthDiagnostic("signup_awaiting_email_confirmation", {
+          flagSaysConfirmationEnabled: emailConfirmationEnabled
+        });
+        return ok({ next: "/login", confirmationRequired: true });
+      }
+      // No user and no session: the provider accepted nothing.
+      logAuthDiagnostic("signup_returned_no_user");
+      return unavailable();
+    }
     // Managed Better Auth sets its secure session cookie on the response. The
     // database trigger has already provisioned the workspace atomically, while
     // authenticated resolution is intentionally deferred to the next request.
@@ -50,7 +74,16 @@ export class SupabaseAuthRepository implements AuthRepository {
 
   async login(input: Credentials): Promise<Result<AuthOutcome>> {
     const { error } = await this.client.auth.signInWithPassword(input);
-    if (error) return mapAuthError(error.message, error.status);
+    if (error) {
+      // Distinguishes a genuinely wrong password from a project misconfiguration
+      // — an anon key issued by a different project than the configured URL
+      // fails here, not later, and says so in the status.
+      logAuthDiagnostic("password_sign_in_failed", {
+        status: error.status ?? 0,
+        code: error.code ?? "none"
+      });
+      return mapAuthError(error.message, error.status);
+    }
     const workspace = await this.resolveWorkspace();
     if (!workspace.ok) {
       await this.client.auth.signOut({ scope: "global" });
@@ -83,7 +116,28 @@ export class SupabaseAuthRepository implements AuthRepository {
   private async resolveWorkspace(): Promise<Result<WorkspaceResolution>> {
     const { data, error } = await this.client.rpc("resolve_workspace", { workspace_hint: null });
     const row = Array.isArray(data) ? (data[0] as WorkspaceResolution | undefined) : undefined;
-    return error || !row ? unavailable() : ok(row);
+    if (!error && row) return ok(row);
+
+    // Three very different faults previously produced one identical message:
+    // the RPC failed, the RPC returned nothing, or no session was attached so
+    // auth.uid() was null inside it. Separate them, at the cost of one extra
+    // round trip on the failure path only.
+    if (error) {
+      logAuthDiagnostic("resolve_workspace_error", {
+        code: error.code ?? "none",
+        message: error.message.slice(0, 200)
+      });
+      return unavailable();
+    }
+
+    const { data: session } = await this.client.auth.getUser();
+    logAuthDiagnostic("resolve_workspace_empty", {
+      rows: Array.isArray(data) ? data.length : 0,
+      // If this is false the JWT never reached the RPC, so auth.uid() was null
+      // and the query could not have matched regardless of the data.
+      sessionAttached: Boolean(session?.user)
+    });
+    return unavailable();
   }
 
   private async audit(eventType: string) {

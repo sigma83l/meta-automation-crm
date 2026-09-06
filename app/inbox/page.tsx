@@ -1,7 +1,13 @@
-import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
+import {
+  conversationsAwaitingReview,
+  isReviewReason,
+  latestTurnReview
+} from "@/src/modules/rcos/server/turn-review-read-model";
 import { TakeoverControls } from "@/src/modules/conversations/takeover-controls";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +16,25 @@ export default async function InboxPage({
 }: {
   searchParams: Promise<{ conversation?: string }>;
 }) {
-  const [{ client, workspace }, { locale, t }] = await Promise.all([
-    createCrmRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
   const text = (english: string, turkish: string, persian: string) =>
     locale === "tr" ? turkish : locale === "fa" ? persian : english;
+  let runtime: Awaited<ReturnType<typeof createCrmRuntime>>;
+  try {
+    runtime = await createCrmRuntime();
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="inbox" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+  const { client, workspace } = runtime;
   const conversations = await client
     .from("conversations")
     .select("*,customers(display_name)")
@@ -39,6 +58,20 @@ export default async function InboxPage({
         .eq("conversation_id", activeId)
         .order("sent_at")
     : null;
+  // Why the assistant stopped, for the list and for the open conversation. Read
+  // alongside rather than joined in, so an unreadable explanation costs the
+  // marker and never the messages.
+  const [awaitingReview, activeReview] = await Promise.all([
+    conversationsAwaitingReview(
+      client,
+      workspace.id,
+      (conversations.data ?? []).map((conversation) => String(conversation.id))
+    ),
+    activeId ? latestTurnReview(client, workspace.id, activeId) : Promise.resolve(undefined)
+  ]);
+  // A code with no sentence is shown as itself: an operator seeing an
+  // identifier they can search for is better served than one seeing nothing.
+  const explain = (code: string) => (isReviewReason(code) ? t(`review.${code}`) : code);
   return (
     <WorkspaceShell active="inbox" workspaceName={workspace.name}>
       <div className={`inbox-grid ${requestedId ? "show-conversation" : "show-list"}`}>
@@ -64,6 +97,9 @@ export default async function InboxPage({
               <span>
                 {conversation.channel} · {conversation.owner}
               </span>
+              {conversation.requires_human_review || awaitingReview.has(String(conversation.id)) ? (
+                <span className="review-flag">{t("inbox.needsReview")}</span>
+              ) : null}
               {conversation.unread_count ? <b>{conversation.unread_count}</b> : null}
             </a>
           ))}
@@ -98,6 +134,17 @@ export default async function InboxPage({
             </div>
             <span>{active?.data?.owner ?? text("No owner", "Sorumlu yok", "بدون مسئول")}</span>
           </div>
+          {active?.data?.requires_human_review && activeReview?.reasonCodes.length ? (
+            <div className="review-reason" role="status">
+              <strong>{t("inbox.whyPaused")}</strong>
+              <ul>
+                {activeReview.reasonCodes.map((code) => (
+                  <li key={code}>{explain(code)}</li>
+                ))}
+              </ul>
+              <span>{t("inbox.reviewHint")}</span>
+            </div>
+          ) : null}
           <div className="message-stream">
             {(messages?.data ?? []).map((message) => (
               <article className={`message ${message.direction}`} key={message.id}>
@@ -106,18 +153,6 @@ export default async function InboxPage({
                 <small>{message.status}</small>
               </article>
             ))}
-            {activeId && !messages?.data?.length ? (
-              <div className="empty-guidance">
-                <strong>{text("No messages yet", "Henüz mesaj yok", "هنوز پیامی نیست")}</strong>
-                <span>
-                  {text(
-                    "This conversation is ready for the next inbound message or a human decision.",
-                    "Bu görüşme bir sonraki gelen mesajı veya insan kararını bekliyor.",
-                    "این گفتگو منتظر پیام ورودی بعدی یا تصمیم اپراتور است."
-                  )}
-                </span>
-              </div>
-            ) : null}
           </div>
           {activeId ? (
             <TakeoverControls
@@ -187,3 +222,4 @@ export default async function InboxPage({
     </WorkspaceShell>
   );
 }
+import { getRequestPreferences } from "@/src/lib/i18n/server";

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-controls";
 import type { BusinessProfile, CredentialStatus, FaqItem, PriceItem } from "../contracts";
 
@@ -84,6 +85,14 @@ export function SettingsPanel({
       );
     }
   }
+  /**
+   * Every form here submits through an `onSubmit` handler, so before hydration
+   * a click falls through to a native submit and the page reloads having saved
+   * nothing - the fields come back empty and the item is simply absent, with
+   * nothing reporting why. See useHydrated.
+   */
+  const ready = useHydrated();
+
   async function addFaq(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -151,7 +160,7 @@ export function SettingsPanel({
           {message}
         </p>
       )}
-      <form className="settings-card" id="business" onSubmit={saveProfile}>
+      <form method="post" className="settings-card" id="business" onSubmit={saveProfile}>
         <h2>{text("Business Profile", "İşletme Profili", "پروفایل کسب‌وکار")}</h2>
         <div className="form-grid">
           <label>
@@ -270,10 +279,12 @@ export function SettingsPanel({
             "Gemini رایگان برای وب‌هوک، CRM، پیام و رسانه مشتری ممنوع است؛ داده واقعی دریافت نمی‌کند و جایگزین خودکار نیست."
           )}
         </p>
-        <button type="submit">{text("Save profile", "Profili kaydet", "ذخیره پروفایل")}</button>
+        <button type="submit" disabled={!ready}>
+          {text("Save profile", "Profili kaydet", "ذخیره پروفایل")}
+        </button>
       </form>
       <div className="settings-columns" id="knowledge">
-        <form className="settings-card" onSubmit={addFaq}>
+        <form method="post" className="settings-card" onSubmit={addFaq}>
           <h2>{text("FAQs", "Sık sorulanlar", "پرسش‌های متداول")}</h2>
           {faqs.map((item) => (
             <p key={item.id}>
@@ -291,9 +302,9 @@ export function SettingsPanel({
             <textarea name="answer" required />
           </label>
           <input name="language" defaultValue={profile.primaryLanguage} hidden />
-          <button>{text("Add FAQ", "SSS ekle", "افزودن پرسش")}</button>
+          <button disabled={!ready}>{text("Add FAQ", "SSS ekle", "افزودن پرسش")}</button>
         </form>
-        <form className="settings-card" onSubmit={addPrice}>
+        <form method="post" className="settings-card" onSubmit={addPrice}>
           <h2>{text("Pricing", "Fiyatlandırma", "قیمت‌گذاری")}</h2>
           {prices.map((item) => (
             <p key={item.id}>
@@ -324,10 +335,10 @@ export function SettingsPanel({
               <option value="ask_human">Ask human</option>
             </select>
           </label>
-          <button>{text("Add price", "Fiyat ekle", "افزودن قیمت")}</button>
+          <button disabled={!ready}>{text("Add price", "Fiyat ekle", "افزودن قیمت")}</button>
         </form>
       </div>
-      <form className="settings-card" id="ai-provider" onSubmit={credential}>
+      <form method="post" className="settings-card" id="ai-provider" onSubmit={credential}>
         <h2>
           {text(
             "Encrypted BYOK credentials",
@@ -382,7 +393,9 @@ export function SettingsPanel({
           {text("New or replacement key", "Yeni veya yedek anahtar", "کلید جدید یا جایگزین")}
           <input name="key" type="password" minLength={12} autoComplete="off" required />
         </label>
-        <button>{text("Encrypt and store", "Şifrele ve sakla", "رمزگذاری و ذخیره")}</button>
+        <button disabled={!ready}>
+          {text("Encrypt and store", "Şifrele ve sakla", "رمزگذاری و ذخیره")}
+        </button>
       </form>
       <section className="settings-card" id="team">
         <h2>{text("Team & roles", "Ekip ve roller", "تیم و نقش‌ها")}</h2>
@@ -468,6 +481,19 @@ export function SettingsPanel({
             <button type="button" className="button-muted" onClick={logoutAll}>
               {text("Log out all sessions", "Tüm oturumları kapat", "خروج از همه نشست‌ها")}
             </button>
+          </article>
+          <article>
+            <strong>{text("Billing", "Faturalandırma", "صورتحساب")}</strong>
+            <span>
+              {text(
+                "Trial status, subscription and payment method",
+                "Deneme durumu, abonelik ve ödeme yöntemi",
+                "وضعیت آزمایشی، اشتراک و روش پرداخت"
+              )}
+            </span>
+            <Link href="/settings/billing">
+              {text("Manage billing", "Faturalandırmayı yönet", "مدیریت صورتحساب")}
+            </Link>
           </article>
         </div>
       </section>

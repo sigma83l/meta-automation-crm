@@ -1,0 +1,106 @@
+# 100-Point V1 Implementation Checklist
+
+**Source pages:** 42–45
+
+No item passes merely because code exists. Each item requires evidence and the relevant automated/manual test.
+
+- [ ] **01.** Read and record current repo/branch/SHA/dirty state plus AGENTS/README/docs/env/CI/routes/migrations.
+- [ ] **02.** Build full UI route inventory mapped to backend dependencies and provider project/account IDs without exposing secrets.
+- [ ] **03.** Lock the dev/preview/staging/production environment matrix.
+- [ ] **04.** Baseline/hash existing Auth/RLS/Meta semantics.
+- [ ] **05.** Write database migration plan plus rollback/restore path.
+- [ ] **06.** Ensure every tenant table has valid workspace_id tenant relation.
+- [ ] **07.** Enable RLS on all exposed tables.
+- [ ] **08.** PASS cross-tenant DB tests.
+- [ ] **09.** PASS RLS on private Storage buckets.
+- [ ] **10.** Implement short-lived signed URL TTL policy for Storage.
+- [ ] **11.** Use server Workspace resolver with session + membership authority.
+- [ ] **12.** Enforce Owner/Admin/Operator/Viewer RBAC.
+- [ ] **13.** Make atomic workspace provisioning idempotent.
+- [ ] **14.** Enforce email verification before live connection.
+- [ ] **15.** Implement neutral password-recovery UI + strict redirect allowlist.
+- [ ] **16.** Enable Turnstile/rate limit for auth/forms.
+- [ ] **17.** Persist/resume 8-stage onboarding state.
+- [ ] **18.** Make account/trial/paid/suspended/delete states server-derived.
+- [ ] **19.** Implement Meta connection state machine beyond boolean.
+- [ ] **20.** Enable Meta webhook signature verification.
+- [ ] **21.** Durably persist Meta inbound before heavy processing.
+- [ ] **22.** Test Meta fast ACK path.
+- [ ] **23.** Enforce provider message/event ID uniqueness.
+- [ ] **24.** Test per-conversation ordering.
+- [ ] **25.** Implement private/safe Meta media fetch/upload.
+- [ ] **26.** Enforce Send Eligibility before every send.
+- [ ] **27.** Implement delivery/failure status projection.
+- [ ] **28.** Bind reconnect/reauth UI to backend provider state.
+- [ ] **29.** Implement 12-step RCOS turn pipeline.
+- [ ] **30.** Implement multi-intent structured NLU schema.
+- [ ] **31.** Implement entity/slot schema with confidence + provenance.
+- [ ] **32.** Enforce Business Memory write rules.
+- [ ] **33.** Keep Lifecycle / Lead Status / Score separate.
+- [ ] **34.** Implement evidence-based qualification score + reasons.
+- [ ] **35.** Implement V1 Next-Best-Action rule engine.
+- [ ] **36.** Enforce answer-first / question-budget policy.
+- [ ] **37.** Enforce objection-before-stage-advance rule.
+- [ ] **38.** Implement reason-based follow-up engine.
+- [ ] **39.** Enforce follow-up eligibility / quiet hours / stop.
+- [ ] **40.** Implement human-handoff trigger + context packet.
+- [ ] **41.** Provide owner + SLA for handoff.
+- [ ] **42.** Record booking/payment success only from authoritative result.
+- [ ] **43.** Build versioned/hashed Agent Snapshot.
+- [ ] **44.** Send only relevant facts from Customer Memory into context.
+- [ ] **45.** Use Rolling Summary as derived cache.
+- [ ] **46.** Guard/prohibit full transcript per call.
+- [ ] **47.** Implement context token budget + p95 alert.
+- [ ] **48.** Implement prompt/cache-key strategy for stable prefix.
+- [ ] **49.** Limit tool list per intent.
+- [ ] **50.** Version provider-neutral model roles/config.
+- [ ] **51.** Implement utility/default/escalation/offline routing.
+- [ ] **52.** Implement normal-turn multi-call guard.
+- [ ] **53.** Enable Structured Outputs/schema validation.
+- [ ] **54.** AI validator checks grounding/claim/PII/policy.
+- [ ] **55.** Enforce money/time/status/booking from tool/DB.
+- [ ] **56.** Implement bounded AI-provider retry/fallback.
+- [ ] **57.** PASS double-send guard under failover.
+- [ ] **58.** Implement knowledge source hierarchy/version/freshness.
+- [ ] **59.** Contradictory knowledge triggers clarification/admin alert.
+- [ ] **60.** Version automation definitions.
+- [ ] **61.** Make automation runs/steps/action logs idempotent.
+- [ ] **62.** Use transactional outbox for uncertain side effects.
+- [ ] **63.** Test Center synthetic dry-run never touches live provider by default.
+- [ ] **64.** Implement workspace/global emergency pause.
+- [ ] **65.** PASS Paddle webhook raw signature verification.
+- [ ] **66.** Durably persist billing event with unique event_id.
+- [ ] **67.** Test out-of-order billing event handling.
+- [ ] **68.** Implement scheduled provider reconciliation job.
+- [ ] **69.** Create entitlement only from verified billing state.
+- [ ] **70.** Ensure checkout success page is not authority.
+- [ ] **71.** Enforce Cancel subscription != Delete data.
+- [ ] **72.** Use append-only server-side Usage Ledger.
+- [ ] **73.** PASS canonical MAC dedupe rule.
+- [ ] **74.** Count AI Reply only after successful customer-facing send.
+- [ ] **75.** Keep internal AI operations separate from customer quota.
+- [ ] **76.** Do not meter technical automation retry twice.
+- [ ] **77.** PASS trial starts once / no auto-charge.
+- [ ] **78.** Enforce 150 AI / 100 MAC / 300 actions / 100MB / 2-seat trial limits server-side.
+- [ ] **79.** PASS trial-expiry outbound pause.
+- [ ] **80.** PASS 72h ingestion grace / suspension.
+- [ ] **81.** PASS 14-day read-only/export + deletion lifecycle.
+- [ ] **82.** Generic analytics contains no raw message/PII.
+- [ ] **83.** Attribution survives site → app → outcome.
+- [ ] **84.** Implement Growth/Product event taxonomy.
+- [ ] **85.** Build Workspace analytics read models.
+- [ ] **86.** Record AI telemetry: tokens/cache/model/latency/outcome.
+- [ ] **87.** Implement site claim/truth status registry.
+- [ ] **88.** Render pricing/trial/CTA from canonical config.
+- [ ] **89.** Use DB as Support ticket source of truth.
+- [ ] **90.** Implement async transactional email + delivery webhook state.
+- [ ] **91.** Keep Auth email path separate from AI/marketing.
+- [ ] **92.** Separate Preview/Staging from Production DB/secrets/providers.
+- [ ] **93.** Enable per-workspace concurrency/noisy-neighbor controls.
+- [ ] **94.** Enable webhook/queue/AI/billing/integration alerts.
+- [ ] **95.** Provide both Database + Storage backup.
+- [ ] **96.** PASS monthly restore drill.
+- [ ] **97.** PASS deletion-tombstone resurrection test.
+- [ ] **98.** PASS load/burst/soak/provider-failure tests.
+- [ ] **99.** PASS full CI + E2E + RLS + a11y + visual + security.
+- [ ] **100.** Prepare Protected RC on exact tested SHA + owner-approved pilot + rollback evidence.

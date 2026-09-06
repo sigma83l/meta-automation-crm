@@ -6,6 +6,7 @@ import {
   storeWorkspaceCredential,
   testWorkspaceCredential
 } from "@/src/modules/ai/credential-service";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 const providers = new Set(["gemini", "openai", "anthropic"]);
 function provider(value: unknown) {
   const result = String(value);
@@ -28,8 +29,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json({ error: "CREDENTIAL_REJECTED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CREDENTIAL_REJECTED", 400);
   }
 }
 export async function PATCH(request: NextRequest) {
@@ -41,8 +42,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       credential: await testWorkspaceCredential(workspace, provider(body.provider))
     });
-  } catch {
-    return NextResponse.json({ error: "CONNECTION_TEST_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CONNECTION_TEST_FAILED", 400);
   }
 }
 export async function DELETE(request: NextRequest) {
@@ -53,7 +54,7 @@ export async function DELETE(request: NextRequest) {
     const { workspace } = await createBusinessProfileRuntime();
     await deleteWorkspaceCredential(workspace, provider(body.provider));
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "CREDENTIAL_DELETE_FAILED" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CREDENTIAL_DELETE_FAILED", 400);
   }
 }

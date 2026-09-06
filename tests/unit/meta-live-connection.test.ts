@@ -5,11 +5,11 @@ import { exchangeAndVerifyMetaCredential } from "@/src/modules/integrations/meta
 
 const environment = parseServerEnvironment({
   META_CONNECTION_MODE: "live",
-  META_APP_ID: "synthetic-app-id",
+  META_APP_ID: "1000000000000001",
   META_APP_SECRET: "synthetic-app-secret",
   META_OAUTH_REDIRECT_URL: "https://crm.example.test/api/connections/meta/callback",
   META_GRAPH_API_VERSION: "v99.0",
-  META_WHATSAPP_CONFIG_ID: "synthetic-config-id"
+  META_WHATSAPP_CONFIG_ID: "2000000000000002"
 });
 
 describe("live Meta connection adapter", () => {

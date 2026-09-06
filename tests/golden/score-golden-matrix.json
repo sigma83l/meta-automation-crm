@@ -1,0 +1,11 @@
+{
+  "cases": [
+    "same evidence+config produces same score",
+    "score contribution always has evidence ref",
+    "disqualifier can reduce score without changing source facts",
+    "config version change creates new snapshot",
+    "manual override requires role+reason+audit",
+    "stale evidence recalculation is deterministic",
+    "score alone never marks Customer or verified outcome"
+  ]
+}

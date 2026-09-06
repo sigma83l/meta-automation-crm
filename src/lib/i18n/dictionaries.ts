@@ -1,7 +1,7 @@
 import type { Locale } from "@/src/lib/i18n/config";
 
 const en = {
-  "app.name": "Rellooma",
+  "app.name": "Relay CRM",
   "app.control": "Business control",
   "common.open": "Open",
   "common.save": "Save changes",
@@ -22,6 +22,7 @@ const en = {
   "nav.analytics": "Analytics",
   "nav.integrations": "Integrations",
   "nav.settings": "Settings",
+  "nav.billing": "Billing",
   "nav.home": "Home",
   "nav.create": "Create",
   "nav.more": "More",
@@ -40,7 +41,7 @@ const en = {
   "prefs.dark": "Dark",
   "prefs.system": "System",
   "auth.isolated": "Isolated by design",
-  "auth.hero": "Build smarter automations. Turn more conversations into qualified leads.",
+  "auth.hero": "One business. One private workspace.",
   "auth.proofTenant": "Workspace authority is checked on every request.",
   "auth.proofSend": "No real message can bypass the policy lock.",
   "auth.proofSecrets": "Credentials stay server-side and encrypted.",
@@ -67,7 +68,8 @@ const en = {
   "auth.email": "Email",
   "auth.password": "Password",
   "auth.newPassword": "New password",
-  "auth.passwordHint": "At least 12 characters.",
+  "auth.passwordHint":
+    "At least 12 characters, with an uppercase letter, a lowercase letter and a digit.",
   "auth.createPrivateWorkspace": "Create private workspace",
   "auth.requestReset": "Request reset",
   "auth.setNewPassword": "Set new password",
@@ -140,6 +142,27 @@ const en = {
   "inbox.owner": "Owner",
   "inbox.missingFields": "Missing fields",
   "inbox.attachments": "Attachments",
+  "inbox.needsReview": "Needs review",
+  "inbox.whyPaused": "Why the assistant stopped",
+  "inbox.reviewHint": "Reply yourself, or resolve the cause and the next message runs again.",
+  "review.empty_draft": "The assistant produced no reply. Usually no AI model is configured yet.",
+  "review.ungrounded_claim": "The draft cited knowledge this workspace has not approved.",
+  "review.unverified_money": "The draft stated a price no approved item confirms.",
+  "review.unverified_time": "The draft stated a time no approved source confirms.",
+  "review.unclaimed_success": "The draft claimed something was done that was never confirmed.",
+  "review.pii_leak": "The draft contained contact details.",
+  "review.pressure_tactic": "The draft used pressure wording.",
+  "review.policy_violation": "Policy did not permit a reply on this turn.",
+  "review.duplicate_send": "A reply with this reference had already been sent.",
+  "review.escalation_keyword": "The message matched one of your escalation keywords.",
+  "review.low_confidence": "The assistant was less certain than your threshold allows.",
+  "review.human_takeover": "You have taken this conversation over.",
+  "review.conversation_closed": "The conversation is closed.",
+  "review.conversation_missing": "The conversation record could not be read.",
+  "review.billing_entitlement_required":
+    "The trial or subscription does not currently allow replies.",
+  "review.ai_replies_disabled": "Assistant replies are not included on this plan.",
+  "review.ai_replies_paused": "Assistant replies are paused. Nothing was lost; try again shortly.",
   "automations.create": "Create automation",
   "automations.recipes": "Recipe gallery",
   "automations.testCenter": "Test Center",
@@ -160,8 +183,24 @@ const en = {
 type TranslationKey = keyof typeof en;
 type Dictionary = { readonly [Key in TranslationKey]: string };
 
+/**
+ * Turkish and Persian no longer spread English.
+ *
+ * They used to open with `...en`, which meant a key nobody had translated
+ * silently rendered English and `dictionaryKeys` returned identical sets for
+ * every locale - so the parity test asserting exactly that could not fail, and
+ * neither could the compiler. The operating rules require en/tr/fa parity, and
+ * this is what actually enforces it: `Dictionary` demands every key, so a
+ * missing translation is a build error naming the key.
+ *
+ * The consequence is that a term staying in English has to say so explicitly,
+ * which is the point. "Relay CRM" is a product name and "CRM" is the same
+ * initialism in all three languages; both are decisions, and they now read as
+ * decisions rather than as omissions.
+ */
 const tr: Dictionary = {
-  ...en,
+  "app.name": "Relay CRM",
+  "nav.crm": "CRM",
   "app.control": "İşletme kontrolü",
   "common.open": "Aç",
   "common.save": "Değişiklikleri kaydet",
@@ -181,6 +220,7 @@ const tr: Dictionary = {
   "nav.analytics": "Analiz",
   "nav.integrations": "Entegrasyonlar",
   "nav.settings": "Ayarlar",
+  "nav.billing": "Faturalandırma",
   "nav.home": "Ana Sayfa",
   "nav.create": "Oluştur",
   "nav.more": "Diğer",
@@ -199,8 +239,7 @@ const tr: Dictionary = {
   "prefs.dark": "Koyu",
   "prefs.system": "Sistem",
   "auth.isolated": "Tasarım gereği izole",
-  "auth.hero":
-    "Daha akıllı otomasyonlar kurun. Daha fazla konuşmayı nitelikli müşterilere dönüştürün.",
+  "auth.hero": "Bir işletme. Bir özel çalışma alanı.",
   "auth.proofTenant": "Her istekte çalışma alanı yetkisi denetlenir.",
   "auth.proofSend": "Hiçbir gerçek mesaj politika kilidini aşamaz.",
   "auth.proofSecrets": "Kimlik bilgileri sunucuda ve şifreli kalır.",
@@ -226,7 +265,7 @@ const tr: Dictionary = {
   "auth.email": "E-posta",
   "auth.password": "Parola",
   "auth.newPassword": "Yeni parola",
-  "auth.passwordHint": "En az 12 karakter.",
+  "auth.passwordHint": "En az 12 karakter; bir büyük harf, bir küçük harf ve bir rakam içermeli.",
   "auth.createPrivateWorkspace": "Özel çalışma alanı oluştur",
   "auth.requestReset": "Sıfırlama iste",
   "auth.setNewPassword": "Yeni parolayı ayarla",
@@ -301,6 +340,29 @@ const tr: Dictionary = {
   "inbox.owner": "Sorumlu",
   "inbox.missingFields": "Eksik alanlar",
   "inbox.attachments": "Ekler",
+  "inbox.needsReview": "İnceleme gerekli",
+  "inbox.whyPaused": "Asistan neden durdu",
+  "inbox.reviewHint": "Kendiniz yanıtlayın veya nedeni giderin; sonraki mesaj yeniden çalışır.",
+  "review.empty_draft":
+    "Asistan yanıt üretmedi. Genellikle henüz bir yapay zekâ modeli tanımlı değildir.",
+  "review.ungrounded_claim": "Taslak, bu çalışma alanının onaylamadığı bilgiye atıf yaptı.",
+  "review.unverified_money": "Taslak, onaylı hiçbir kalemin doğrulamadığı bir fiyat belirtti.",
+  "review.unverified_time": "Taslak, onaylı hiçbir kaynağın doğrulamadığı bir zaman belirtti.",
+  "review.unclaimed_success": "Taslak, hiç doğrulanmamış bir işlemin yapıldığını öne sürdü.",
+  "review.pii_leak": "Taslak iletişim bilgisi içeriyordu.",
+  "review.pressure_tactic": "Taslak baskı içeren ifadeler kullandı.",
+  "review.policy_violation": "Politika bu turda yanıt verilmesine izin vermedi.",
+  "review.duplicate_send": "Bu referansla bir yanıt zaten gönderilmişti.",
+  "review.escalation_keyword": "Mesaj, yükseltme anahtar kelimelerinizden biriyle eşleşti.",
+  "review.low_confidence": "Asistan, eşiğinizin izin verdiğinden daha az emindi.",
+  "review.human_takeover": "Bu konuşmayı siz devraldınız.",
+  "review.conversation_closed": "Konuşma kapalı.",
+  "review.conversation_missing": "Konuşma kaydı okunamadı.",
+  "review.billing_entitlement_required":
+    "Deneme veya abonelik şu anda yanıt vermeye izin vermiyor.",
+  "review.ai_replies_disabled": "Asistan yanıtları bu plana dahil değil.",
+  "review.ai_replies_paused":
+    "Asistan yanıtları duraklatıldı. Hiçbir şey kaybolmadı; kısa süre sonra tekrar deneyin.",
   "automations.create": "Otomasyon oluştur",
   "automations.recipes": "Tarif galerisi",
   "automations.testCenter": "Test Merkezi",
@@ -319,7 +381,8 @@ const tr: Dictionary = {
 };
 
 const fa: Dictionary = {
-  ...en,
+  "app.name": "Relay CRM",
+  "nav.crm": "CRM",
   "app.control": "کنترل کسب‌وکار",
   "common.open": "باز کردن",
   "common.save": "ذخیره تغییرات",
@@ -339,6 +402,7 @@ const fa: Dictionary = {
   "nav.analytics": "تحلیل",
   "nav.integrations": "اتصال‌ها",
   "nav.settings": "تنظیمات",
+  "nav.billing": "صورتحساب",
   "nav.home": "خانه",
   "nav.create": "ساخت",
   "nav.more": "بیشتر",
@@ -357,8 +421,7 @@ const fa: Dictionary = {
   "prefs.dark": "تیره",
   "prefs.system": "سیستم",
   "auth.isolated": "ایزوله از پایه",
-  "auth.hero":
-    "اتوماسیون‌های هوشمندتر بسازید. گفتگوهای بیشتری را به سرنخ‌های واجد شرایط تبدیل کنید.",
+  "auth.hero": "یک کسب‌وکار. یک فضای کاری خصوصی.",
   "auth.proofTenant": "مجوز فضای کاری در هر درخواست بررسی می‌شود.",
   "auth.proofSend": "هیچ پیام واقعی نمی‌تواند قفل سیاست را دور بزند.",
   "auth.proofSecrets": "اطلاعات محرمانه رمزگذاری‌شده و روی سرور می‌ماند.",
@@ -383,7 +446,7 @@ const fa: Dictionary = {
   "auth.email": "ایمیل",
   "auth.password": "رمز عبور",
   "auth.newPassword": "رمز عبور تازه",
-  "auth.passwordHint": "حداقل ۱۲ نویسه.",
+  "auth.passwordHint": "حداقل ۱۲ نویسه، شامل یک حرف بزرگ، یک حرف کوچک و یک رقم.",
   "auth.createPrivateWorkspace": "ساخت فضای کاری خصوصی",
   "auth.requestReset": "درخواست بازیابی",
   "auth.setNewPassword": "ثبت رمز تازه",
@@ -456,6 +519,27 @@ const fa: Dictionary = {
   "inbox.owner": "مسئول",
   "inbox.missingFields": "اطلاعات ناقص",
   "inbox.attachments": "پیوست‌ها",
+  "inbox.needsReview": "نیازمند بررسی",
+  "inbox.whyPaused": "چرا دستیار متوقف شد",
+  "inbox.reviewHint": "خودتان پاسخ دهید یا علت را برطرف کنید تا پیام بعدی دوباره اجرا شود.",
+  "review.empty_draft": "دستیار پاسخی تولید نکرد. معمولاً هنوز مدل هوش مصنوعی تنظیم نشده است.",
+  "review.ungrounded_claim": "پیش‌نویس به دانشی استناد کرد که این فضای کاری تأیید نکرده است.",
+  "review.unverified_money": "پیش‌نویس قیمتی را گفت که هیچ مورد تأییدشده‌ای آن را تأیید نمی‌کند.",
+  "review.unverified_time": "پیش‌نویس زمانی را گفت که هیچ منبع تأییدشده‌ای آن را تأیید نمی‌کند.",
+  "review.unclaimed_success": "پیش‌نویس ادعا کرد کاری انجام شده که هرگز تأیید نشده بود.",
+  "review.pii_leak": "پیش‌نویس شامل اطلاعات تماس بود.",
+  "review.pressure_tactic": "پیش‌نویس از عبارت‌های فشارآور استفاده کرد.",
+  "review.policy_violation": "سیاست در این نوبت اجازه پاسخ نداد.",
+  "review.duplicate_send": "پاسخی با همین شناسه پیش‌تر ارسال شده بود.",
+  "review.escalation_keyword": "پیام با یکی از کلیدواژه‌های ارجاع شما مطابقت داشت.",
+  "review.low_confidence": "اطمینان دستیار کمتر از حد آستانه شما بود.",
+  "review.human_takeover": "شما این گفتگو را در دست گرفته‌اید.",
+  "review.conversation_closed": "گفتگو بسته است.",
+  "review.conversation_missing": "رکورد گفتگو خوانده نشد.",
+  "review.billing_entitlement_required": "دوره آزمایشی یا اشتراک در حال حاضر اجازه پاسخ نمی‌دهد.",
+  "review.ai_replies_disabled": "پاسخ‌های دستیار در این طرح گنجانده نشده است.",
+  "review.ai_replies_paused":
+    "پاسخ‌های دستیار موقتاً متوقف شده است. چیزی از دست نرفت؛ کمی بعد دوباره تلاش کنید.",
   "automations.create": "ساخت اتوماسیون",
   "automations.recipes": "گالری دستورکارها",
   "automations.testCenter": "مرکز آزمایش",

@@ -49,3 +49,29 @@ browser role.
 The onboarding row is business-workspace state. Additional members inherit that
 state; the resolver no longer requires a second impossible onboarding primary
 row.
+
+## Billing and subscriptions
+
+- `subscription_plans`: small global catalog (one row for V1).
+- `workspace_subscriptions`: one row per workspace, seeded `incomplete` by an
+  `after insert on public.workspaces` trigger (mirrors
+  `initialize_business_profile_after_workspace`); transitions to `trialing`,
+  `active`, `past_due` or `canceled` only through the
+  `transition_workspace_subscription` RPC.
+- `billing_payment_methods`: server-managed AES-256-GCM envelopes for the
+  provider customer/card tokens only; ciphertext columns are excluded from
+  the `authenticated` grant entirely, same as `workspace_ai_credentials`.
+- `private.trial_fraud_signals`: HMAC-only, append-only card-fingerprint
+  ledger; never purged by TTL, survives workspace deletion.
+- `billing_callback_nonces`, `billing_webhook_events` /
+  `billing_provider_event_outbox`: single-use signed callback state and the
+  verified-webhook/durable-outbox pair, structural copies of the Meta OAuth
+  nonce and webhook/outbox tables.
+- `billing_charge_attempts`: one row per charge attempt, doubling as the
+  provider idempotency key (`orderRef`); `charge_unknown` rows require manual
+  reconciliation and are never auto-retried.
+- `billing_audit_events`: sensitive billing action evidence (trial started,
+  fingerprint reused, charge failed, subscription canceled).
+
+All use forced RLS; members may read masked/status columns only, and every
+write goes through service-role code plus the RPCs above.

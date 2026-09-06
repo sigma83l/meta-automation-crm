@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { MediaRepository } from "@/src/modules/crm/media/media-repository";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 export async function POST(request: NextRequest) {
   const rejected = requireCsrf(request);
@@ -20,6 +22,8 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json({ file: stored }, { status: 201 });
   } catch (error) {
+    if (error instanceof BillingEntitlementError)
+      return billingBlockedResponse(error, "MEDIA_REJECTED");
     const code = error instanceof Error ? error.message : "MEDIA_REJECTED";
     return NextResponse.json({ error: code }, { status: 400 });
   }
@@ -31,8 +35,8 @@ export async function GET(request: NextRequest) {
     const { client, workspace } = await createCrmRuntime();
     const url = await new MediaRepository(client, workspace).signedDownload(fileId);
     return NextResponse.json({ url, expiresIn: 60 });
-  } catch {
-    return NextResponse.json({ error: "FILE_NOT_AVAILABLE" }, { status: 404 });
+  } catch (error) {
+    return billingBlockedResponse(error, "FILE_NOT_AVAILABLE", 404);
   }
 }
 
@@ -44,7 +48,7 @@ export async function DELETE(request: NextRequest) {
     const { client, workspace } = await createCrmRuntime();
     await new MediaRepository(client, workspace).remove(fileId);
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "FILE_NOT_AVAILABLE" }, { status: 404 });
+  } catch (error) {
+    return billingBlockedResponse(error, "FILE_NOT_AVAILABLE", 404);
   }
 }

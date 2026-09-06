@@ -27,11 +27,43 @@ export const structuredReplySchema = z
   .strict();
 export type StructuredReply = z.infer<typeof structuredReplySchema>;
 
+/**
+ * The cheap first pass: what the customer wants, in what language, and whether
+ * this turn carries enough at stake to justify the expensive model.
+ *
+ * Separate from the reply because the router treats them as separate roles.
+ * Classification is `utility` work and runs before retrieval; the reply is
+ * `primary` or `escalation` work and cannot be written until retrieval has
+ * said what is actually approved. Producing both in one call would mean
+ * drafting a reply before knowing the facts it must be built from.
+ */
+export const turnClassificationSchema = z
+  .object({
+    intent: z.string().trim().min(1).max(100),
+    language: z.string().trim().min(2).max(16),
+    confidence: z.number().min(0).max(1),
+    /** A high-value objection or genuine ambiguity. Feeds RoutingSignals. */
+    highStakes: z.boolean()
+  })
+  .strict();
+export type TurnClassification = z.infer<typeof turnClassificationSchema>;
+
 export type AiReplyInput = Readonly<{
   workspaceId: string;
   conversationId: string;
   messages: readonly Readonly<{ role: "customer" | "business"; content: string }>[];
   requiredFields: readonly string[];
+  /**
+   * What the CRM already knows about this contact.
+   *
+   * The workspace's own record, not the customer's words, so it sits outside
+   * the untrusted fence with the approved knowledge. Its purpose is narrow: a
+   * returning customer must not be asked again for something they already
+   * answered. Facts past their validity window are dropped before they get
+   * here - stale is not knowledge, and a model told an old budget is current
+   * will quote against it.
+   */
+  knownFacts: readonly Readonly<{ key: string; value: string; confidence: string }>[];
   faqItems: readonly Readonly<{ id: string; question: string; answer: string }>[];
   priceItems: readonly Readonly<{
     id: string;
@@ -58,6 +90,8 @@ export type ClassifiedProviderError = Readonly<{
 
 export interface AiProvider {
   readonly name: AiProviderName | "deterministic-mock";
+  /** The utility-role first pass. Cheap, and run before retrieval. */
+  classifyTurn(input: AiReplyInput): Promise<Result<TurnClassification>>;
   generateStructuredReply(input: AiReplyInput): Promise<Result<StructuredReply>>;
   testConnection(): Promise<Result<{ available: boolean }>>;
   classifyProviderError(error: unknown): ClassifiedProviderError;

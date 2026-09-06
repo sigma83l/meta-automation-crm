@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 
 export function LogoutButton() {
   const { text } = useI18n();
   const [loading, setLoading] = useState(false);
+  /** Signing out lives entirely in an `onClick`. See useHydrated. */
+  const ready = useHydrated();
 
   async function logout() {
     setLoading(true);
@@ -24,7 +27,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button type="button" onClick={logout} disabled={loading}>
+    <button type="button" onClick={logout} disabled={loading || !ready}>
       {loading
         ? text("Signing out…", "Çıkış yapılıyor…", "در حال خروج…")
         : text("Sign out", "Çıkış yap", "خروج")}

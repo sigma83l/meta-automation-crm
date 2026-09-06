@@ -8,6 +8,22 @@ const optionalUrl = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().url().optional()
 );
+/**
+ * A Meta numeric identifier - app id, Embedded Signup configuration id.
+ *
+ * Digits only, deliberately. Both of these were previously accepted as any
+ * non-empty string, and a placeholder sat in META_WHATSAPP_CONFIG_ID for weeks:
+ * it satisfied every presence check, live-mode readiness reported ready, and
+ * the only symptom was FB.login doing nothing at all - no dialog, no callback,
+ * no error. A shape this well known should never be validated as "not empty".
+ */
+const optionalMetaNumericId = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z
+    .string()
+    .regex(/^\d{8,20}$/, "Meta identifiers are numeric")
+    .optional()
+);
 const optionalMetaVersion = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z
@@ -38,11 +54,32 @@ const serverEnvironmentSchema = z.object({
   PLATFORM_GEMINI_API_KEY: optionalNonEmpty,
   PLATFORM_OPENAI_API_KEY: optionalNonEmpty,
   PLATFORM_ANTHROPIC_API_KEY: optionalNonEmpty,
-  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
-  META_APP_ID: optionalNonEmpty,
+  /**
+   * 45s, raised from 15s on measurement.
+   *
+   * The configured Gemini models think before answering - a trivial prompt
+   * returns in 8-10s with more reasoning tokens than answer tokens - so 15s
+   * left barely 1.5x headroom on the *simplest* possible call. A real turn
+   * carries approved FAQ, prices, remembered facts and a transcript, and the
+   * reply schema permits 4000 output tokens.
+   *
+   * The cost of being wrong is asymmetric and was pointing the wrong way. A
+   * timeout is not an error the customer sees; it degrades to a handoff, so a
+   * tight bound quietly converts answerable questions into work for a person,
+   * and it does it worst under exactly the load where that hurts.
+   */
+  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(45000),
+  // Model identifiers per router role. Optional: an unconfigured role fails at
+  // the point of use, naming the role, rather than blocking a deployment that
+  // never reaches it. See src/modules/rcos/model-registry.ts.
+  AI_MODEL_UTILITY: optionalNonEmpty,
+  AI_MODEL_PRIMARY: optionalNonEmpty,
+  AI_MODEL_ESCALATION: optionalNonEmpty,
+  AI_MODEL_OFFLINE_EVALUATOR: optionalNonEmpty,
+  META_APP_ID: optionalMetaNumericId,
   META_APP_SECRET: optionalNonEmpty,
   META_WEBHOOK_VERIFY_TOKEN: optionalNonEmpty,
-  META_WHATSAPP_CONFIG_ID: optionalNonEmpty,
+  META_WHATSAPP_CONFIG_ID: optionalMetaNumericId,
   META_CONNECTION_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   ENABLE_EMAIL_CONFIRMATION: z.enum(["true", "false"]).default("false"),
   EMAIL_DELIVERY_VERIFIED: z.enum(["true", "false"]).default("false"),
@@ -50,6 +87,12 @@ const serverEnvironmentSchema = z.object({
   TURNSTILE_SECRET_KEY: optionalNonEmpty,
   AUTH_CAPTCHA_MODE: z.enum(["fake", "turnstile"]).default("fake"),
   AUTH_SIGNUP_MODE: z.enum(["self_service", "invite_only"]).default("self_service"),
+  // Local developer convenience only; enforced in proxy.ts and refused outright
+  // by assertProductionConfiguration. Declared here so it is part of the
+  // validated surface rather than an undocumented process.env read.
+  AUTH_BYPASS_ENABLED: z.enum(["true", "false"]).default("false"),
+  AUTH_BYPASS_EMAIL: optionalNonEmpty,
+  AUTH_BYPASS_PASSWORD: optionalNonEmpty,
   PREVIEW_OWNER_EMAIL_ALLOWLIST: z.string().default(""),
   AUTH_RATE_LIMIT_MODE: z.enum(["memory", "database"]).default("memory"),
   AUTH_RATE_LIMIT_HASH_KEY: optionalNonEmpty,
@@ -59,7 +102,24 @@ const serverEnvironmentSchema = z.object({
   CRM_EXPORT_MAX_ROWS: z.coerce.number().int().min(1).max(100000).default(25000),
   CRM_EXPORT_MAX_FILES: z.coerce.number().int().min(0).max(10000).default(1000),
   CRM_EXPORT_MAX_BYTES: z.coerce.number().int().min(1048576).max(104857600).default(104857600),
-  CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900)
+  CRM_EXPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
+  PAYMENT_PROVIDER_MODE: z.enum(["fake", "paytr", "paddle"]).default("fake"),
+  PAYTR_MERCHANT_ID: optionalNonEmpty,
+  PAYTR_MERCHANT_KEY: optionalNonEmpty,
+  PAYTR_MERCHANT_SALT: optionalNonEmpty,
+  // Paddle. The account does not exist yet, so these are unset everywhere and
+  // paddle mode cannot be selected until they are filled in - see the check in
+  // assertEnvironmentInvariants and the placeholder catalogue in
+  // src/modules/billing/providers/paddle/catalogue.ts.
+  PADDLE_API_KEY: optionalNonEmpty,
+  PADDLE_WEBHOOK_SECRET: optionalNonEmpty,
+  PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+  LIVE_BILLING_ENABLED: z.enum(["true", "false"]).default("false"),
+  BILLING_LIVE_APPROVED: z.enum(["true", "false"]).default("false"),
+  BILLING_FINGERPRINT_HASH_KEY: optionalNonEmpty,
+  BILLING_CALLBACK_STATE_SECRET: optionalNonEmpty,
+  BILLING_TRIAL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+  BILLING_PLAN_PRICE_MINOR_UNITS: z.coerce.number().int().min(1).default(49900)
 });
 
 export type ServerEnvironment = Readonly<{
@@ -76,6 +136,7 @@ export type ServerEnvironment = Readonly<{
   inngestEventKey?: string;
   inngestSigningKey?: string;
   liveProviderSendEnabled: boolean;
+  authBypassEnabled: boolean;
   liveTestRecipientAllowlist: readonly string[];
   credentialEncryptionKey?: string;
   platformAiProvider: "gemini" | "openai" | "anthropic";
@@ -83,6 +144,12 @@ export type ServerEnvironment = Readonly<{
   platformOpenAiApiKey?: string;
   platformAnthropicApiKey?: string;
   aiProviderTimeoutMs: number;
+  aiModels: Readonly<{
+    utility?: string;
+    primary?: string;
+    escalation?: string;
+    offline_evaluator?: string;
+  }>;
   metaAppId?: string;
   metaAppSecret?: string;
   metaWebhookVerifyToken?: string;
@@ -106,6 +173,19 @@ export type ServerEnvironment = Readonly<{
   crmExportMaxFiles: number;
   crmExportMaxBytes: number;
   crmExportTtlSeconds: number;
+  paymentProviderMode: "fake" | "paytr" | "paddle";
+  paytrMerchantId?: string;
+  paytrMerchantKey?: string;
+  paytrMerchantSalt?: string;
+  paddleApiKey?: string;
+  paddleWebhookSecret?: string;
+  paddleEnvironment: "sandbox" | "production";
+  liveBillingEnabled: boolean;
+  billingLiveApproved: boolean;
+  billingFingerprintHashKey?: string;
+  billingCallbackStateSecret?: string;
+  billingTrialDays: number;
+  billingPlanPriceMinorUnits: number;
 }>;
 
 export function parseServerEnvironment(
@@ -133,6 +213,7 @@ export function parseServerEnvironment(
     ...(parsed.INNGEST_EVENT_KEY ? { inngestEventKey: parsed.INNGEST_EVENT_KEY } : {}),
     ...(parsed.INNGEST_SIGNING_KEY ? { inngestSigningKey: parsed.INNGEST_SIGNING_KEY } : {}),
     liveProviderSendEnabled: parsed.LIVE_PROVIDER_SEND_ENABLED === "true",
+    authBypassEnabled: parsed.AUTH_BYPASS_ENABLED === "true",
     liveTestRecipientAllowlist: Object.freeze(
       parsed.LIVE_TEST_RECIPIENT_ALLOWLIST.split(",")
         .map((value) => value.trim())
@@ -152,6 +233,14 @@ export function parseServerEnvironment(
       ? { platformAnthropicApiKey: parsed.PLATFORM_ANTHROPIC_API_KEY }
       : {}),
     aiProviderTimeoutMs: parsed.AI_PROVIDER_TIMEOUT_MS,
+    aiModels: Object.freeze({
+      ...(parsed.AI_MODEL_UTILITY ? { utility: parsed.AI_MODEL_UTILITY } : {}),
+      ...(parsed.AI_MODEL_PRIMARY ? { primary: parsed.AI_MODEL_PRIMARY } : {}),
+      ...(parsed.AI_MODEL_ESCALATION ? { escalation: parsed.AI_MODEL_ESCALATION } : {}),
+      ...(parsed.AI_MODEL_OFFLINE_EVALUATOR
+        ? { offline_evaluator: parsed.AI_MODEL_OFFLINE_EVALUATOR }
+        : {})
+    }),
     ...(parsed.META_APP_ID ? { metaAppId: parsed.META_APP_ID } : {}),
     ...(parsed.META_APP_SECRET ? { metaAppSecret: parsed.META_APP_SECRET } : {}),
     ...(parsed.META_WEBHOOK_VERIFY_TOKEN
@@ -190,7 +279,24 @@ export function parseServerEnvironment(
     crmExportMaxRows: parsed.CRM_EXPORT_MAX_ROWS,
     crmExportMaxFiles: parsed.CRM_EXPORT_MAX_FILES,
     crmExportMaxBytes: parsed.CRM_EXPORT_MAX_BYTES,
-    crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS
+    crmExportTtlSeconds: parsed.CRM_EXPORT_TTL_SECONDS,
+    paymentProviderMode: parsed.PAYMENT_PROVIDER_MODE,
+    ...(parsed.PAYTR_MERCHANT_ID ? { paytrMerchantId: parsed.PAYTR_MERCHANT_ID } : {}),
+    ...(parsed.PAYTR_MERCHANT_KEY ? { paytrMerchantKey: parsed.PAYTR_MERCHANT_KEY } : {}),
+    ...(parsed.PAYTR_MERCHANT_SALT ? { paytrMerchantSalt: parsed.PAYTR_MERCHANT_SALT } : {}),
+    ...(parsed.PADDLE_API_KEY ? { paddleApiKey: parsed.PADDLE_API_KEY } : {}),
+    ...(parsed.PADDLE_WEBHOOK_SECRET ? { paddleWebhookSecret: parsed.PADDLE_WEBHOOK_SECRET } : {}),
+    paddleEnvironment: parsed.PADDLE_ENVIRONMENT,
+    liveBillingEnabled: parsed.LIVE_BILLING_ENABLED === "true",
+    billingLiveApproved: parsed.BILLING_LIVE_APPROVED === "true",
+    ...(parsed.BILLING_FINGERPRINT_HASH_KEY
+      ? { billingFingerprintHashKey: parsed.BILLING_FINGERPRINT_HASH_KEY }
+      : {}),
+    ...(parsed.BILLING_CALLBACK_STATE_SECRET
+      ? { billingCallbackStateSecret: parsed.BILLING_CALLBACK_STATE_SECRET }
+      : {}),
+    billingTrialDays: parsed.BILLING_TRIAL_DAYS,
+    billingPlanPriceMinorUnits: parsed.BILLING_PLAN_PRICE_MINOR_UNITS
   });
 }
 
@@ -238,6 +344,12 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
   if ((parsed.AUTH_RATE_LIMIT_HASH_KEY?.length ?? 0) < 32) {
     throw new Error("AUTH_RATE_LIMIT_HASH_KEY must contain at least 32 characters.");
   }
+  if (parsed.AUTH_BYPASS_ENABLED === "true") {
+    // Refuse to boot rather than serve an authentication bypass. Every other
+    // dangerous switch here fails closed; this one used to be an unvalidated
+    // process.env read that nothing checked.
+    throw new Error("AUTH_BYPASS_ENABLED must never be enabled in production.");
+  }
   if (parsed.META_CONNECTION_MODE === "live") {
     const callback = parsed.META_OAUTH_REDIRECT_URL
       ? new URL(parsed.META_OAUTH_REDIRECT_URL)
@@ -256,6 +368,38 @@ function assertProductionConfiguration(parsed: z.infer<typeof serverEnvironmentS
       throw new Error("Live Meta mode requires exact same-origin provider configuration.");
     }
   }
+  if ((parsed.BILLING_FINGERPRINT_HASH_KEY?.length ?? 0) < 32) {
+    throw new Error("BILLING_FINGERPRINT_HASH_KEY must contain at least 32 characters.");
+  }
+  if ((parsed.BILLING_CALLBACK_STATE_SECRET?.length ?? 0) < 32) {
+    throw new Error("BILLING_CALLBACK_STATE_SECRET must contain at least 32 characters.");
+  }
+  if (parsed.PAYMENT_PROVIDER_MODE === "paddle") {
+    // The webhook secret is the whole of the trust boundary: without it every
+    // notification is unverifiable, and an unverifiable notification must never
+    // reach the billing authority.
+    if (!parsed.PADDLE_WEBHOOK_SECRET) {
+      throw new Error("Paddle mode requires PADDLE_WEBHOOK_SECRET.");
+    }
+    if (!parsed.PADDLE_API_KEY) {
+      throw new Error("Paddle mode requires PADDLE_API_KEY.");
+    }
+    if (parsed.LIVE_BILLING_ENABLED === "true" && parsed.BILLING_LIVE_APPROVED !== "true") {
+      throw new Error(
+        "Live billing requires explicit BILLING_LIVE_APPROVED alongside the environment gate."
+      );
+    }
+  }
+  if (parsed.PAYMENT_PROVIDER_MODE === "paytr") {
+    if (!parsed.PAYTR_MERCHANT_ID || !parsed.PAYTR_MERCHANT_KEY || !parsed.PAYTR_MERCHANT_SALT) {
+      throw new Error("Live PayTR mode requires merchant id, key and salt.");
+    }
+    if (parsed.LIVE_BILLING_ENABLED === "true" && parsed.BILLING_LIVE_APPROVED !== "true") {
+      throw new Error(
+        "Live billing requires explicit BILLING_LIVE_APPROVED alongside the environment gate."
+      );
+    }
+  }
 }
 
 export function getServerEnvironment(): ServerEnvironment {
@@ -270,6 +414,7 @@ export function configuredInfrastructure(environment: ServerEnvironment) {
       Boolean(environment.supabaseServiceRoleKey),
     inngest: Boolean(environment.inngestEventKey) && Boolean(environment.inngestSigningKey),
     credentialEncryption: Boolean(environment.credentialEncryptionKey),
-    liveSending: environment.liveProviderSendEnabled
+    liveSending: environment.liveProviderSendEnabled,
+    liveBilling: environment.liveBillingEnabled && environment.billingLiveApproved
   });
 }

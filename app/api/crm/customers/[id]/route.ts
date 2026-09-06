@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireCsrf } from "@/src/modules/auth/security/route";
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { repository } = await createCrmRuntime();
     return NextResponse.json(await repository.detail((await params).id));
-  } catch {
-    return NextResponse.json({ error: "CUSTOMER_NOT_FOUND" }, { status: 404 });
+  } catch (error) {
+    return billingBlockedResponse(error, "CUSTOMER_NOT_FOUND", 404);
   }
 }
 
@@ -23,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(body.companyName ? { companyName: String(body.companyName) } : {})
     });
     return NextResponse.json({ customer });
-  } catch {
-    return NextResponse.json({ error: "INVALID_CUSTOMER" }, { status: 400 });
+  } catch (error) {
+    return billingBlockedResponse(error, "INVALID_CUSTOMER", 400);
   }
 }

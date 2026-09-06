@@ -15,11 +15,17 @@ minimumReleaseAgeExclude:
   - "@supabase/cli-windows-x64@2.110.0"
   - supabase@2.110.0
 overrides:
+  # GHSA-rgw5-rvv9-x895 (DoS via unbounded intermediate). 5.0.8 was the patched
+  # release when these were first pinned; the advisory now extends through
+  # <5.0.9, so the ceiling moves with it. Patch-level bump within v5.
   brace-expansion@1.1.16: 5.0.9
   brace-expansion@2.1.2: 5.0.9
   "brace-expansion@>=5.0.0 <5.0.9": 5.0.9
-  "nanoid@<3.3.17": 3.3.17
   postcss: 8.5.23
+  # GHSA-2v37-7h3g-55p8 (custom generators can loop indefinitely). Reached via
+  # inngest > next > postcss. Only one nanoid major is present in the tree, so
+  # this cannot pull a consumer across a major boundary.
+  nanoid: 3.3.18
   sharp: 0.35.3
 patchedDependencies:
   minimatch@3.1.5: patches/minimatch@3.1.5.patch

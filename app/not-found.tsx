@@ -5,15 +5,18 @@ import { BrandLockup } from "@/src/modules/workspaces/ui/brand-lockup";
 export default async function NotFound() {
   const { t } = await getRequestPreferences();
   return (
-    <main className="onboarding-page">
-      <header className="onboarding-header">
+    <main className="brand-splash">
+      <section className="system-notice">
         <BrandLockup />
-      </header>
-      <section className="panel">
-        <div className="empty-guidance">
-          <strong>{t("system.notFound")}</strong>
-          <span>{t("system.notFoundDetail")}</span>
-          <Link href="/dashboard">{t("nav.overview")}</Link>
+        <p className="system-notice-code" aria-hidden="true">
+          404
+        </p>
+        <h1>{t("system.notFound")}</h1>
+        <p className="system-notice-detail">{t("system.notFoundDetail")}</p>
+        <div className="system-notice-actions">
+          <Link className="btn btn-primary" href="/dashboard">
+            {t("nav.overview")}
+          </Link>
         </div>
       </section>
     </main>

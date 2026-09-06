@@ -1,0 +1,21 @@
+# Local reference material that is not part of the application.
+#
+# A CLI deploy uploads the working directory, not the git tree, so anything
+# sitting untracked beside the source rides along into the build — the handoff
+# PDF, the execution pack, the local agent config. None of it is served, but
+# none of it needs to leave this machine either.
+.claude/
+handoff.pdf
+Rellooma_Master_Pack_Complete_File_Category_Guide_EN.md
+Rellooma_Master_Sequential_Execution_Pack_v1/
+Rellooma_V1_Backend_Launch_MD_Pack/
+
+# Test and build artefacts.
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+
+# Local environment backups. `.env*` is gitignored but not upload-ignored.
+.env.local.bak-*
+.env.local.mumbai.bak

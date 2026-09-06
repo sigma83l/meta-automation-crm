@@ -1,16 +1,70 @@
 import Link from "next/link";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
+import { isFeatureEnabled } from "@/src/modules/features/server/gate";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  const [{ client, workspace }, { locale, t }] = await Promise.all([
-    createMetaRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale, t } = await getRequestPreferences();
+  // Every other paid route catches this; analytics was the one that did not,
+  // so a lapsed subscription reached the generic error boundary and was
+  // reported as "the workspace view could not be loaded - retry after checking
+  // the connection". Nothing about that is true: the connection is fine, and
+  // retrying cannot resolve it. The workspace and status ride along on the
+  // error precisely so the page can say what actually happened.
+  let client: Awaited<ReturnType<typeof createMetaRuntime>>["client"];
+  let workspace: Awaited<ReturnType<typeof createMetaRuntime>>["workspace"];
+  try {
+    ({ client, workspace } = await createMetaRuntime());
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="analytics" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
+
+  // Checked before the six counts run, not after. A page that gathers the
+  // numbers and then declines to render them has already done the work and
+  // still shows nothing, and the shape of an empty analytics screen is itself
+  // information about the workspace.
+  if (!(await isFeatureEnabled(client, workspace.id, "analytics"))) {
+    const pickOne = (en: string, tr: string, fa: string) =>
+      locale === "tr" ? tr : locale === "fa" ? fa : en;
+    return (
+      <WorkspaceShell active="analytics" workspaceName={workspace.name}>
+        <div className="content analytics-content">
+          <div className="empty-state">
+            <strong>
+              {pickOne(
+                "Analytics is not part of this plan",
+                "Analitik bu plana dahil değil",
+                "تحلیل بخشی از این طرح نیست"
+              )}
+            </strong>
+            <p>
+              {pickOne(
+                "Nothing has been switched off in your workspace — the records are all still there. Talk to us about including it.",
+                "Çalışma alanınızda hiçbir şey kapatılmadı — kayıtların tamamı yerinde. Dahil etmek için bizimle görüşün.",
+                "چیزی در فضای کاری شما خاموش نشده است — همه رکوردها سر جای خود هستند. برای افزودن آن با ما در تماس باشید."
+              )}
+            </p>
+          </div>
+        </div>
+      </WorkspaceShell>
+    );
+  }
+
   const [conversations, messages, reviews, runs, blocked, customers] = await Promise.all([
     client.from("conversations").select("*", { count: "exact", head: true }),
     client.from("messages").select("*", { count: "exact", head: true }),

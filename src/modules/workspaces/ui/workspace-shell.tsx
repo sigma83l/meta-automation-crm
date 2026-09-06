@@ -12,10 +12,20 @@ import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-contr
 export function WorkspaceShell({
   active,
   workspaceName,
+  platformStaff = false,
   children
 }: {
   active: "overview" | "automations" | "crm" | "inbox" | "analytics" | "settings" | "connections";
   workspaceName: string;
+  /**
+   * Whether this session also holds platform staff access.
+   *
+   * Resolved on the server and passed down rather than asked for here: the
+   * console is protected by its own layout and by every route under it, so this
+   * is only about whether the door is visible. A client component deciding it
+   * for itself would be a claim about authority made in the browser.
+   */
+  platformStaff?: boolean;
   children: ReactNode;
 }) {
   const { t, text } = useI18n();
@@ -117,6 +127,11 @@ export function WorkspaceShell({
             <Link className="topbar-link" href="/dashboard#attention">
               {t("shell.notifications")}
             </Link>
+            {platformStaff ? (
+              <Link className="topbar-link" href="/admin">
+                {text("Platform", "Platform", "پلتفرم")}
+              </Link>
+            ) : null}
             <PreferenceControls compact />
             <span className="environment-chip">{t("shell.safeMode")}</span>
             <LogoutButton />

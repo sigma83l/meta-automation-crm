@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node scripts/with-supabase-env.mjs pnpm next dev",
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
@@ -18,6 +19,7 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:migrations": "vitest run tests/migrations",
     "test:integration:local": "node scripts/with-supabase-env.mjs pnpm vitest run tests/integration",
     "test:db": "supabase test db",
     "test:e2e": "node scripts/with-supabase-env.mjs pnpm playwright test",
@@ -31,6 +33,7 @@
     "load:check": "node --check load/k6/panel.js && node --check load/k6/conversations.js",
     "production:preflight": "node scripts/production-preflight.mjs",
     "backup:local": "bash scripts/local-backup.sh",
+    "meta:connect-test": "node --env-file=.env.local scripts/meta-connect-test-number.mjs",
     "audit:prod": "pnpm audit --prod --audit-level high",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm load:check && pnpm build && pnpm secret:scan"
   },
@@ -51,8 +54,10 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
+    "@electric-sql/pglite": "0.5.5",
     "@playwright/test": "1.62.0",
     "@secretlint/secretlint-rule-preset-recommend": "13.0.4",
+    "@types/emscripten": "1.41.5",
     "@types/node": "22.20.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",

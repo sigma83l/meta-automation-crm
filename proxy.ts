@@ -9,7 +9,19 @@ const protectedPrefixes = [
   "/crm",
   "/inbox",
   "/settings",
-  "/connections"
+  "/connections",
+  // The console fails closed twice over: this redirects an anonymous visitor to
+  // the sign-in page, and every route under it then resolves staff identity
+  // through `current_platform_admin()` before rendering anything. Middleware
+  // knows only that somebody is signed in — it deliberately does not try to
+  // decide who is staff, since that answer belongs to the database.
+  "/admin",
+  // The local-only AI lab. It resolves a workspace to read that workspace's
+  // approved knowledge, so an anonymous visit throws rather than renders -
+  // listing it here turns that into the sign-in redirect every other
+  // workspace route gives. On any deployment the route 404s before this
+  // matters; see src/modules/ai-lab/dev-only.ts.
+  "/dev"
 ];
 
 export async function proxy(request: NextRequest) {
@@ -47,7 +59,30 @@ export async function proxy(request: NextRequest) {
     }
   });
   const { data } = await client.auth.getUser();
-  if (!data.user && isProtected) return redirectToLogin(request);
+  if (!data.user && isProtected) {
+    // Local-only developer convenience. The deployment-mode check is the load
+    // bearing half: without it, setting one environment variable in a deployed
+    // environment would silently sign in every visitor to a protected route as
+    // the bypass user. Middleware reads process.env directly (importing the
+    // validated schema here would re-run it on every request), so this fails
+    // closed on its own, and assertProductionConfiguration refuses to boot a
+    // production build with the flag set.
+    if (
+      process.env.AUTH_BYPASS_ENABLED === "true" &&
+      (process.env.APP_DEPLOYMENT_MODE ?? "local") === "local"
+    ) {
+      const bypassEmail = process.env.AUTH_BYPASS_EMAIL;
+      const bypassPassword = process.env.AUTH_BYPASS_PASSWORD;
+      if (bypassEmail && bypassPassword) {
+        const { error } = await client.auth.signInWithPassword({
+          email: bypassEmail,
+          password: bypassPassword
+        });
+        if (!error) return response;
+      }
+    }
+    return redirectToLogin(request);
+  }
   return response;
 }
 

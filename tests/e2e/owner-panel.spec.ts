@@ -45,7 +45,7 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   }
   await page.getByRole("link", { name: /Synthetic recipe 1/ }).click();
   await page.getByRole("button", { name: "Run safe test" }).click();
-  await expect(page.getByRole("status")).toContainText("Safe test completed");
+  await expect(page.getByRole("status")).toContainText(/safe test completed/i);
   await page.getByRole("button", { name: "Activate" }).click();
   await expect(page.getByText("Current status: ACTIVE")).toBeVisible();
 

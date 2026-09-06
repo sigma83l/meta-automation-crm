@@ -18,6 +18,10 @@ export function CrmControls() {
     const params = new URLSearchParams();
     const query = String(form.get("q") ?? "");
     const status = String(form.get("status") ?? "");
+    // The view survives a filter. Search and status compose over the list an
+    // operator chose rather than dropping them back to the default one.
+    const view = search.get("view");
+    if (view) params.set("view", view);
     if (query) params.set("q", query);
     if (status) params.set("status", status);
     router.push(`/crm?${params}`);
@@ -43,6 +47,13 @@ export function CrmControls() {
     }
   }
 
+  /**
+   * Exports what the search and status controls select - not what the chosen
+   * view selects. Two of the views are decided by the attention ranking, which
+   * lives in the read path and not in the export path, and a button labelled
+   * for the view would quietly export the whole workspace instead of the queue
+   * on screen. The label says which one this is.
+   */
   async function exportView(kind: "filtered" | "workspace") {
     setLoading(true);
     const csrf = (await fetch("/api/auth/csrf").then((response) => response.json())) as {
@@ -108,7 +119,7 @@ export function CrmControls() {
 
   return (
     <div className="crm-control-grid">
-      <form className="crm-filter" onSubmit={filter}>
+      <form method="post" className="crm-filter" onSubmit={filter}>
         <input
           name="q"
           placeholder={text("Search name or company", "Ad veya şirket ara", "جستجوی نام یا شرکت")}
@@ -126,28 +137,49 @@ export function CrmControls() {
         </select>
         <button>{text("Apply filters", "Filtreleri uygula", "اعمال فیلتر")}</button>
         <button type="button" onClick={() => exportView("filtered")} disabled={loading}>
-          {text("Export view", "Görünümü dışa aktar", "خروجی این نما")}
+          {text("Export search", "Aramayı dışa aktar", "خروجی نتایج جستجو")}
         </button>
         <button type="button" onClick={() => exportView("workspace")} disabled={loading}>
           {text("Export all", "Tümünü dışa aktar", "خروجی همه")}
         </button>
       </form>
-      <form className="crm-create" onSubmit={create}>
+      <form method="post" className="crm-create" onSubmit={create}>
         <strong>{text("New customer", "Yeni müşteri", "مشتری جدید")}</strong>
+        {/*
+          Named as well as placeheld. A placeholder is the last thing an
+          accessible name falls back to, and it disappears the moment somebody
+          types - so the one control whose label a person most needs while
+          filling it in is the one that no longer has one. Every other form in
+          this application carries an explicit label; this one did not.
+        */}
         <input
           name="displayName"
           placeholder={text("Display name", "Görünen ad", "نام نمایشی")}
+          aria-label={text(
+            "New customer display name",
+            "Yeni müşteri görünen adı",
+            "نام نمایشی مشتری جدید"
+          )}
           required
         />
-        <input name="companyName" placeholder={text("Company", "Şirket", "شرکت")} />
-        <input name="email" type="email" placeholder={text("Email", "E-posta", "ایمیل")} />
+        <input
+          name="companyName"
+          placeholder={text("Company", "Şirket", "شرکت")}
+          aria-label={text("New customer company", "Yeni müşteri şirketi", "شرکت مشتری جدید")}
+        />
+        <input
+          name="email"
+          type="email"
+          placeholder={text("Email", "E-posta", "ایمیل")}
+          aria-label={text("New customer email", "Yeni müşteri e-postası", "ایمیل مشتری جدید")}
+        />
         <button disabled={loading}>
           {loading
             ? text("Working…", "İşleniyor…", "در حال انجام…")
             : text("Create", "Oluştur", "ساخت")}
         </button>
       </form>
-      <form className="crm-create" onSubmit={importCsv}>
+      <form method="post" className="crm-create" onSubmit={importCsv}>
         <strong>{text("Import CSV", "CSV içe aktar", "ورود CSV")}</strong>
         <p>
           {text(

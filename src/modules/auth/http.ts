@@ -24,6 +24,8 @@ function publicError(error: AppError) {
     VALIDATION_ERROR: "Check the information and try again.",
     AUTH_INVALID_CREDENTIALS: "Email or password could not be accepted.",
     AUTH_ACCOUNT_UNAVAILABLE: "This account is unavailable.",
+    AUTH_SIGNUP_DISABLED:
+      "Account creation is currently disabled for this deployment. Contact your workspace administrator.",
     AUTH_RATE_LIMITED: "Too many attempts. Try again shortly.",
     AUTH_CAPTCHA_FAILED: "Human verification failed.",
     AUTH_SESSION_EXPIRED: "Your session has expired.",
@@ -31,6 +33,13 @@ function publicError(error: AppError) {
   };
   return {
     code: error.code,
-    message: messages[error.code] ?? "The request could not be completed."
+    // A weak password carries its own message, because the whole point is to
+    // say which rule was missed - "needs a digit" and "needs an uppercase
+    // letter" are different instructions. The strings come from this module's
+    // own schema, never from user input or a provider.
+    message:
+      error.code === "AUTH_PASSWORD_TOO_WEAK"
+        ? error.message
+        : (messages[error.code] ?? "The request could not be completed.")
   };
 }

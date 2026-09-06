@@ -1,0 +1,249 @@
+"use client";
+
+import Link from "next/link";
+
+import { useI18n } from "@/src/lib/i18n/client";
+
+import type {
+  DeadLetterRow,
+  OutboxHealth,
+  PlatformAdminRole,
+  PlatformSwitch,
+  StuckOutboxRow
+} from "../contracts";
+import { AdminShell } from "./admin-shell";
+import { ReasonAction } from "./reason-action";
+
+export function SystemPanel({
+  role,
+  switches,
+  deadLetters,
+  outbox,
+  stuckOutbox
+}: {
+  role: PlatformAdminRole;
+  switches: readonly PlatformSwitch[];
+  deadLetters: readonly DeadLetterRow[];
+  outbox: OutboxHealth;
+  /** The rows behind the "past retry limit" count, so it can be acted on. */
+  stuckOutbox: readonly StuckOutboxRow[];
+}) {
+  const { text } = useI18n();
+
+  return (
+    <AdminShell active="system" role={role}>
+      <div className="content">
+        <section className="panel">
+          <div className="panel-heading">
+            <h2>{text("Global switches", "Genel anahtarlar", "کلیدهای سراسری")}</h2>
+          </div>
+          <div className="warning-box">
+            {/*
+              Stated on the screen, not only in the migration. Somebody reaching
+              for these during an incident needs to know in one sentence which
+              direction actually does something.
+            */}
+            {text(
+              "Off stops a capability everywhere, immediately. On only removes this block — the environment gate, approval and allowlist still decide, so nothing here can start a live send.",
+              "Kapalı, bir yeteneği her yerde anında durdurur. Açık yalnızca bu engeli kaldırır — ortam kilidi, onay ve izin listesi yine karar verir; buradaki hiçbir şey canlı gönderim başlatamaz.",
+              "خاموش، یک قابلیت را فوراً همه‌جا متوقف می‌کند. روشن فقط این مانع را برمی‌دارد — دروازه محیط، تأیید و فهرست مجاز همچنان تصمیم می‌گیرند؛ هیچ‌چیز اینجا نمی‌تواند ارسال زنده را آغاز کند."
+            )}
+          </div>
+          {/*
+            One row per switch. These were full-width cards a paragraph tall
+            apiece, which made a list of eight booleans two thousand pixels of
+            scrolling; the state pill now sits beside the name it qualifies
+            instead of below the sentence describing it.
+          */}
+          <div className="admin-switch-list">
+            {switches.map((entry) => (
+              <div className="admin-switch" key={entry.key}>
+                <span className="admin-switch-name">
+                  <strong className="admin-key" dir="ltr">
+                    {entry.key}
+                  </strong>
+                  <span
+                    className={entry.enabled ? "status-pill" : "status-pill status-pill-warning"}
+                  >
+                    {entry.enabled
+                      ? text("Permitted", "İzinli", "مجاز")
+                      : text("Blocked", "Engelli", "مسدود")}
+                  </span>
+                </span>
+                <p>{entry.description}</p>
+                <span className="admin-switch-when">
+                  {text("Changed", "Değiştirildi", "تغییر یافته")}{" "}
+                  <time dateTime={entry.updatedAt}>
+                    {new Date(entry.updatedAt).toLocaleString()}
+                  </time>
+                </span>
+                <ReasonAction
+                  endpoint="switches"
+                  body={{ key: entry.key, enabled: !entry.enabled }}
+                  label={
+                    entry.enabled
+                      ? text("Block everywhere", "Her yerde engelle", "مسدودسازی همه‌جا")
+                      : text("Remove the block", "Engeli kaldır", "برداشتن مسدودی")
+                  }
+                  {...(entry.enabled
+                    ? {
+                        confirmLabel: text("Confirm block", "Engeli onayla", "تأیید مسدودسازی"),
+                        variant: "danger" as const
+                      }
+                    : {})}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <h2>{text("Delivery queues", "Teslim kuyrukları", "صف‌های تحویل")}</h2>
+          </div>
+          <div className="metric-grid">
+            <div className="summary-card">
+              <span className="eyebrow">
+                {text("Waiting to relay", "Aktarım bekliyor", "در انتظار انتقال")}
+              </span>
+              <strong>{outbox.pendingOutbox}</strong>
+            </div>
+            <div className="summary-card">
+              <span className="eyebrow">
+                {text("Past retry limit", "Deneme sınırını aştı", "فراتر از حد تلاش")}
+              </span>
+              <strong>{outbox.exhaustedOutbox}</strong>
+              <small>
+                {text(
+                  "These stop on their own and are listed below",
+                  "Bunlar kendiliğinden durur ve aşağıda listelenir",
+                  "این‌ها خودبه‌خود متوقف می‌شوند و در پایین فهرست شده‌اند"
+                )}
+              </small>
+            </div>
+            <div className="summary-card">
+              <span className="eyebrow">
+                {text("Unprocessed webhooks", "İşlenmemiş webhook", "وب‌هوک‌های پردازش‌نشده")}
+              </span>
+              <strong>{outbox.unprocessedWebhooks}</strong>
+            </div>
+          </div>
+        </section>
+
+        {/*
+          The rows behind the "past retry limit" tile.
+          The panel used to report that number and stop, so the one queue it
+          named as needing a person offered that person nothing to press — the
+          requeue endpoint existed but reached no screen. A retry here grants a
+          few fresh attempts rather than resetting the counter, which is what
+          keeps a permanently failing row from looping forever.
+        */}
+        {stuckOutbox.length > 0 ? (
+          <section className="panel crm-table-panel">
+            <div className="panel-heading">
+              <h2>{text("Stopped deliveries", "Durmuş teslimler", "تحویل‌های متوقف‌شده")}</h2>
+            </div>
+            <p className="section-note">
+              {text(
+                "The relay has given up on these. Retrying grants a few more attempts; each send carries the same event id, so one that did go out is discarded rather than delivered twice.",
+                "Aktarıcı bunlardan vazgeçti. Yeniden denemek birkaç hak daha verir; her gönderim aynı olay kimliğini taşır, bu yüzden gerçekte gitmiş olan biri iki kez teslim edilmez, elenir.",
+                "رله از این‌ها منصرف شده است. تلاش دوباره چند فرصت تازه می‌دهد؛ هر ارسال همان شناسه رویداد را دارد، پس موردی که واقعاً رفته باشد دوباره تحویل نمی‌شود."
+              )}
+            </p>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
+                  <th>{text("Attempts", "Deneme", "تلاش‌ها")}</th>
+                  <th>{text("Waiting since", "Bekliyor", "در انتظار از")}</th>
+                  <th>{text("Action", "İşlem", "اقدام")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stuckOutbox.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <Link href={`/admin/workspaces/${row.workspaceId}`}>{row.workspaceName}</Link>
+                      <small className="admin-key" dir="ltr">
+                        {row.id}
+                      </small>
+                    </td>
+                    <td className="admin-num">{row.attempts}</td>
+                    <td>
+                      <time dateTime={row.createdAt}>
+                        {new Date(row.createdAt).toLocaleString()}
+                      </time>
+                    </td>
+                    <td className="admin-actions-cell">
+                      <ReasonAction
+                        endpoint="ops"
+                        body={{ action: "requeue_outbox", id: row.id }}
+                        label={text("Retry delivery", "Yeniden dene", "تلاش دوباره")}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
+
+        <section className="panel crm-table-panel">
+          <div className="panel-heading">
+            <h2>{text("Failed automation steps", "Başarısız adımlar", "گام‌های ناموفق")}</h2>
+          </div>
+          <p className="section-note">
+            {text(
+              "Clearing one records that a person handled it. It does not re-run the step — a send whose outcome is unknown is never retried blindly.",
+              "Birini temizlemek, bir kişinin onu ele aldığını kaydeder. Adımı yeniden çalıştırmaz — sonucu bilinmeyen bir gönderim asla körlemesine yinelenmez.",
+              "پاک کردن یکی ثبت می‌کند که فردی به آن رسیدگی کرده است. گام را دوباره اجرا نمی‌کند — ارسالی که نتیجه‌اش نامعلوم است هرگز کورکورانه تکرار نمی‌شود."
+            )}
+          </p>
+          {deadLetters.length === 0 ? (
+            <div className="empty-state">
+              <strong>{text("Queue is clear", "Kuyruk temiz", "صف خالی است")}</strong>
+            </div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>{text("Workspace", "Çalışma alanı", "فضای کاری")}</th>
+                  <th>{text("Error", "Hata", "خطا")}</th>
+                  <th>{text("When", "Zaman", "زمان")}</th>
+                  <th>{text("Action", "İşlem", "اقدام")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deadLetters.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <Link href={`/admin/workspaces/${row.workspaceId}`}>{row.workspaceName}</Link>
+                    </td>
+                    <td>
+                      <strong className="admin-key" dir="ltr">
+                        {row.errorCode}
+                      </strong>
+                      <small>{row.safeSummary}</small>
+                    </td>
+                    <td>
+                      <time dateTime={row.createdAt}>
+                        {new Date(row.createdAt).toLocaleString()}
+                      </time>
+                    </td>
+                    <td className="admin-actions-cell">
+                      <ReasonAction
+                        endpoint="ops"
+                        body={{ action: "acknowledge_dead_letter", id: row.id }}
+                        label={text("Mark handled", "Ele alındı", "رسیدگی‌شده")}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
+    </AdminShell>
+  );
+}

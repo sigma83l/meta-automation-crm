@@ -335,7 +335,12 @@ body {
 }
 .crm-row {
   display: grid;
-  grid-template-columns: 60px minmax(180px, 1.4fr) minmax(140px, 1fr) 100px 100px;
+  /* Select, customer, current need, lifecycle, status, score, next action,
+     owner, last activity - the radar's primary columns. Company folds into the
+     customer cell rather than taking a tenth. */
+  grid-template-columns:
+    44px minmax(150px, 1.3fr) minmax(140px, 1.2fr) 110px 120px 64px
+    minmax(120px, 0.9fr) 110px 110px;
   gap: 12px;
   align-items: center;
   min-height: 52px;
@@ -354,6 +359,97 @@ body {
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+.crm-row [role="cell"] small {
+  display: block;
+  color: var(--tertiary);
+  font-size: 0.68rem;
+}
+/* An unknown is stated, never left blank: a gap an operator can see is one they
+   can close. */
+.unknown-value {
+  color: var(--tertiary);
+  font-style: normal;
+}
+/* Priority carries its word as well as its colour, per the pack's rule that a
+   score or a level is never colour-only. */
+.crm-row [role="cell"] small.priority-chip {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.crm-row [role="cell"] small.priority-chip[data-priority="critical"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.crm-row [role="cell"] small.priority-chip[data-priority="high"] {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.radar-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.radar-views ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.radar-views li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.radar-views a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.radar-views a[aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--info-soft);
+  color: var(--blue-deep);
+}
+.radar-views form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+.radar-views label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.crm-pager {
+  display: flex;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+}
+.crm-pager a {
+  color: var(--blue-deep);
+  font-weight: 750;
+  text-decoration: none;
 }
 .status-pill {
   width: fit-content;
@@ -381,6 +477,249 @@ body {
   margin: 0;
   color: var(--muted);
 }
+/* The Now card: the record's first working block, and the one thing on the page
+   that is always present. Fields stay in a grid so an unknown occupies the same
+   space as a value - a card that reflows as facts arrive hides the fact that it
+   had nothing to say. */
+.now-card {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.now-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-block-end: 16px;
+}
+.now-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+.now-field dt {
+  color: var(--tertiary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.now-field dd {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+}
+.now-field small {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--tertiary);
+  font-size: 0.7rem;
+}
+.now-field .evidence-ref {
+  overflow-wrap: anywhere;
+}
+.now-footnote {
+  margin: 18px 0 0;
+  font-size: 0.74rem;
+}
+.now-footnote a {
+  color: var(--muted);
+}
+.reason-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+.reason-chip[data-effect="caps"] {
+  color: var(--tertiary);
+  font-style: italic;
+}
+
+/* Suggestions waiting on a person. Beside the Now card rather than in a tab:
+   they are the one thing on the record that stops mattering if nobody sees it. */
+.proposal-panel {
+  padding: 16px clamp(18px, 3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--info-soft);
+}
+.proposal-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.proposal-panel li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.86rem;
+}
+.proposal-panel small {
+  flex-basis: 100%;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+}
+.proposal-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.proposal-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--blue);
+  color: white;
+  font-weight: 700;
+}
+.proposal-actions .button-text {
+  background: none;
+  color: var(--muted);
+}
+
+/* Timeline. Routine rows are dimmed rather than restyled: when somebody turns
+   them on they are reading them beside the rest, and a different visual
+   language would break the sequence they came for. */
+.timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 16px;
+}
+.timeline-filters a {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.timeline-filters a[aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--info-soft);
+  color: var(--blue-deep);
+}
+.timeline {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timeline li {
+  padding: 12px 14px;
+  border-inline-start: 3px solid var(--line-strong);
+  background: var(--surface-raised);
+  border-radius: 0 8px 8px 0;
+}
+.timeline li[data-routine] {
+  border-inline-start-color: var(--line);
+  color: var(--tertiary);
+}
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.timeline-head strong {
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+.timeline li p {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+/* The record's list sections. One layout for all of them: a name, its state,
+   and the small print that says where the row came from. */
+.memory-list,
+.followup-list,
+.conversation-summaries,
+.file-list,
+.automation-list,
+.field-list,
+.note-list,
+.contact-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.memory-list li,
+.followup-list li,
+.conversation-summaries li,
+.file-list li,
+.automation-list li,
+.field-list li,
+.note-list li,
+.contact-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  font-size: 0.86rem;
+}
+.memory-list small,
+.followup-list small,
+.conversation-summaries small,
+.file-list small,
+.field-list small,
+.note-list small {
+  flex-basis: 100%;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+}
+/* Expired memory is shown, and shown as expired: the record is where somebody
+   corrects it, and they cannot correct what they cannot see. */
+.memory-list li[data-expired] {
+  border-style: dashed;
+  color: var(--tertiary);
+}
+.note-list li p {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.section-note {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.detail-panel h4 {
+  margin: 18px 0 10px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tertiary);
+}
+.detail-panel h4:first-of-type {
+  margin-block-start: 0;
+}
+
 .detail-tabs {
   display: flex;
   overflow-x: auto;
@@ -391,7 +730,8 @@ body {
   padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  /* Was `white`, which stayed white in dark mode and left the label unreadable. */
+  background: var(--surface);
   color: var(--muted);
   text-decoration: none;
 }
@@ -562,6 +902,45 @@ body {
   background: var(--info-soft);
   box-shadow: inset 3px 0 var(--blue);
 }
+
+/* A conversation the assistant stopped on. Amber rather than red: it is work
+   waiting, not a fault, and the operator chooses when to pick it up. Both
+   tokens are redefined per theme, so no dark-mode override is needed. */
+.review-flag {
+  width: fit-content;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--line));
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.review-reason {
+  display: grid;
+  gap: 8px;
+  margin: 16px 20px 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--amber) 36%, var(--line));
+  border-inline-start: 4px solid var(--amber);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--amber) 9%, var(--surface));
+}
+.review-reason strong {
+  font-size: 0.82rem;
+}
+.review-reason ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+.review-reason > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
 .message-stream {
   display: flex;
   flex-direction: column;
@@ -613,15 +992,33 @@ body {
   }
 }
 
+@media (max-width: 1080px) {
+  .crm-row {
+    grid-template-columns: 44px minmax(140px, 1.3fr) 110px 120px 64px minmax(120px, 0.9fr);
+  }
+  .crm-row > :nth-child(3),
+  .crm-row > :nth-child(8),
+  .crm-row > :nth-child(9) {
+    display: none;
+  }
+}
+
 @media (max-width: 680px) {
   .crm-filter {
     display: grid;
   }
   .crm-row {
-    grid-template-columns: 40px 1fr 90px;
+    grid-template-columns: 40px 1fr minmax(96px, auto);
   }
+  /* What survives on a phone: who it is, and what to do about them. The rest is
+     on the record, one tap away - the pack's rule is that mobile stays usable
+     for real work, not that it shows every column badly. */
   .crm-row > :nth-child(3),
-  .crm-row > :nth-child(5) {
+  .crm-row > :nth-child(4),
+  .crm-row > :nth-child(5),
+  .crm-row > :nth-child(6),
+  .crm-row > :nth-child(8),
+  .crm-row > :nth-child(9) {
     display: none;
   }
   .inbox-grid {
@@ -1143,9 +1540,54 @@ main {
   letter-spacing: -0.05em;
 }
 
-.metric-grid .word-value {
-  color: #176e5e;
-  font-size: 1.35rem;
+.metric-grid article a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.metric-grid article a:hover {
+  text-decoration: underline;
+}
+
+/* Totals, kept visually subordinate to the counts above them: one line, no
+   cards, so the eye reaches the work-waiting figures first. */
+.metric-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  margin: -6px 0 18px;
+  padding: 13px 20px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+
+.metric-totals li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.metric-totals span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.metric-totals strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.metric-unavailable {
+  margin: -6px 0 12px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--warning-soft);
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .dashboard-grid {
@@ -1182,20 +1624,37 @@ main {
 .setup-list,
 .activity-list {
   display: grid;
+  /* Zeroed for the `<ul>` callers. The user-agent sheet indents a list by 40px
+     of `padding-inline-start`, which `display: grid` does not remove — so the
+     platform overview's grants and the workspace detail's audit rows sat inset
+     from every other row in the console for no reason anybody chose. */
+  margin: 0;
+  padding: 0;
 }
 
+/* `li` alongside `article` because both markups occur.
+   These rules described `article` only, and a caller that reached for the
+   semantically correct `<ul><li>` — the platform overview's list of open
+   customer views — got no rules at all: an unstyled list item whose `strong`,
+   `span` and `small` ran together into one unspaced line. Naming both shapes
+   is cheaper than a parallel class, and keeps the list markup honest. */
 .setup-list article,
-.activity-list article {
+.setup-list > li,
+.activity-list article,
+.activity-list > li {
   min-height: 74px;
   display: flex;
   align-items: center;
   gap: 13px;
   padding: 13px 20px;
   border-bottom: 1px solid var(--line);
+  list-style: none;
 }
 
 .setup-list article:last-child,
-.activity-list article:last-child {
+.setup-list > li:last-child,
+.activity-list article:last-child,
+.activity-list > li:last-child {
   border-bottom: 0;
 }
 
@@ -1212,9 +1671,21 @@ main {
 }
 
 .setup-list article > div span,
-.activity-list article > div span {
+.activity-list article > div span,
+.activity-list > li > span {
   color: var(--muted);
   font-size: 0.7rem;
+}
+
+/* The trailing detail of a list row — a time, a state — sits at the inline end
+   rather than butted against the text before it. */
+.activity-list > li > small {
+  margin-inline-start: auto;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+  white-space: nowrap;
 }
 
 .step,
@@ -1543,6 +2014,11 @@ main {
   padding: 14px;
   color: var(--ink);
   line-height: 1.55;
+  /* These boxes carry machine policy codes - LIVE_MULTI_BUSINESS_BLOCKED_BY_META
+     is 35 characters with no break opportunity in it. `anywhere` rather than
+     `break-word` because only `anywhere` lowers the element's min-content width,
+     and it is the min-content width that decides how narrow the page may be. */
+  overflow-wrap: anywhere;
 }
 .credential-row {
   display: flex;
@@ -2660,5 +3136,1286 @@ main {
 
   :where(.brand-logo-horizontal, .brand-logo-mark) {
     forced-color-adjust: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Components added after the v11 design freeze.
+ *
+ * Carried over from the backend branch rather than merged into the sections
+ * above, so the v11 stylesheet stays byte-identical to what the designer
+ * shipped and this addendum is the only thing to review when the design is
+ * next updated. Every rule here styles a component that did not exist when v11
+ * was frozen — legal pages, billing panel, entitlement block, timeline.
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------- */
+/* Component library primitives (Figma "Component Library" page)          */
+/* ---------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 18px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 750;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--brand-700);
+  background: var(--brand-700);
+}
+
+.btn-ghost {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Whole-screen system surfaces: waiting, 404, and the error boundary.    */
+/*                                                                        */
+/* These three render in place of the page, and the workspace shell        */
+/* belongs to the page rather than to a layout - so none of them can       */
+/* borrow the rail or the topbar. They own the viewport instead.           */
+/* ---------------------------------------------------------------------- */
+
+.brand-splash {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(20px, 5vw, 48px);
+  background: var(--canvas);
+}
+
+.brand-splash-inner {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.brand-splash-inner strong {
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-splash-inner span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.brand-spinner {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 104px;
+  block-size: 104px;
+  margin-block-end: 24px;
+}
+
+/* The track and the arc are two rings on the same box: only the arc turns,
+   so the circle stays legible at every frame instead of blinking in and out. */
+.brand-spinner::before,
+.brand-spinner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.brand-spinner::before {
+  border-color: var(--line);
+}
+
+.brand-spinner::after {
+  border-block-start-color: var(--blue);
+  border-inline-end-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  animation: brand-spin 900ms linear infinite;
+}
+
+.brand-spinner-mark {
+  inline-size: 52px;
+  block-size: auto;
+}
+
+@keyframes brand-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The global reduce rule stops the rotation, which would leave the arc
+     parked at an arbitrary angle and reading as a spinner that has hung.
+     Closing the ring makes the still frame deliberate. */
+  .brand-spinner::after {
+    border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+  }
+}
+
+.system-notice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  inline-size: min(100%, 460px);
+  padding: clamp(24px, 4vw, 34px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.system-notice .brand-lockup {
+  margin-block-end: 14px;
+  padding: 0;
+}
+
+.system-notice-code {
+  margin: 0;
+  color: var(--tertiary);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.system-notice h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.system-notice-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.system-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block-start: 8px;
+}
+
+/* The error boundary is the one of the three that reports a fault, so it is
+   the only one that carries the accent the product uses to say so. */
+.system-notice-alert {
+  border-inline-start: 4px solid var(--amber);
+}
+
+/* The subscription gate. A settings card that holds three short things, so it
+   sizes to them: without this the CTA is a grid item stretched edge to edge,
+   which reads as a banner rather than as the one action on offer. */
+.entitlement-block {
+  gap: 10px;
+  max-inline-size: 560px;
+}
+
+.entitlement-block p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.entitlement-block .btn {
+  justify-self: start;
+  margin-block-start: 6px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* AI Lab. Local-only developer surface; never served in production.       */
+/* ---------------------------------------------------------------------- */
+
+.ai-lab {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+@media (max-width: 1050px) {
+  .ai-lab {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The controls scroll independently: a long knowledge list would otherwise
+   push the message box and the result off the bottom of the page, which is
+   where the attention actually belongs. */
+.ai-lab-controls {
+  position: sticky;
+  top: 88px;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+  gap: 12px;
+}
+
+@media (max-width: 1050px) {
+  .ai-lab-controls {
+    position: static;
+    max-height: none;
+  }
+}
+
+.ai-lab-modes {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-lab-modes .btn {
+  flex: 1;
+}
+
+.ai-lab-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.ai-lab-controls details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-raised);
+}
+
+.ai-lab-controls details[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-lab-controls summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.ai-lab-group {
+  margin-block-start: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tertiary);
+}
+
+.ai-lab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-lab-row input {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+
+.ai-lab-row button {
+  flex: 0 0 auto;
+}
+
+.ai-lab-stage {
+  gap: 14px;
+}
+
+.ai-lab-transcript {
+  display: grid;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+
+.ai-lab-turn {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  /* Long, unbroken text is normal here: a pasted order number, a URL, a token
+     a customer typed. Without this one of them widens the page. */
+  overflow-wrap: anywhere;
+}
+
+.ai-lab-turn.customer {
+  justify-self: start;
+  max-inline-size: 82%;
+  background: var(--surface-tertiary);
+}
+
+.ai-lab-turn.business {
+  justify-self: end;
+  max-inline-size: 82%;
+  background: var(--message-outbound);
+}
+
+.ai-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-lab-outcome {
+  display: grid;
+  gap: 14px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--line);
+}
+
+.ai-lab-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.ai-lab-reply {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--blue);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.ai-lab-reply p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.ai-lab-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+}
+
+.ai-lab-facts div {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-lab-facts dt {
+  color: var(--tertiary);
+}
+
+.ai-lab-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ai-lab-calls {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.ai-lab-calls caption {
+  margin-block-end: 6px;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-align: start;
+  text-transform: uppercase;
+}
+
+.ai-lab-calls :where(th, td) {
+  padding: 7px 10px;
+  border-block-end: 1px solid var(--line);
+  text-align: start;
+  vertical-align: top;
+}
+
+.ai-lab-calls th {
+  color: var(--tertiary);
+  font-weight: 750;
+}
+
+.ai-lab-outcome details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ai-lab-outcome summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.ai-lab-outcome pre {
+  overflow-x: auto;
+  margin: 6px 0 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-tertiary);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Status / feedback banner */
+
+.status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+/* Summary card (status-badged card used for setup items, automation summaries, etc.) */
+
+.summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.summary-card strong {
+  font-size: var(--fs-card-title);
+  line-height: var(--lh-card-title);
+  font-weight: var(--fw-card-title);
+}
+
+.summary-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Timeline */
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding-inline-start: 22px;
+  list-style: none;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-start: 5px;
+  width: 2px;
+  background: var(--line);
+}
+
+.timeline li {
+  position: relative;
+  display: grid;
+  gap: 2px;
+}
+
+.timeline li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -22px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.timeline time {
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.66rem;
+}
+
+.timeline span {
+  font-size: 0.82rem;
+}
+
+/* Empty state */
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: clamp(28px, 5vw, 48px) 20px;
+  text-align: center;
+}
+
+.empty-state strong {
+  font-size: var(--fs-card-title);
+  line-height: var(--lh-card-title);
+  font-weight: var(--fw-card-title);
+}
+
+.empty-state p {
+  max-width: 380px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+[dir="rtl"] .timeline {
+  padding-inline-start: 22px;
+}
+
+/* Public legal documents (/privacy, /terms, /data-deletion).
+   Long-form prose, so this sets a readable measure and vertical rhythm rather
+   than reusing the dashboard card classes. All colours come from the shared
+   semantic tokens, so both themes follow automatically. */
+.legal-page {
+  min-height: 100vh;
+  padding: clamp(24px, 5vw, 70px);
+  background: var(--canvas);
+}
+
+.legal-doc {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 44px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+.legal-doc section {
+  margin-top: 30px;
+}
+
+.legal-doc h2 {
+  margin: 0 0 10px;
+  font-size: 1.18rem;
+  line-height: 1.3;
+}
+
+.legal-doc h3 {
+  margin: 20px 0 6px;
+  font-size: 1rem;
+  color: var(--tertiary);
+}
+
+.legal-doc p {
+  margin: 0 0 12px;
+}
+
+.legal-doc ul,
+.legal-doc ol {
+  margin: 0 0 12px;
+  padding-inline-start: 1.35rem;
+}
+
+.legal-doc li {
+  margin-bottom: 7px;
+}
+
+.legal-doc code {
+  padding: 1px 6px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 5px;
+  background: var(--surface-tertiary);
+  color: var(--tertiary);
+  font-size: 0.88em;
+  unicode-bidi: isolate;
+}
+
+.legal-doc a {
+  color: var(--blue);
+}
+
+/* Platform administration console.
+   Semantic tokens throughout, and no palette of its own. A console that
+   recoloured itself to announce "this is the admin area" would be exactly the
+   route-specific authorization colour the UI rules forbid — and it would also
+   be the weakest possible signal, since colour is the first thing a screenshot,
+   a colour-blind reader or a forced-colours mode loses. What distinguishes this
+   area is what it says: the rail names the scope, and the banner names the
+   customer. */
+
+/* The rail carries five bands now — logo, scope, destinations, the recording
+   note, the way out — where the shared rule declares four. Without this the
+   fifth lands outside the grid and the note and the exit link stack on top of
+   each other at the bottom. */
+.admin-shell .control-rail {
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 16px;
+}
+
+/* The scope, as a sentence rather than a captioned box.
+   "Scope / All workspaces / Platform owner" spent three lines and a bordered
+   card on two facts, one of which was the word "Scope". Two lines, no box: the
+   fact is what matters and the rail has already established it is a rail. */
+.admin-scope {
+  display: grid;
+  gap: 2px;
+  padding-inline: 7px;
+}
+
+.admin-scope strong {
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  /* A workspace name never appears here, but the role and the scope are
+     translated strings sitting in a rail that flips direction, so isolation
+     keeps them from re-ordering around neighbouring punctuation. */
+  unicode-bidi: isolate;
+}
+
+.admin-scope span {
+  color: #8fa7b1;
+  font-size: 0.71rem;
+}
+
+/* The icon slot. The shared `.nav-glyph` is a bordered 28px box with a
+   monospace face, built to hold two capital letters; an icon needs the box and
+   none of the type. Scoped to this shell so the tenant rail keeps its own
+   glyphs until that surface is redesigned on its own terms. */
+.admin-shell .nav-glyph {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+}
+
+.admin-shell nav a:hover .nav-glyph,
+.admin-shell nav a[aria-current="page"] .nav-glyph {
+  color: currentColor;
+}
+
+/* The standing note that everything here is recorded.
+   Kept — unlike the environment chips this console used to echo, it is a live
+   warning about what the person is about to do rather than a restatement of
+   where they are — but quieter than the three-line block it replaces. */
+.admin-recorded {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 9px 0;
+  border-block-start: 1px solid rgba(255, 255, 255, 0.11);
+  color: #8fa7b1;
+  font-size: 0.71rem;
+  line-height: 1.35;
+}
+
+.admin-recorded .status-light {
+  flex: none;
+  border-color: rgba(242, 169, 59, 0.3);
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(242, 169, 59, 0.09);
+}
+
+/* The way back to the person's own tenant. It was `.topbar-link`, which is
+   styled for a light top bar and rendered as near-invisible grey on the dark
+   rail. */
+.admin-exit {
+  padding-inline: 9px;
+  color: #a8bbc3;
+  font-size: 0.73rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-exit:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* Not dismissible, and it holds its place in the flow rather than floating, so
+   the content below it never sits where the banner used to be. */
+.admin-impersonation-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+.admin-impersonation-banner strong {
+  font-weight: 800;
+}
+
+.admin-impersonation-banner span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Actions.
+
+   A reason-gated action is a closed trigger until somebody chooses it. The
+   expanded form used to be the resting state, which put four hundred controls
+   on `/admin/users` — see the comment in `reason-action.tsx` for why that had
+   to change. These rules only have to make the two states read correctly: a
+   trigger that looks like a control and not like a paragraph, and a form that
+   is visibly attached to the row it will act on.
+   --------------------------------------------------------------------------- */
+
+.admin-action {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin-block: 0;
+}
+
+.admin-action-trigger {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-action-trigger:hover {
+  border-color: var(--ink);
+  background: var(--surface-raised);
+}
+
+/* Destructive intent named in the text colour, not in a filled box. The
+   confirm button inside the form carries the full danger treatment, so the
+   strongest signal in the palette is spent at the moment of consequence rather
+   than on a hundred rows where nothing has happened. */
+.admin-action-trigger.is-danger {
+  color: var(--danger);
+}
+
+.admin-action-trigger.is-danger:hover {
+  border-color: var(--danger);
+}
+
+.admin-action.is-open .admin-action-trigger {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.admin-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  /* Wide enough that the reason box is usable, and allowed to shrink inside a
+     narrow table cell rather than forcing the column open. */
+  width: min(100%, 34rem);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+/* `hidden` has to win against the flex display above it, or the closed form
+   stays on screen and in the tab order. */
+.admin-action-form[hidden] {
+  display: none;
+}
+
+.admin-action-form input,
+.admin-action-form select {
+  min-height: 36px;
+  padding-inline: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+/* The reason box earns the remaining width: it is the field people actually
+   type into, and the numeric and select fields beside it are a few characters
+   wide at most. */
+.admin-action-form > input:last-of-type {
+  flex: 1 1 11rem;
+  min-width: 7rem;
+}
+
+.admin-action-field {
+  display: inline-flex;
+}
+
+.admin-action-field input[type="number"] {
+  width: 6rem;
+}
+
+.admin-action-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.admin-grant-form .admin-action {
+  justify-items: stretch;
+}
+
+/* Several actions on one panel read as a toolbar, not a column of buttons.
+   Each `ReasonAction` is its own grid, so three siblings — extend a trial, set
+   a status, move a plan — stacked one per line down the left edge of the
+   Subscription panel. Wrapping is retained so an opened form can take the row
+   to itself. */
+.admin-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+
+/* The destructive variant. Reads as a warning in both themes because both
+   `--danger` and `--surface` are redefined for dark, and it never relies on
+   colour alone: these buttons all carry a confirm step and a written label. */
+.btn-danger {
+  border-color: var(--danger);
+  background: var(--surface);
+  color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.status-pill-warning {
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .status-pill-warning {
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------------------
+   Tables.
+
+   These are real <table> elements with three to eight columns, and they used to
+   borrow `.analytics-table` — which is `display: grid` with a hardcoded
+   three-column template that only matches `[role="row"]`. On a real table that
+   grid discards the native layout and nothing matches `tr`/`th`/`td`, so every
+   cell became an anonymous grid item in one implicit column: the audit log's
+   eight headings rendered as a single run-on line. Native table layout is the
+   right tool for a table, so this uses it, and the analytics grid goes back to
+   describing only the div-based markup it was written for.
+   --------------------------------------------------------------------------- */
+.admin-table {
+  width: 100%;
+  /* Never below the width its content needs. The panel scrolls instead, which
+     is what `.admin-shell .crm-table-panel` is for - an eight-column audit row
+     squeezed to fit is unreadable in a different way from one that is off
+     screen, and only one of those is recoverable by scrolling. */
+  min-width: min-content;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.admin-table th,
+.admin-table td {
+  /* Logical, not left: `fa` renders this console RTL like every other route. */
+  text-align: start;
+  vertical-align: middle;
+  padding: 10px 14px;
+  border-block-start: 1px solid var(--line);
+}
+
+.admin-table thead th {
+  /* The heading row opens the table; a rule above it would double the panel's
+     own border. */
+  border-block-start: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  /* Headings are short labels and read as one line; the cells below them wrap. */
+  white-space: nowrap;
+}
+
+/* The row under the cursor, so the eye can hold a line across eight columns.
+   A directory is read across, and at a hundred rows the horizontal tracking is
+   the thing that fails first. */
+.admin-table tbody tr:hover {
+  background: var(--surface-raised);
+}
+
+.admin-table small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* A name is the row's identity, not a call to action. Every one of them was
+   rendering as underlined link blue, which made the first column of a
+   hundred-row directory a wall of underlines and spent the link colour on the
+   least surprising destination in the console. Weight identifies it; the
+   underline returns on hover, where it belongs. */
+.admin-table a {
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-table a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+/* Counts, dates and machine keys.
+   Tabular figures so digits line up down a column, and isolation so a Latin
+   identifier such as `standard_monthly` or an ISO timestamp keeps its own
+   direction inside a Persian row instead of re-ordering around the
+   punctuation next to it. */
+.admin-table :is(td, th) :is(time, code, .admin-key),
+.admin-table .admin-num {
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.admin-key {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95em;
+  unicode-bidi: isolate;
+}
+
+/* A cell holding an action keeps the trigger on its own line and lets the
+   opened form use the width of the cell. */
+.admin-table td .admin-action {
+  margin: 0;
+}
+
+/* Two actions on a row sit beside each other, not stacked.
+   Each `ReasonAction` is its own grid — the trigger above its form — so two of
+   them in one cell stacked into a two-line column and made every directory row
+   half again as tall for no gain. Side by side, and wrapping only when one of
+   them is opened and needs the width. */
+.admin-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The plan columns of the feature catalogue are a stack by nature: a state
+   pill, whether it was inherited, and the control to change it. */
+.admin-plan-cell {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+/* Every wide table in the console scrolls inside its own panel rather than
+   pushing the page sideways. */
+.admin-shell .crm-table-panel {
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Overview.
+   --------------------------------------------------------------------------- */
+
+/* The attention figures are links, and a link inside `.metric-grid` inherits
+   nothing from `.metric-grid article` — so they rendered as four underlined
+   blue hyperlinks with the count underlined too, which is the one shape a
+   dashboard tile must not have. They are cards that happen to navigate. */
+.admin-shell .metric-grid a.summary-card {
+  min-height: 118px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.admin-shell .metric-grid a.summary-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 18px 38px -32px rgba(36, 59, 195, 0.7);
+}
+
+.admin-shell .metric-grid a.summary-card:hover .eyebrow {
+  color: var(--blue);
+}
+
+.admin-shell .metric-grid .summary-card {
+  align-content: space-between;
+}
+
+.admin-shell .metric-grid .summary-card strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-shell .metric-grid .summary-card small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+/* Three inventory cards in a four-column grid left a quarter of the row empty,
+   which reads as a tile that failed to load rather than as a deliberate stop.
+   The attention row above genuinely has four. */
+.admin-shell .admin-inventory {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Signing out is not the most important thing on this screen, and
+   `.topbar button` painted it solid blue — so on every console page the
+   loudest element was the one that throws the session away. Secondary
+   treatment; the label still says exactly what it does. */
+.admin-shell .topbar-actions button {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.admin-shell .topbar-actions button:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--surface-raised);
+}
+
+/* ---------------------------------------------------------------------------
+   Global switches.
+
+   Eight switches rendered as eight full-width blocks — heading, sentence,
+   timestamp, state pill, then a reason field and a button on their own row —
+   came to two thousand pixels for what is a list of eight booleans. A switch is
+   one row: what it is, what it does, where it stands, and how to move it.
+   --------------------------------------------------------------------------- */
+.admin-switch-list {
+  display: grid;
+}
+
+.admin-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px 16px;
+  padding: 14px 20px;
+  border-block-start: 1px solid var(--line);
+}
+
+.admin-switch:first-child {
+  border-block-start: 0;
+}
+
+.admin-switch-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-switch-name strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-switch p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.admin-switch-when {
+  grid-column: 1;
+  color: var(--tertiary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.admin-switch .admin-action {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  justify-items: end;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive.
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 1050px) {
+  /* The collapsed 76px rail shows destinations and nothing else. The shared
+     rule hides `.workspace-card`, which this shell no longer renders, so its
+     own bands have to be named here — a stale selector in a media query is a
+     silent failure, and the visible symptom would be a scope line and an exit
+     link overflowing a 76px column. */
+  .admin-scope,
+  .admin-recorded span,
+  .admin-exit {
+    display: none;
+  }
+
+  .admin-shell .control-rail {
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .admin-recorded {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* Language and theme stay reachable. The shared rule hides the top bar's
+     preference controls below 1050px, which leaves a staff member on a tablet
+     with no way to change either — and this console is read on tablets. The
+     tenant shell has the same gap and its own pending fix; this scopes the
+     answer to the surface being designed rather than pre-empting that. */
+  .admin-shell .topbar .preference-controls {
+    display: flex;
+  }
+
+  /* And the bar has to be able to hold them. `.topbar` is a nowrap flex row, so
+     restoring two selects beside the heading simply pushed the cluster past the
+     viewport — 290px of controls in 354px of usable width, with the title
+     already occupying part of it — and every console page gained a horizontal
+     page scrollbar. Wrapping is the whole fix: the cluster drops to its own
+     line when the title leaves it no room, and the bar grows a row instead of
+     the document growing a column. */
+  .admin-shell .topbar {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .admin-shell .topbar-actions {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-shell .control-rail {
+    grid-template-rows: auto;
+  }
+
+  .admin-recorded,
+  .admin-exit {
+    display: none;
+  }
+
+  /* Seven destinations, not the tenant bar's five, and they must not be
+     squeezed to nothing: the strip scrolls sideways inside itself before any
+     label becomes unreadable. */
+  .admin-mobile-nav {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(66px, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .admin-mobile-nav a {
+    gap: 4px;
+    align-content: center;
+    padding-inline: 4px;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .admin-mobile-nav a span {
+    /* One line per label, so a two-word destination cannot make the bar twice
+       as tall as its neighbours. */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-switch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-switch .admin-action {
+    grid-column: 1;
+    grid-row: auto;
+    justify-items: start;
+  }
+}
+
+/* The inventory row follows the same steps down as every other metric grid;
+   these have to come after the rule above them, which is scoped tightly enough
+   to have beaten the shared breakpoints. */
+@media (max-width: 1050px) {
+  .admin-shell .admin-inventory {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-shell .admin-inventory {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

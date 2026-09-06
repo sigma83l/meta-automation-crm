@@ -2,9 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createCrmRuntime } from "@/src/modules/crm/runtime";
 import { isExportExpired } from "@/src/modules/exports/export-policy";
+import { billingBlockedResponse } from "@/src/modules/billing/http";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { client, workspace } = await createCrmRuntime();
+  let runtime: Awaited<ReturnType<typeof createCrmRuntime>>;
+  try {
+    runtime = await createCrmRuntime();
+  } catch (error) {
+    return billingBlockedResponse(error, "EXPORT_NOT_AVAILABLE", 404);
+  }
+  const { client, workspace } = runtime;
   const job = await client
     .from("export_jobs")
     .select("status,object_path,expires_at")

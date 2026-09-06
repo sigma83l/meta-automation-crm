@@ -2,6 +2,7 @@ import { aiModule } from "@/src/modules/ai";
 import { auditModule } from "@/src/modules/audit";
 import { authModule } from "@/src/modules/auth";
 import { automationsModule } from "@/src/modules/automations";
+import { billingModule } from "@/src/modules/billing";
 import { businessProfileModule } from "@/src/modules/business-profile";
 import { conversationsModule } from "@/src/modules/conversations";
 import { crmModule } from "@/src/modules/crm";
@@ -19,5 +20,6 @@ export const foundationModules = Object.freeze([
   integrationsModule,
   aiModule,
   exportsModule,
-  auditModule
+  auditModule,
+  billingModule
 ]);

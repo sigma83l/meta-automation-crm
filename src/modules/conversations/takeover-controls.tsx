@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 export function TakeoverControls({
   conversationId,
   owner
@@ -8,8 +8,13 @@ export function TakeoverControls({
   conversationId: string;
   owner: string;
 }) {
-  const { text } = useI18n();
   const [status, setStatus] = useState("");
+  /**
+   * Taking over reloads the page, and the control someone reaches for next is
+   * the same control - now reading "Resume automation" in a document that has
+   * not hydrated. See useHydrated: that click would do nothing and say nothing.
+   */
+  const ready = useHydrated();
   async function run(action: "takeover" | "resume") {
     const { token } = (await fetch("/api/auth/csrf").then((r) => r.json())) as { token: string };
     const response = await fetch("/api/inbox/takeover", {
@@ -20,22 +25,16 @@ export function TakeoverControls({
     setStatus(
       response.ok
         ? action === "takeover"
-          ? text(
-              "Human takeover is active.",
-              "İnsan devralması etkin.",
-              "تحویل به اپراتور فعال است."
-            )
-          : text("Automation resumed.", "Otomasyon sürdürüldü.", "اتوماسیون از سر گرفته شد.")
-        : text("The action could not be completed.", "İşlem tamamlanamadı.", "عملیات انجام نشد.")
+          ? "Human takeover active."
+          : "Automation resumed."
+        : "Action failed."
     );
     if (response.ok) location.reload();
   }
   return (
     <div className="takeover-controls">
-      <button onClick={() => run(owner === "human" ? "resume" : "takeover")}>
-        {owner === "human"
-          ? text("Resume automation", "Otomasyonu sürdür", "ادامه اتوماسیون")
-          : text("Take over conversation", "Görüşmeyi devral", "تحویل گرفتن گفتگو")}
+      <button disabled={!ready} onClick={() => run(owner === "human" ? "resume" : "takeover")}>
+        {owner === "human" ? "Resume automation" : "Take over conversation"}
       </button>
       {status && <span role="status">{status}</span>}
     </div>

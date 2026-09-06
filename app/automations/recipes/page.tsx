@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
+import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
+import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
 
 const recipes = [
   {
@@ -58,10 +60,22 @@ const recipes = [
 ] as const;
 
 export default async function RecipeGalleryPage() {
-  const [{ workspace }, { locale }] = await Promise.all([
-    createMetaRuntime(),
-    getRequestPreferences()
-  ]);
+  const { locale } = await getRequestPreferences();
+  let workspace: Awaited<ReturnType<typeof createMetaRuntime>>["workspace"];
+  try {
+    ({ workspace } = await createMetaRuntime());
+  } catch (error) {
+    if (error instanceof BillingEntitlementError) {
+      return (
+        <WorkspaceShell active="automations" workspaceName={error.workspace.name}>
+          <div className="content">
+            <EntitlementBlocked locale={locale} status={error.status} />
+          </div>
+        </WorkspaceShell>
+      );
+    }
+    throw error;
+  }
   const pick = (en: string, tr: string, fa: string) =>
     locale === "tr" ? tr : locale === "fa" ? fa : en;
   const recipeNames: Record<(typeof recipes)[number]["id"], readonly [string, string]> = {

@@ -12,7 +12,8 @@ describe("environment contract", () => {
       supabase: false,
       inngest: false,
       credentialEncryption: false,
-      liveSending: false
+      liveSending: false,
+      liveBilling: false
     });
   });
 
@@ -58,7 +59,9 @@ describe("environment contract", () => {
       AUTH_CAPTCHA_MODE: "turnstile",
       AUTH_SIGNUP_MODE: "invite_only",
       AUTH_RATE_LIMIT_MODE: "database",
-      AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum"
+      AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum",
+      BILLING_FINGERPRINT_HASH_KEY: "synthetic-billing-fingerprint-key-32-bytes-minimum",
+      BILLING_CALLBACK_STATE_SECRET: "synthetic-billing-callback-secret-32-bytes-minimum"
     });
     expect(environment.deploymentMode).toBe("production");
     expect(environment.liveProviderSendEnabled).toBe(false);
@@ -83,5 +86,51 @@ describe("environment contract", () => {
         AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum"
       })
     ).toThrow("Production self-service signup requires verified email delivery");
+  });
+});
+
+describe("authentication bypass", () => {
+  const completeProductionConfiguration = {
+    APP_DEPLOYMENT_MODE: "production",
+    NEXT_PUBLIC_APP_URL: "https://crm.example.test",
+    NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-public-key",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-server-key",
+    INNGEST_EVENT_KEY: "synthetic-event-key",
+    INNGEST_SIGNING_KEY: "synthetic-signing-key",
+    CREDENTIAL_ENCRYPTION_KEY: "synthetic-encryption-key-placeholder",
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: "synthetic-site-key",
+    TURNSTILE_SECRET_KEY: "synthetic-turnstile-key",
+    AUTH_CAPTCHA_MODE: "turnstile",
+    AUTH_SIGNUP_MODE: "invite_only",
+    AUTH_RATE_LIMIT_MODE: "database",
+    AUTH_RATE_LIMIT_HASH_KEY: "synthetic-rate-limit-key-32-bytes-minimum",
+    BILLING_FINGERPRINT_HASH_KEY: "synthetic-billing-fingerprint-key-32-bytes-minimum",
+    BILLING_CALLBACK_STATE_SECRET: "synthetic-billing-callback-secret-32-bytes-minimum"
+  };
+
+  it("is disabled by default", () => {
+    expect(parseServerEnvironment({}).authBypassEnabled).toBe(false);
+  });
+
+  it("refuses to boot a production deployment with the bypass enabled", () => {
+    // Serving an authentication bypass is worse than failing to start: the
+    // flag used to be an unvalidated process.env read that nothing checked.
+    expect(() =>
+      parseServerEnvironment({
+        ...completeProductionConfiguration,
+        AUTH_BYPASS_ENABLED: "true",
+        AUTH_BYPASS_EMAIL: "synthetic-owner@example.test",
+        AUTH_BYPASS_PASSWORD: "synthetic-password"
+      })
+    ).toThrow("AUTH_BYPASS_ENABLED must never be enabled in production.");
+  });
+
+  it("still boots a production deployment with the bypass explicitly disabled", () => {
+    const environment = parseServerEnvironment({
+      ...completeProductionConfiguration,
+      AUTH_BYPASS_ENABLED: "false"
+    });
+    expect(environment.authBypassEnabled).toBe(false);
   });
 });

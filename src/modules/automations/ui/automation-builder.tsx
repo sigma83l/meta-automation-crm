@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { useHydrated } from "@/src/lib/react/use-hydrated";
 
 const recipes = [
   ["INSTAGRAM_COMMENT_TO_DM"],
@@ -22,6 +23,12 @@ async function csrf() {
 export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | undefined }) {
   const router = useRouter();
   const { t, text } = useI18n();
+  /**
+   * The wizard advances entirely through `onClick`, so before hydration every
+   * step control is painted and inert: a click picks no recipe and moves to no
+   * step, and the only evidence is that nothing happened. See useHydrated.
+   */
+  const ready = useHydrated();
   const steps = [
     text("Basics", "Temel bilgiler", "اطلاعات پایه"),
     text("Channel & Trigger", "Kanal ve tetikleyici", "کانال و محرک"),
@@ -159,14 +166,18 @@ export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | 
             className={index === currentStep ? "current" : index < currentStep ? "complete" : ""}
             key={step}
           >
-            <button type="button" onClick={() => index <= currentStep && setCurrentStep(index)}>
+            <button
+              type="button"
+              disabled={!ready}
+              onClick={() => index <= currentStep && setCurrentStep(index)}
+            >
               <span>{index < currentStep ? "✓" : index + 1}</span>
               {step}
             </button>
           </li>
         ))}
       </ol>
-      <form className="wizard-form" onSubmit={create}>
+      <form method="post" className="wizard-form" onSubmit={create}>
         {currentStep === 0 ? (
           <div className="wizard-panel">
             <span className="eyebrow">01 · Basics</span>
@@ -195,6 +206,7 @@ export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | 
                 <button
                   type="button"
                   aria-pressed={recipe === id}
+                  disabled={!ready}
                   onClick={() => setRecipe(id)}
                   key={id}
                 >
@@ -369,16 +381,16 @@ export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | 
             className="button-muted"
             type="button"
             onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))}
-            disabled={currentStep === 0}
+            disabled={!ready || currentStep === 0}
           >
             {t("common.back")}
           </button>
           {currentStep < steps.length - 1 ? (
-            <button key="continue-action" type="button" onClick={next}>
+            <button key="continue-action" type="button" disabled={!ready} onClick={next}>
               {t("common.next")}
             </button>
           ) : (
-            <button key="create-action" type="submit" disabled={busy}>
+            <button key="create-action" type="submit" disabled={!ready || busy}>
               {busy
                 ? text("Creating…", "Oluşturuluyor…", "در حال ساخت…")
                 : text("Create draft", "Taslak oluştur", "ساخت پیش‌نویس")}
@@ -393,6 +405,8 @@ export function AutomationBuilder({ initialRecipe }: { initialRecipe?: string | 
 
 export function AutomationActions({ id, status }: { id: string; status: string }) {
   const { text } = useI18n();
+  /** Activate, test and stop are onClick-only. See useHydrated. */
+  const ready = useHydrated();
   const [message, setMessage] = useState("");
   const [currentStatus, setCurrentStatus] = useState(status);
 
@@ -434,6 +448,7 @@ export function AutomationActions({ id, status }: { id: string; status: string }
     <div className="automation-actions">
       <button
         className={currentStatus === "READY" ? undefined : "button-muted"}
+        disabled={!ready}
         onClick={() => run(currentStatus === "ACTIVE" ? "pause" : "activate")}
       >
         {currentStatus === "ACTIVE"
@@ -442,11 +457,12 @@ export function AutomationActions({ id, status }: { id: string; status: string }
       </button>
       <button
         className={currentStatus === "READY_TO_TEST" ? undefined : "button-muted"}
+        disabled={!ready}
         onClick={() => run("safe_test")}
       >
         {text("Run safe test", "Güvenli test çalıştır", "اجرای آزمایش امن")}
       </button>
-      <button onClick={() => run("stop_queued")} className="button-muted">
+      <button disabled={!ready} onClick={() => run("stop_queued")} className="button-muted">
         {text("Stop queued messages", "Kuyruktaki mesajları durdur", "توقف پیام‌های صف")}
       </button>
       <span className="status-pill">

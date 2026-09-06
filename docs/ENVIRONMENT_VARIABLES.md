@@ -52,5 +52,15 @@ environment secret.
 | `CRM_EXPORT_MAX_FILES`             | Server-only                    | Maximum files included in a ZIP                              |
 | `CRM_EXPORT_MAX_BYTES`             | Server-only                    | Maximum accumulated/export ZIP bytes                         |
 | `CRM_EXPORT_TTL_SECONDS`           | Server-only                    | Private export availability window                           |
+| `PAYMENT_PROVIDER_MODE`            | Server-only                    | `fake` locally; `paytr` selects the real adapter             |
+| `PAYTR_MERCHANT_ID`                | Server-only                    | PayTR merchant identifier                                    |
+| `PAYTR_MERCHANT_KEY`               | Server-only                    | PayTR request/notification signing credential                |
+| `PAYTR_MERCHANT_SALT`              | Server-only                    | PayTR notification hash salt                                 |
+| `LIVE_BILLING_ENABLED`             | Server-only                    | Environment-level live-billing gate; insufficient by itself  |
+| `BILLING_LIVE_APPROVED`            | Server-only                    | Explicit approval required alongside the environment gate    |
+| `BILLING_FINGERPRINT_HASH_KEY`     | Server-only                    | HMAC key for the append-only trial-fingerprint ledger        |
+| `BILLING_CALLBACK_STATE_SECRET`    | Server-only                    | Signs the single-use card-registration callback state        |
+| `BILLING_TRIAL_DAYS`               | Server-only                    | Free trial length in days (default 7)                        |
+| `BILLING_PLAN_PRICE_MINOR_UNITS`   | Server-only                    | Standard plan price in kuruş (default 49900 = 499 TRY)       |
 
 Secret values must never use a `NEXT_PUBLIC_` prefix.

@@ -151,6 +151,42 @@ WABA/phone relationship, and encrypts the token before returning safe metadata.
 Expired, future-dated, cross-workspace, tampered and replayed values fail
 closed.
 
+## Inbound pipeline: from a verified event to a turn
+
+The relay hands a verified event to a handler that does three things in order,
+each idempotent on its own, because a retry must not repeat the ones that
+already succeeded.
+
+**Projection.** `project_meta_message` turns one webhook event into an identity,
+a customer, an open conversation and a message, in one transaction. Before this
+existed the inbound path terminated in `meta_webhook_events`: nothing wrote
+`conversations` or `messages`, so the inbox was structurally empty in every
+environment. A customer created this way has no `created_by` — nobody made
+them — and is distinguished by `source`. One open conversation per customer per
+channel is enforced by a partial unique index rather than by the handler, since
+the relay is concurrent per workspace.
+
+**The turn.** Only a newly projected message runs one; a duplicate or a delivery
+receipt has nothing new to answer. `runTurn` executes the twelve steps against
+ports that are now durable: `turn_records` provides deduplication and send
+refs, `conversations.owner` and the entitlement check provide policy, and the
+composed reply is persisted at `prepared` before anything could send it.
+
+**Sending, which does not happen.** `send` authorises through the live-send gate
+and stops. A sandbox connection, a closed environment gate, or a recipient
+outside the allowlist all leave the reply at `prepared` — composed, validated,
+stored, undelivered. That is the intended resting state. If every gate is open
+the port throws, because there is no outbound adapter and a port that returned
+quietly would make a build without one indistinguishable from a working one.
+
+Failure has a single route. A provider that is down, a model that is
+unconfigured, a credential that will not decrypt and a model that asked for a
+person all produce an empty draft, which fails validation and resolves to a
+handoff that flags the conversation for review. Configuration is therefore not
+a precondition for running the pipeline: an unconfigured workspace stores its
+customers' messages and escalates them to a human, which is correct rather than
+degraded.
+
 ## Durable automation engine
 
 Immutable versions and a validated state machine separate configuration from
@@ -207,3 +243,28 @@ The V1 route set adds operational Analytics, a five-recipe Gallery and a
 distinct Test Center. Meta adapters now include bounded server-side media
 resolution and WhatsApp template inventory contracts, but no live outbound
 adapter.
+
+## Billing and trial-abuse module
+
+`src/modules/billing/` owns the trial/subscription state machine behind an
+application-owned `PaymentProvider` interface; a deterministic fake adapter
+is the dev/test default, PayTR is the first real adapter, and provider SDK
+types stop at the adapter exactly like Meta and AI. Card registration follows
+the same signed, single-use, workspace-bound callback-state pattern as Meta
+OAuth (`billing_callback_nonces`, consumed exactly once via a guarded SQL
+update); provider tokens are stored through the same AES-256-GCM envelope
+seam used for Meta tokens and AI BYOK keys.
+
+Trial eligibility is deduped by an HMAC-only, append-only ledger
+(`private.trial_fraud_signals`) keyed by the payment provider's card-token
+fingerprint rather than email, following the same private-schema,
+service-role-only pattern as `private.auth_rate_limits`; unlike a rate limit
+this ledger never expires. `resolveEntitledWorkspace` wraps
+`resolveTrustedWorkspace` with a subscription-status check and is used by the
+CRM, automations, inbox and Meta-connection runtimes; billing itself and the
+dashboard overview stay on the plain resolver so a blocked workspace can
+still reach `/settings/billing` to fix payment. PayTR webhooks follow the
+verified-payload → durable outbox → Inngest-cron-relay → per-workspace
+concurrency-limited consumer shape used for Meta webhooks; an ambiguous
+charge outcome is recorded as `charge_unknown` and never auto-retried, per
+the same uncertain-persistence rule as provider sends.

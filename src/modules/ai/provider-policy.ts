@@ -60,6 +60,7 @@ export function minimizeAiContext(input: AiReplyInput): AiReplyInput {
     ...input,
     messages: Object.freeze(input.messages.slice(-8)),
     requiredFields: Object.freeze(input.requiredFields.slice(0, 20)),
+    knownFacts: Object.freeze(input.knownFacts.slice(0, 20)),
     faqItems: Object.freeze(input.faqItems.slice(0, 20)),
     priceItems: Object.freeze(input.priceItems.slice(0, 20))
   });
