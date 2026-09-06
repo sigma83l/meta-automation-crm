@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
+import { isReviewReason } from "@/src/modules/rcos/review-reasons";
 import { useHydrated } from "@/src/lib/react/use-hydrated";
 import type { SimulationTrace } from "@/src/modules/automations/simulation-contracts";
 
@@ -33,7 +34,7 @@ export function TestCenterConsole({
   automations: readonly TestCenterAutomation[];
   conversations: readonly TestCenterConversation[];
 }) {
-  const { text } = useI18n();
+  const { t, text } = useI18n();
   /** The run button is onClick-only, so it stays inert until hydration. */
   const ready = useHydrated();
   const [automationId, setAutomationId] = useState(automations[0]?.id ?? "");
@@ -200,6 +201,7 @@ export function TestCenterConsole({
                 {trace.reasonCodes.map((code) => (
                   <li key={code}>
                     <code>{code}</code>
+                    {isReviewReason(code) && <span>{t(`review.${code}`)}</span>}
                   </li>
                 ))}
               </ul>

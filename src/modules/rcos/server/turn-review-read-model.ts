@@ -18,41 +18,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * per locale in the database.
  */
 
-/** Codes this surface explains. Anything else is shown as itself. */
-export const REVIEW_REASONS = [
-  // From the validator.
-  "empty_draft",
-  "ungrounded_claim",
-  "unverified_money",
-  "unverified_time",
-  "unclaimed_success",
-  "pii_leak",
-  "policy_violation",
-  "pressure_tactic",
-  "duplicate_send",
-  // From the decision port.
-  "escalation_keyword",
-  "low_confidence",
-  // From the policy port.
-  "human_takeover",
-  "conversation_closed",
-  "conversation_missing",
-  "billing_entitlement_required",
-  "ai_replies_disabled",
-  "ai_replies_paused"
-] as const;
-
-export type ReviewReason = (typeof REVIEW_REASONS)[number];
+// Re-exported so existing importers keep one import, while a client component
+// can reach the same list without pulling `server-only` into its bundle.
+export {
+  REVIEW_REASONS,
+  isReviewReason,
+  type ReviewReason
+} from "@/src/modules/rcos/review-reasons";
 
 export type TurnReview = Readonly<{
   outcome: string;
   reasonCodes: readonly string[];
   occurredAt: string;
 }>;
-
-export function isReviewReason(value: string): value is ReviewReason {
-  return (REVIEW_REASONS as readonly string[]).includes(value);
-}
 
 function toReview(row: Readonly<Record<string, unknown>>): TurnReview {
   return Object.freeze({
