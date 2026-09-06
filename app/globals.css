@@ -4600,3 +4600,107 @@ main {
     grid-column: 2;
   }
 }
+
+/* Automation detail panels. Each tab is a server-rendered view of the same
+   record, so these share the surface tokens rather than inventing a palette. */
+.run-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: 12px;
+}
+
+.run-table th,
+.run-table td {
+  padding: 10px 12px;
+  text-align: start;
+  border-block-end: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.run-table th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.activity-list,
+.version-list,
+.question-list {
+  display: grid;
+  gap: 8px;
+  margin-block: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.question-list {
+  list-style: decimal;
+  padding-inline-start: 20px;
+}
+
+.activity-list li,
+.version-list li,
+.question-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  font-size: 0.85rem;
+}
+
+.activity-list span,
+.version-list span:not(.status-pill) {
+  color: var(--muted);
+  margin-inline-start: auto;
+}
+
+.version-list code,
+.activity-list code {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.settings-list {
+  display: grid;
+  gap: 1px;
+  margin-block: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+}
+
+.settings-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+}
+
+.settings-list dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.settings-list dd {
+  margin: 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .settings-list > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .run-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
