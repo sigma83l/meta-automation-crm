@@ -1,10 +1,18 @@
 import Link from "next/link";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import {
+  TestCenterConsole,
+  type TestCenterAutomation,
+  type TestCenterConversation
+} from "@/src/modules/automations/ui/test-center-console";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
 import { EntitlementBlocked } from "@/src/modules/billing/ui/entitlement-blocked";
+
+export const dynamic = "force-dynamic";
 
 const testModes = [
   ["UI preview", "Layout only", "Does not execute provider, AI or policy contracts."],
@@ -31,8 +39,43 @@ export default async function TestCenterPage() {
     }
     throw error;
   }
+
+  const admin = await createSupabaseAdminClient();
+  // Both lists are the operator's own workspace only. The simulation re-checks
+  // the automation against the workspace server-side, so a tampered id in the
+  // request buys nothing, but there is no reason to offer the choice either.
+  const [automationRows, conversationRows] = await Promise.all([
+    admin
+      .from("automations")
+      .select("id,name,recipe,status")
+      .eq("workspace_id", workspace.id)
+      .order("updated_at", { ascending: false }),
+    admin
+      .from("conversations")
+      .select("id,state,last_message_at,customers(display_name)")
+      .eq("workspace_id", workspace.id)
+      .order("last_message_at", { ascending: false })
+      .limit(25)
+  ]);
+
+  const automations: readonly TestCenterAutomation[] = (automationRows.data ?? []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    recipe: String(row.recipe),
+    status: String(row.status)
+  }));
+
+  const conversations: readonly TestCenterConversation[] = (conversationRows.data ?? []).map(
+    (row) => {
+      const customer = row.customers as { display_name?: string | null } | null;
+      const name = customer?.display_name ?? "Unnamed contact";
+      return { id: String(row.id), label: `${name} · ${String(row.state)}` };
+    }
+  );
+
   const pick = (en: string, tr: string, fa: string) =>
     locale === "tr" ? tr : locale === "fa" ? fa : en;
+
   return (
     <WorkspaceShell active="automations" workspaceName={workspace.name}>
       <div className="content">
@@ -47,12 +90,13 @@ export default async function TestCenterPage() {
           <h2>{pick("Test Center", "Test Merkezi", "مرکز آزمون")}</h2>
           <p>
             {pick(
-              "Preview, simulation, sandbox and live pilot are separate evidence classes.",
-              "Önizleme, simülasyon, Sandbox ve canlı pilot ayrı kanıt sınıflarıdır.",
-              "پیش‌نمایش، شبیه‌سازی، محیط آزمایشی و پایلوت زنده شواهد جداگانه‌اند."
+              "Run a synthetic message through the real turn engine and see every step it takes, why it stopped, and whether anything would go out.",
+              "Sentetik bir mesajı gerçek tur motorundan geçirin; attığı her adımı, nerede durduğunu ve dışarı bir şey çıkıp çıkmayacağını görün.",
+              "یک پیام ساختگی را از موتور واقعی گفت‌وگو عبور دهید و هر گام، دلیل توقف و اینکه آیا چیزی ارسال می‌شود را ببینید."
             )}
           </p>
         </header>
+        <TestCenterConsole automations={automations} conversations={conversations} />
         <section className="panel test-center">
           {testModes.map(([name, status, detail]) => (
             <article key={name}>
@@ -64,39 +108,11 @@ export default async function TestCenterPage() {
             </article>
           ))}
         </section>
-        <section className="simulation-console">
-          <div>
-            <span className="eyebrow">
-              {pick("Synthetic input", "Sentetik girdi", "ورودی ساختگی")}
-            </span>
-            <p dir="auto">“What is the approved price and when are you open?”</p>
-          </div>
-          <div>
-            <span className="eyebrow">
-              {pick("Actual path", "Gerçekleşen yol", "مسیر اجراشده")}
-            </span>
-            <strong>INBOUND → POLICY → KNOWLEDGE → HUMAN REVIEW</strong>
-          </div>
-          <div>
-            <span className="eyebrow">
-              {pick("Blocked reason", "Engelleme nedeni", "دلیل مسدودشدن")}
-            </span>
-            <p>
-              {pick(
-                "No approved price is configured. No outbound message is authorized.",
-                "Onaylı fiyat tanımlı değil. Giden mesaja izin verilmedi.",
-                "قیمت تأییدشده‌ای تنظیم نشده؛ هیچ پیام خروجی مجاز نیست."
-              )}
-            </p>
-          </div>
+        <p>
           <Link href="/automations">
-            {pick(
-              "Choose an automation and run its safe test",
-              "Bir otomasyon seçip güvenli testini çalıştırın",
-              "یک اتوماسیون انتخاب و آزمون امن آن را اجرا کنید"
-            )}
+            {pick("Back to automations", "Otomasyonlara dön", "بازگشت به اتوماسیون‌ها")}
           </Link>
-        </section>
+        </p>
       </div>
     </WorkspaceShell>
   );

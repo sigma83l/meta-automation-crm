@@ -4419,3 +4419,184 @@ main {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Test Center simulation runner. Colour carries meaning here — a blocked step
+   and a skipped one are different findings — so each tone pairs a border with
+   text weight rather than relying on hue alone. */
+.simulation-runner {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  margin-block-end: 18px;
+}
+
+.simulation-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.simulation-controls label,
+.simulation-input {
+  display: grid;
+  gap: 6px;
+}
+
+.simulation-controls span,
+.simulation-input > span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.simulation-input textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.simulation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulation-result {
+  display: grid;
+  gap: 16px;
+}
+
+.simulation-verdict {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border-inline-start: 4px solid var(--line-strong);
+  background: var(--surface-raised);
+}
+
+.simulation-verdict strong {
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+}
+
+.verdict-would_send {
+  border-inline-start-color: var(--success);
+  background: var(--success-soft);
+}
+
+.verdict-would_block {
+  border-inline-start-color: var(--danger);
+  background: var(--warning-soft);
+}
+
+.verdict-would_hand_off {
+  border-inline-start-color: var(--amber);
+  background: var(--warning-soft);
+}
+
+.reason-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reason-codes code {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+
+.simulation-steps {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--line);
+}
+
+.simulation-steps li {
+  display: grid;
+  grid-template-columns: 32px minmax(140px, 200px) 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  background: var(--surface);
+}
+
+.step-number {
+  color: var(--tertiary);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.step-label {
+  font-weight: 650;
+}
+
+.step-detail {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.simulation-steps li.step-skipped .step-label,
+.simulation-steps li.step-skipped .step-detail {
+  color: var(--tertiary);
+}
+
+.simulation-steps li.step-blocked {
+  border-inline-start: 3px solid var(--danger);
+}
+
+.simulation-steps li.step-blocked .step-detail {
+  color: var(--danger);
+  font-weight: 650;
+}
+
+.simulation-steps li.step-stipulated {
+  border-inline-start: 3px solid var(--amber);
+}
+
+.simulation-draft {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--message-outbound);
+}
+
+.cited-refs {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.simulation-caveat {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .simulation-steps li {
+    grid-template-columns: 28px 1fr;
+  }
+
+  .simulation-steps .step-detail {
+    grid-column: 2;
+  }
+}
