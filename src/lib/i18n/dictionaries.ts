@@ -61,6 +61,8 @@ const en = {
     "The response is deliberately the same whether or not an account exists.",
   "auth.returnSignIn": "Return to sign in",
   "auth.recoverySession": "Recovery session",
+  "auth.recoveryInProgress": "Confirming your reset link…",
+  "auth.recoveryFailed": "That reset link is no longer valid. Request a new one.",
   "auth.newPasswordTitle": "Choose a new password",
   "auth.resetDescription":
     "This form requires the short-lived recovery session established by the email callback.",
@@ -258,6 +260,8 @@ const tr: Dictionary = {
   "auth.recoveryDescription": "Hesap olsa da olmasa da yanıt bilinçli olarak aynıdır.",
   "auth.returnSignIn": "Girişe dön",
   "auth.recoverySession": "Kurtarma oturumu",
+  "auth.recoveryInProgress": "Sıfırlama bağlantınız doğrulanıyor…",
+  "auth.recoveryFailed": "Bu sıfırlama bağlantısı artık geçerli değil. Yenisini isteyin.",
   "auth.newPasswordTitle": "Yeni parola seçin",
   "auth.resetDescription":
     "Bu form, e-posta bağlantısının oluşturduğu kısa süreli oturumu gerektirir.",
@@ -440,6 +444,8 @@ const fa: Dictionary = {
   "auth.recoveryDescription": "پاسخ، چه حساب وجود داشته باشد چه نه، عمداً یکسان است.",
   "auth.returnSignIn": "بازگشت به ورود",
   "auth.recoverySession": "نشست بازیابی",
+  "auth.recoveryInProgress": "در حال تأیید پیوند بازنشانی…",
+  "auth.recoveryFailed": "این پیوند بازنشانی دیگر معتبر نیست. پیوند تازه‌ای درخواست کنید.",
   "auth.newPasswordTitle": "رمز عبور تازه انتخاب کنید",
   "auth.resetDescription": "این فرم به نشست کوتاه‌مدتی نیاز دارد که پیوند ایمیل ایجاد می‌کند.",
   "auth.businessName": "نام کسب‌وکار",
