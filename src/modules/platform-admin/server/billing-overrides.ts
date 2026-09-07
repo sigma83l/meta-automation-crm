@@ -219,7 +219,13 @@ export async function resumeTrial(
 export async function listPlans(runtime: PlatformAdminRuntime) {
   const { data, error } = await runtime.db
     .from("subscription_plans")
-    .select("id,plan_key,display_name,price_minor_units,currency,active")
+    .select(
+      "id,plan_key,display_name,price_minor_units,currency,active,billing_interval,sort_order"
+    )
+    // By catalogue order, not by price. Price ordering interleaved the monthly
+    // and annual rows of different tiers - Solo annual sorted between Solo and
+    // Growth monthly - which reads as a pricing mistake rather than a sort.
+    .order("sort_order")
     .order("price_minor_units");
   if (error) throw new Error("Plan catalogue read failed.");
   return (data ?? []).map((row) => ({
@@ -228,6 +234,7 @@ export async function listPlans(runtime: PlatformAdminRuntime) {
     displayName: row.display_name as string,
     priceMinorUnits: row.price_minor_units as number,
     currency: row.currency as string,
+    billingInterval: (row.billing_interval as string | null) ?? "monthly",
     active: row.active as boolean
   }));
 }

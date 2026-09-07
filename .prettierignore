@@ -19,3 +19,8 @@ Rellooma_Master_Pack_Complete_File_Category_Guide_EN.md
 tests/golden/rbac-matrix.json
 tests/golden/memory-golden-matrix.json
 tests/golden/score-golden-matrix.json
+
+# Vendored commercial spec. Kept byte-identical to the V1.8 master pack so its
+# sha256 still matches MANIFEST.sha256; reformatting would break that check and
+# the file is a source document, not code we maintain.
+docs/commercial/
