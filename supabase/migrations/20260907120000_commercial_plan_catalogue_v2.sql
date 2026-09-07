@@ -180,6 +180,47 @@ on conflict (plan_key) do nothing;
 -- Free has no annual row on purpose: zero billed yearly is the same product,
 -- and a second row would only be somewhere for the two to disagree.
 
+-- Repoint new-workspace provisioning at the new trial plan.
+--
+-- This is not optional tidying. `initialize_workspace_subscription` selected
+-- `plan_key = 'standard_monthly' and active`, and retiring that row above makes
+-- the lookup return NULL. `workspace_subscriptions.plan_id` is nullable, so the
+-- insert would keep succeeding and every account created after this migration
+-- would get a subscription attached to no plan at all — visible to nobody until
+-- a customer opened their billing page and found it blank.
+--
+-- Growth is the pack's `default_trial_plan`. The seven-day length and the
+-- trial_consumed_at stamp are carried over unchanged; only the plan moves.
+create or replace function private.initialize_workspace_subscription()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  default_plan_id uuid;
+  trial_length interval := interval '7 days';
+begin
+  select id into default_plan_id
+  from public.subscription_plans
+  where plan_key = 'growth_monthly' and active
+  limit 1;
+
+  -- trial_consumed_at is stamped here, at the moment the trial is granted.
+  -- It is never cleared, so a workspace that cancels cannot come back around
+  -- for a second free window - which is the same reason the column exists.
+  insert into public.workspace_subscriptions (
+    workspace_id, plan_id, status, trial_ends_at, trial_consumed_at
+  )
+  values (
+    new.id, default_plan_id, 'trialing', now() + trial_length, now()
+  )
+  on conflict (workspace_id) do nothing;
+
+  return new;
+end;
+$$;
+
 -- Per-plan feature defaults.
 --
 -- The pack describes entitlements in its own vocabulary (broadcast, template

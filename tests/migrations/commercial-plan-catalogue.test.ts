@@ -219,6 +219,27 @@ describe("commercial plan catalogue 2026-09-v2", () => {
     }
   });
 
+  it("provisions a new workspace onto the pack's trial plan, not a null one", async () => {
+    // Retiring `standard_monthly` broke the provisioning trigger's hardcoded
+    // lookup, and because `plan_id` is nullable the insert would have kept
+    // succeeding with no plan attached - invisible until a customer opened a
+    // blank billing page. The pack names Growth as `default_trial_plan`.
+    const workspace = await db.query<{ id: string }>(
+      "insert into public.workspaces (name) values ('Trial default probe') returning id"
+    );
+    const workspaceId = workspace.rows[0]!.id;
+    const result = await db.query<{ plan_key: string; status: string }>(
+      `select p.plan_key, s.status
+       from public.workspace_subscriptions s
+       join public.subscription_plans p on p.id = s.plan_id
+       where s.workspace_id = $1`,
+      [workspaceId]
+    );
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.plan_key).toBe("growth_monthly");
+    expect(result.rows[0]?.status).toBe("trialing");
+  });
+
   it("never withholds data export, at any tier including Free", async () => {
     // The billing document is explicit that manual inbox access and export
     // "must not be hostage to usage exhaustion". A free tier that cannot export
