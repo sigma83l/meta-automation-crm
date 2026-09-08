@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
 import { isReviewReason } from "@/src/modules/rcos/review-reasons";
 import { useHydrated } from "@/src/lib/react/use-hydrated";
-import type { SimulationTrace } from "@/src/modules/automations/simulation-contracts";
+import type {
+  SimulationModelCall,
+  SimulationTrace
+} from "@/src/modules/automations/simulation-contracts";
 
 async function csrf() {
   return ((await fetch("/api/auth/csrf").then((response) => response.json())) as { token: string })
@@ -92,6 +95,33 @@ export function TestCenterConsole({
       setBusy(false);
     }
   }
+
+  /**
+   * What an empty draft actually meant.
+   *
+   * Five causes collapse into `empty_draft` and the dictionary's sentence names
+   * only the most common one. When a call record says which it was, that beats
+   * a guess -- particularly for the case the sentence gets backwards, where the
+   * model answered perfectly well and asked for a person.
+   */
+  const emptyDraftCause = (calls: readonly SimulationModelCall[]) => {
+    const reply = calls.find((call) => call.role === "customer_reply") ?? calls.at(-1);
+    if (!reply) return undefined;
+    if (reply.deferredToHuman) {
+      return text(
+        "The model answered and asked for a person. That is a judgement, not a failure - usually low confidence or nothing approved to cite.",
+        "Model yanıt verdi ve bir kişi istedi. Bu bir başarısızlık değil, bir karardır - genellikle düşük güven veya alıntılanacak onaylı bilgi yok.",
+        "مدل پاسخ داد و درخواست انسان کرد. این یک قضاوت است نه خطا - معمولاً اطمینان پایین یا نبود دانش تأییدشده."
+      );
+    }
+    if (reply.outcome === "failed") {
+      return `${text("The provider refused the call", "Sağlayıcı çağrıyı reddetti", "ارائه‌دهنده تماس را رد کرد")}: ${reply.failureCode ?? "?"}${reply.failureKind ? ` (${reply.failureKind})` : ""}.`;
+    }
+    if (reply.outcome === "skipped") {
+      return `${text("No call was made", "Çağrı yapılmadı", "تماسی انجام نشد")}: ${reply.failureCode ?? "?"}.`;
+    }
+    return undefined;
+  };
 
   const verdictLabel = (verdict: SimulationTrace["verdict"]) =>
     verdict === "would_send"
@@ -201,7 +231,13 @@ export function TestCenterConsole({
                 {trace.reasonCodes.map((code) => (
                   <li key={code}>
                     <code>{code}</code>
-                    {isReviewReason(code) && <span>{t(`review.${code}`)}</span>}
+                    {isReviewReason(code) && (
+                      <span>
+                        {code === "empty_draft" && emptyDraftCause(trace.modelCalls)
+                          ? emptyDraftCause(trace.modelCalls)
+                          : t(`review.${code}`)}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -233,6 +269,29 @@ export function TestCenterConsole({
                   {text("Cited", "Alıntılanan", "استناد")}: {trace.draft.citedRefs.join(", ")}
                 </p>
               )}
+            </div>
+          )}
+          {trace.modelCalls.length > 0 && (
+            <div className="model-calls">
+              <span className="eyebrow">
+                {text("Model calls", "Model çağrıları", "تماس‌های مدل")}
+              </span>
+              <ul>
+                {trace.modelCalls.map((call, index) => (
+                  <li key={`${call.role}-${index}`} className={`call-${call.outcome}`}>
+                    <code>{call.role}</code>
+                    <span>{call.model || "—"}</span>
+                    <span>
+                      {call.outcome}
+                      {call.deferredToHuman
+                        ? ` · ${text("asked for a person", "kişi istedi", "درخواست انسان")}`
+                        : ""}
+                      {call.failureCode ? ` · ${call.failureCode}` : ""}
+                      {call.failureKind ? ` (${call.failureKind})` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {trace.subject === "synthetic" && (

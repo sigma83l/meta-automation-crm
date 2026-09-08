@@ -4716,3 +4716,49 @@ main {
     overflow-x: auto;
   }
 }
+
+/* Model-call records. The outcome carries the meaning, so it gets a border as
+   well as a colour: "skipped" and "failed" are different findings. */
+.model-calls {
+  display: grid;
+  gap: 8px;
+}
+
+.model-calls ul {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+}
+
+.model-calls li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  font-size: 0.82rem;
+}
+
+.model-calls li span:last-child {
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
+.model-calls li.call-failed {
+  border-inline-start: 3px solid var(--danger);
+}
+
+.model-calls li.call-skipped {
+  border-inline-start: 3px solid var(--amber);
+}
+
+.model-calls li.call-ok {
+  border-inline-start: 3px solid var(--success);
+}

@@ -75,6 +75,26 @@ export type SimulationStep = Readonly<{
 
 export type SimulationVerdict = "would_send" | "would_block" | "would_hand_off";
 
+/**
+ * One model call the turn made, flattened for the wire.
+ *
+ * Without these, every way a draft can come back empty reports as
+ * `empty_draft`: no budget, no credential, a provider that refused, a provider
+ * that timed out, and a model that answered and asked for a person all produce
+ * the same empty string and the same reason code. They have five different
+ * owners and five different fixes, and the engine already records which one
+ * happened — it was simply never shown.
+ */
+export type SimulationModelCall = Readonly<{
+  role: string;
+  model: string;
+  outcome: "ok" | "failed" | "skipped";
+  failureCode?: string;
+  failureKind?: string;
+  /** True only when the model itself asked for a person. */
+  deferredToHuman?: boolean;
+}>;
+
 export type SimulationTrace = Readonly<{
   verdict: SimulationVerdict;
   outcome: TurnRecord["outcome"];
@@ -87,5 +107,7 @@ export type SimulationTrace = Readonly<{
   draft?: Readonly<{ text: string; citedRefs: readonly string[] }>;
   /** What `send` would have been called with. Absent means nothing goes out. */
   wouldSend?: Readonly<{ text: string; sendRef: string }>;
+  /** Every model call this turn made, in order. Empty when none was attempted. */
+  modelCalls: readonly SimulationModelCall[];
   memory: Readonly<{ accepted: number; refused: number }>;
 }>;

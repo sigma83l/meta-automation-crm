@@ -10,6 +10,7 @@ import { runTurn, type TurnEvent, type TurnPolicy } from "@/src/modules/rcos/tur
 import { createTurnRuntime } from "@/src/modules/rcos/turn-runtime";
 import { instrumentPorts, verdictFor } from "@/src/modules/automations/server/simulation-trace";
 import type {
+  SimulationModelCall,
   SimulationRequest,
   SimulationSubjectKind,
   SimulationTrace
@@ -129,13 +130,36 @@ export async function simulateAutomationTurn(
     occurredAt: new Date().toISOString()
   };
 
-  const runtime = await createTurnRuntime(admin, event, {
-    customerId: randomUUID(),
-    recipientRef: "test-center-synthetic",
-    // Never `live`. The send port is replaced regardless, but a sandbox subject
-    // means nothing downstream can read this as a real recipient either.
-    connectionMode: "sandbox"
-  });
+  // Collected through the runtime's own seam rather than inferred from the
+  // outcome. Five different causes produce an empty draft and the same
+  // `empty_draft` code; this is the only place that says which one it was.
+  const modelCalls: SimulationModelCall[] = [];
+
+  const runtime = await createTurnRuntime(
+    admin,
+    event,
+    {
+      customerId: randomUUID(),
+      recipientRef: "test-center-synthetic",
+      // Never `live`. The send port is replaced regardless, but a sandbox
+      // subject means nothing downstream can read this as a real recipient
+      // either.
+      connectionMode: "sandbox"
+    },
+    {
+      onCall: (record) =>
+        void modelCalls.push({
+          role: String(record.role),
+          model: record.model,
+          outcome: record.outcome,
+          ...(record.failureCode ? { failureCode: record.failureCode } : {}),
+          ...(record.failureKind ? { failureKind: record.failureKind } : {}),
+          ...(record.deferredToHuman === undefined
+            ? {}
+            : { deferredToHuman: record.deferredToHuman })
+        })
+    }
+  );
   if (!runtime) throw new SimulationUnavailableError("NO_BUSINESS_PROFILE");
 
   const instrumented = instrumentPorts(runtime.ports, {
@@ -162,6 +186,7 @@ export async function simulateAutomationTurn(
     steps: instrumented.steps(),
     ...(draft ? { draft } : {}),
     ...(wouldSend ? { wouldSend } : {}),
+    modelCalls,
     memory: { accepted: record.acceptedMemoryWrites, refused: record.refusedMemoryWrites }
   };
 }
