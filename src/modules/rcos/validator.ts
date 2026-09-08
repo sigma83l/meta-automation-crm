@@ -62,6 +62,26 @@ const MONEY = /(?:[$£€₺]\s?\d[\d.,]*|\b\d[\d.,]*\s?(?:tl|try|usd|eur|gbp)\b
 // not merely unapproved - it was invisible to this check, and sent.
 const TIME =
   /\b(?:\d{1,2}:\d{2}\s?(?:am|pm)?|\d{1,2}\s?(?:am|pm)|tomorrow|today|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?)\b/gi;
+/**
+ * Words that turn a day into a promise.
+ *
+ * "today" and "tomorrow" are in TIME because "we are open today" and "we can
+ * deliver tomorrow" are claims about the business that nothing may back. But
+ * the same words carry no claim at all in "how can I help you today?", and
+ * blocking that sent every ordinary greeting to a human -- a false block on
+ * roughly any polite opening line, which is not the trade the strictness was
+ * meant to buy.
+ *
+ * So a bare temporal adverb is only a time claim when the reply also says
+ * something is happening: opening, closing, delivering, arriving, booked. A
+ * clock time or a named weekday still counts on its own, because there is no
+ * innocent way to put "Tuesday" or "9am" in a sentence to a customer.
+ */
+const AVAILABILITY =
+  /\b(?:open|opens|opening|clos(?:e|es|ed|ing)|deliver\w*|ship\w*|arriv\w*|available|availability|ready|book\w*|appointment|reserv\w*|collect\w*|pick\s?up|send\w*|start\w*|finish\w*|begin\w*|end\w*|due|schedul\w*)\b/i;
+
+const BARE_ADVERB = /^(?:today|tomorrow)$/i;
+
 const EMAIL = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/;
 const PHONE = /\+?\d[\d\s().-]{8,}\d/;
 const PRESSURE =
@@ -184,7 +204,9 @@ export function validateReply(draft: ReplyDraft, context: ValidationContext): Va
     detail.push(`money not confirmed by an authoritative source: ${money.join(", ")}`);
   }
 
-  const times = unapprovedMatches(draft.text, TIME, context.approvedTimes);
+  const times = unapprovedMatches(draft.text, TIME, context.approvedTimes).filter(
+    (match) => !BARE_ADVERB.test(match) || AVAILABILITY.test(draft.text)
+  );
   if (times.length) {
     failures.push("unverified_time");
     detail.push(`time not confirmed by an authoritative source: ${times.join(", ")}`);

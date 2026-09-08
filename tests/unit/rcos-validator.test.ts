@@ -56,6 +56,44 @@ describe("authoritative values", () => {
     expect(failuresOf(verdict)).toContain("unverified_money");
   });
 
+  it("lets an ordinary greeting through when its only 'time' is a pleasantry", () => {
+    // "How can I help you today?" was blocked as an unverified time claim,
+    // which sent essentially every polite opening line to a human. The word
+    // asserts nothing about the business, and nothing in it can mislead.
+    const verdict = validateReply(
+      { text: "Hello! How can I help you today?", citedRefs: [] },
+      context()
+    );
+    expect(failuresOf(verdict)).not.toContain("unverified_time");
+  });
+
+  it("still blocks the same word when it promises something", () => {
+    // The reason "today" is in the pattern at all: this is a claim about the
+    // business that nothing here backs.
+    for (const text of [
+      "Yes, we are open today.",
+      "We can deliver today.",
+      "Your order will arrive tomorrow.",
+      "We are closed today."
+    ]) {
+      const verdict = validateReply({ text, citedRefs: [] }, context());
+      expect(`${text} -> ${failuresOf(verdict).includes("unverified_time")}`).toBe(
+        `${text} -> true`
+      );
+    }
+  });
+
+  it("still blocks a clock time or a named day on its own", () => {
+    // These have no innocent reading in a message to a customer, so they are
+    // never excused by the absence of an availability word.
+    for (const text of ["See you at 09:30.", "Tuesday works.", "Come at 6pm."]) {
+      const verdict = validateReply({ text, citedRefs: [] }, context());
+      expect(`${text} -> ${failuresOf(verdict).includes("unverified_time")}`).toBe(
+        `${text} -> true`
+      );
+    }
+  });
+
   it("blocks an appointment time nothing confirmed", () => {
     const verdict = validateReply({ text: "See you tomorrow at 09:30.", citedRefs: [] }, context());
     expect(failuresOf(verdict)).toContain("unverified_time");
