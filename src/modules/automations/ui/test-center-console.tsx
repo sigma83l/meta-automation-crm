@@ -271,6 +271,13 @@ export function TestCenterConsole({
               )}
             </div>
           )}
+          {trace.validationDetail && trace.validationDetail.length > 0 && (
+            <ul className="validation-detail">
+              {trace.validationDetail.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
           {trace.modelCalls.length > 0 && (
             <div className="model-calls">
               <span className="eyebrow">

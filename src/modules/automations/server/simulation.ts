@@ -170,6 +170,7 @@ export async function simulateAutomationTurn(
   const record = await runTurn(event, instrumented.ports);
   const draft = instrumented.draft();
   const wouldSend = instrumented.wouldSend();
+  const validationDetail = instrumented.validationDetail(record.reasonCodes);
 
   return {
     verdict: verdictFor(record.outcome),
@@ -187,6 +188,7 @@ export async function simulateAutomationTurn(
     ...(draft ? { draft } : {}),
     ...(wouldSend ? { wouldSend } : {}),
     modelCalls,
+    ...(validationDetail && validationDetail.length > 0 ? { validationDetail } : {}),
     memory: { accepted: record.acceptedMemoryWrites, refused: record.refusedMemoryWrites }
   };
 }

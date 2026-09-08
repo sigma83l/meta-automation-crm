@@ -160,6 +160,42 @@ describe("test centre simulation", () => {
     expect(writes).toEqual([]);
   });
 
+  it("recovers the validator's own words for a refusal", async () => {
+    // The engine keeps only the failure codes, so the token that actually
+    // caused the block -- the whole question an operator is asking -- was being
+    // discarded. Recomputed from the same pure validator over the same inputs.
+    const { ports } = realPorts({
+      compose: async () => reply({ text: "We open Saturday at 9am.", citedRefs: ["price-1"] })
+    });
+    const instrumented = instrumentPorts(ports, { subject: "conversation" });
+
+    const record = await runTurn(event, instrumented.ports);
+    const detail = instrumented.validationDetail(record.reasonCodes);
+
+    expect(record.reasonCodes).toContain("unverified_time");
+    expect(detail?.join(" ")).toContain("Saturday");
+  });
+
+  it("withholds the detail when its reconstruction disagrees with the engine", async () => {
+    // A tool changes `hasAuthoritativeResult`, which this reconstruction cannot
+    // see. Reporting a confident reason derived from the wrong context is worse
+    // than reporting none.
+    const { ports } = realPorts({
+      decide: async () =>
+        decision({
+          toolRequest: {
+            actionName: "book",
+            actionClass: "reversible_low_risk",
+            idempotencyKey: "k1",
+            hasHumanApproval: true
+          }
+        })
+    });
+    const instrumented = instrumentPorts(ports, { subject: "conversation" });
+    const record = await runTurn(event, instrumented.ports);
+    expect(instrumented.validationDetail(record.reasonCodes)).toBeUndefined();
+  });
+
   it("does not invent a memory failure when facts would have been stored", async () => {
     const { ports } = realPorts({
       decide: async () =>

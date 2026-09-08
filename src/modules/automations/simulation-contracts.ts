@@ -109,5 +109,11 @@ export type SimulationTrace = Readonly<{
   wouldSend?: Readonly<{ text: string; sendRef: string }>;
   /** Every model call this turn made, in order. Empty when none was attempted. */
   modelCalls: readonly SimulationModelCall[];
+  /**
+   * The validator's own words for the refusal, naming the offending tokens.
+   * Absent when the turn passed, or when the reason cannot be reconstructed
+   * faithfully.
+   */
+  validationDetail?: readonly string[];
   memory: Readonly<{ accepted: number; refused: number }>;
 }>;
