@@ -95,6 +95,15 @@ export type ModelCallRecord = Readonly<{
   failureKind?: string;
   /** True only when the model itself asked for a person. */
   deferredToHuman?: boolean;
+  /**
+   * The model's own words for why it wants a person.
+   *
+   * `composedFrom` discards the whole structured reply when `needsHuman` is
+   * set, so this sentence -- the only thing that distinguishes "I am not
+   * confident" from "nothing here answers that" from a guardrail the model
+   * never chose -- was produced on every deferral and read by nobody.
+   */
+  deferralReason?: string;
   usage: ReturnType<AiProvider["getUsageMetadata"]>;
 }>;
 
@@ -304,6 +313,9 @@ export function createAiTurnPorts(
         // The distinction this whole record exists for: a model that answered
         // and asked for a person is not a model that failed.
         ...(generated.ok ? { deferredToHuman: generated.value.needsHuman } : {}),
+        ...(generated.ok && generated.value.needsHuman && generated.value.reason
+          ? { deferralReason: generated.value.reason }
+          : {}),
         usage: provider.value.getUsageMetadata()
       });
       // An empty draft fails validation, which routes to a handoff. That is the

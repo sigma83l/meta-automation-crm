@@ -156,7 +156,8 @@ export async function simulateAutomationTurn(
           ...(record.failureKind ? { failureKind: record.failureKind } : {}),
           ...(record.deferredToHuman === undefined
             ? {}
-            : { deferredToHuman: record.deferredToHuman })
+            : { deferredToHuman: record.deferredToHuman }),
+          ...(record.deferralReason ? { deferralReason: record.deferralReason } : {})
         })
     }
   );

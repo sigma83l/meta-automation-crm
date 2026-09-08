@@ -93,6 +93,8 @@ export type SimulationModelCall = Readonly<{
   failureKind?: string;
   /** True only when the model itself asked for a person. */
   deferredToHuman?: boolean;
+  /** The model's own words for why, when it deferred. */
+  deferralReason?: string;
 }>;
 
 export type SimulationTrace = Readonly<{

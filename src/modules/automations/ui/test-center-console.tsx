@@ -108,6 +108,9 @@ export function TestCenterConsole({
     const reply = calls.find((call) => call.role === "customer_reply") ?? calls.at(-1);
     if (!reply) return undefined;
     if (reply.deferredToHuman) {
+      if (reply.deferralReason) {
+        return `${text("The model asked for a person", "Model bir kişi istedi", "مدل درخواست انسان کرد")}: ${reply.deferralReason}`;
+      }
       return text(
         "The model answered and asked for a person. That is a judgement, not a failure - usually low confidence or nothing approved to cite.",
         "Model yanıt verdi ve bir kişi istedi. Bu bir başarısızlık değil, bir karardır - genellikle düşük güven veya alıntılanacak onaylı bilgi yok.",
@@ -296,6 +299,9 @@ export function TestCenterConsole({
                       {call.failureCode ? ` · ${call.failureCode}` : ""}
                       {call.failureKind ? ` (${call.failureKind})` : ""}
                     </span>
+                    {call.deferralReason && (
+                      <span className="deferral-reason">{call.deferralReason}</span>
+                    )}
                   </li>
                 ))}
               </ul>

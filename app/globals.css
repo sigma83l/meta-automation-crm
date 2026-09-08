@@ -4778,3 +4778,12 @@ main {
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
+
+/* The model's own sentence for why it wanted a person. Full width under the
+   call it belongs to, because it is prose rather than a status. */
+.model-calls li .deferral-reason {
+  flex-basis: 100%;
+  margin-inline-start: 0;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
