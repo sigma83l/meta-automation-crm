@@ -4787,3 +4787,314 @@ main {
   color: var(--ink);
   font-size: 0.8rem;
 }
+
+/* --- Guided setup: fields, hours, choices and readiness -------------------
+   Appended rather than edited into the block above because that block is
+   shared, and every rule here is additive to it: `.setup-fields` still owns
+   the grid, the animation and the control styling, and these describe only
+   what the redesigned stages added.
+
+   Colour comes from the same custom properties as everything else, so a rule
+   here is correct in both themes by construction. `:is()` rather than
+   `:where()` in anything that has to win against an earlier rule - `:where()`
+   contributes no specificity at all, which is how a dark-mode override in this
+   file has silently lost to its own light-mode base before. */
+
+/* A label above its control, its hint below it, its error below that. Replaces
+   the wrapping-label layout, which could not describe a control it contained
+   without an id, and so could not point `aria-describedby` at anything. */
+.setup-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.setup-field > label,
+.setup-choices > legend {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.setup-choices > legend {
+  padding: 0;
+}
+
+.setup-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.setup-issue {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Both are rendered whether or not they have anything to say, so that the
+   description an input points at never changes identity. Empty ones must not
+   leave a gap behind. */
+.setup-hint:empty,
+.setup-issue:empty {
+  display: none;
+}
+
+.setup-fields :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.setup-fields :is(input[type="checkbox"], input[type="radio"]) {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.setup-hours,
+.setup-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+
+.setup-hours ol,
+.setup-choices ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-hours li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.setup-fields .setup-hours-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 clamp(120px, 26%, 190px);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.setup-hours-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Times read left to right in every locale, so they stay a machine value
+   inside a right-to-left sentence rather than being reordered by it. */
+.setup-hours-range input {
+  width: auto;
+  unicode-bidi: isolate;
+}
+
+.setup-hours-closed {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.setup-fields .setup-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.setup-choices ul {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.setup-choice-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.setup-fields .setup-choice-add label {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.setup-choice-add input {
+  flex: 1 1 160px;
+  width: auto;
+  max-width: 320px;
+}
+
+.setup-choice-add button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.setup-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.setup-fields .setup-levels label {
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.setup-fields .setup-levels label:has(input:checked) {
+  border-color: var(--blue);
+  background: var(--info-soft);
+}
+
+/* What the workspace just described, in the assistant's words. The point of
+   the panel is that it is not a summary of the form - it is the approved
+   answer the form produced. */
+.setup-preview {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--signal-500);
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+
+.setup-preview p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.setup-preview pre {
+  margin: 0;
+  overflow-x: auto;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  unicode-bidi: isolate;
+  white-space: pre-wrap;
+}
+
+.setup-preview span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.setup-readiness {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-readiness li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  font-size: 0.85rem;
+}
+
+.setup-readiness li > span[aria-hidden] {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.setup-readiness .ready > span[aria-hidden] {
+  background: var(--signal-100);
+  color: var(--signal-700);
+}
+
+.setup-readiness .pending > span[aria-hidden] {
+  background: var(--warning-soft);
+  color: var(--amber);
+}
+
+.setup-readiness button {
+  min-height: 44px;
+  margin-inline-start: auto;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--blue-deep);
+  font-weight: 750;
+}
+
+/* A callout that is a warning rather than a note: the demo mode it describes
+   stops every real customer getting a reply. */
+.setup-callout.danger {
+  border-inline-start-color: var(--danger);
+  color: var(--ink);
+}
+
+.setup-callout a {
+  color: var(--blue-deep);
+  font-weight: 750;
+}
+
+@media (max-width: 620px) {
+  .setup-hours li {
+    flex-wrap: wrap;
+  }
+
+  .setup-fields .setup-hours-day {
+    flex-basis: 100%;
+  }
+}
+
+/* "2 / 6" is a counter, not a sentence. Left as prose it inherits the
+   paragraph direction, and in Persian the neutral slash reorders it into
+   "6 / 2" - a step number that reads as its own opposite. */
+.setup-stage > header .eyebrow {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* One rail column per stage. The count is a fact about the stage list, so the
+   component supplies it and this stops needing an edit every time a stage is
+   added or removed - it was hard-coded to eight and the list is now six. */
+@media (max-width: 900px) {
+  .setup-rail ol {
+    grid-template-columns: repeat(var(--setup-stage-count, 6), minmax(140px, 1fr));
+  }
+}

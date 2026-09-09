@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import type { SetupValue } from "@/src/modules/workspaces/onboarding/setup-plan";
 import { OnboardingForm } from "@/src/modules/workspaces/ui/onboarding-form";
 import { BrandLockup } from "@/src/modules/workspaces/ui/brand-lockup";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export default async function OnboardingPage() {
         initialStage={data?.current_step ?? "welcome"}
         initialCompleted={data?.completed_steps ?? []}
         initialSkipped={data?.skipped_steps ?? []}
-        initialData={(data?.stage_data as Record<string, Record<string, string>>) ?? {}}
+        initialData={(data?.stage_data as Record<string, Record<string, SetupValue>>) ?? {}}
         initialLastSavedAt={data?.last_saved_at ?? undefined}
       />
     </main>
