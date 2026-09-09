@@ -17,6 +17,7 @@ import type { ModelRegistry, ModelRole } from "./router";
 /** Roles that resolve to a model. Everything in MODEL_ROLES except deterministic. */
 export const CONFIGURABLE_ROLES = [
   "utility",
+  "lookup",
   "primary",
   "escalation",
   "offline_evaluator"
@@ -27,6 +28,7 @@ export type ConfigurableRole = (typeof CONFIGURABLE_ROLES)[number];
 /** The environment variable that carries each role's model identifier. */
 export const ROLE_ENVIRONMENT_KEYS = Object.freeze({
   utility: "AI_MODEL_UTILITY",
+  lookup: "AI_MODEL_LOOKUP",
   primary: "AI_MODEL_PRIMARY",
   escalation: "AI_MODEL_ESCALATION",
   offline_evaluator: "AI_MODEL_OFFLINE_EVALUATOR"

@@ -45,7 +45,8 @@ const context: TurnContext = {
   approvedTimes: ["09:00-17:00"],
   messages: [{ role: "customer", content: "Do you deliver?" }],
   classification: "webhook",
-  demoMode: false
+  demoMode: false,
+  priorOutcomes: []
 };
 
 const reply: StructuredReply = {
@@ -207,11 +208,53 @@ describe("retrieval, citation and approval agree by construction", () => {
 });
 
 describe("composition routes by what classification found", () => {
-  it("uses the primary model for an ordinary turn", async () => {
+  it("reads two approved items with the cheap model", async () => {
+    // A confident classification, a first message and a small approved set:
+    // this is the turn the lookup role exists for.
+    const { ports: p, calls } = ports({}, { ...MODELS, lookup: "model-lookup" });
+    await p.understand(event);
+    await p.compose(event, decision());
+    expect(calls.at(-1)).toEqual({ role: "lookup", model: "model-lookup" });
+  });
+
+  it("uses the primary model when no lookup model is configured", async () => {
+    // The role is still `lookup` - the turn has not changed - but the
+    // identifier substitutes upwards, so a deployment that never set
+    // AI_MODEL_LOOKUP answers with the better model rather than not at all.
     const { ports: p, calls } = ports();
     await p.understand(event);
     await p.compose(event, decision());
+    expect(calls.at(-1)).toEqual({ role: "lookup", model: "model-primary" });
+  });
+
+  it("uses the primary model once there is more than a lookup to do", async () => {
+    const { ports: p, calls } = ports({
+      utility: {
+        classification: ok({ intent: "chat", language: "en", confidence: 0.5, highStakes: false })
+      }
+    });
+    await p.understand(event);
+    await p.compose(event, decision());
     expect(calls.at(-1)).toEqual({ role: "primary", model: "model-primary" });
+  });
+
+  it("says why the role was chosen", async () => {
+    // The record the Test Center reads. Without it a cheaper model is a
+    // change nobody can account for after the fact.
+    const reasons: (readonly string[] | undefined)[] = [];
+    const built = createAiTurnPorts({
+      providers: {
+        utility: stubProvider({}, [], "utility"),
+        primary: stubProvider({}, [], "primary")
+      },
+      models: MODELS,
+      loadContext: async () => context,
+      onCall: (record) => reasons.push(record.routingReasons)
+    });
+    await built.understand(event);
+    await built.compose(event, decision());
+    // The classification call carries none: only the reply is routed.
+    expect(reasons).toEqual([undefined, ["direct_lookup_against_approved_knowledge"]]);
   });
 
   it("escalates only when the stakes and the doubt coincide", async () => {
@@ -310,7 +353,8 @@ describe("what an approved FAQ answer approves", () => {
     approvedTimes: [],
     messages: [{ role: "customer", content: "when are you open?" }],
     classification: "webhook",
-    demoMode: false
+    demoMode: false,
+    priorOutcomes: []
   });
 
   const retrieveWith = async (answer: string) => {

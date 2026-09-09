@@ -299,6 +299,25 @@ describe("every dialect reads its own vendor's shape", () => {
     ).toEqual({ inputTokens: 3, outputTokens: 4, model: "m" });
   });
 
+  it("bills a thinking model for the tokens it thought with", () => {
+    // Reasoning tokens are reported apart from the reply and charged at the
+    // output rate. Reading only the visible reply reported a thinking model as
+    // costing the same as one that answers directly, which is the comparison
+    // the routing decision is made on.
+    expect(
+      DIALECTS.gemini.extractUsage(
+        {
+          usageMetadata: {
+            promptTokenCount: 850,
+            candidatesTokenCount: 168,
+            thoughtsTokenCount: 796
+          }
+        },
+        "m"
+      )
+    ).toEqual({ inputTokens: 850, outputTokens: 964, model: "m" });
+  });
+
   it("returns null for an unexpected shape instead of guessing", () => {
     for (const dialect of Object.values(DIALECTS)) {
       expect(dialect.extractText({ unexpected: true })).toBeNull();

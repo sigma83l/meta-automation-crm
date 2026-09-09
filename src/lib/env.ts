@@ -73,6 +73,7 @@ const serverEnvironmentSchema = z.object({
   // the point of use, naming the role, rather than blocking a deployment that
   // never reaches it. See src/modules/rcos/model-registry.ts.
   AI_MODEL_UTILITY: optionalNonEmpty,
+  AI_MODEL_LOOKUP: optionalNonEmpty,
   AI_MODEL_PRIMARY: optionalNonEmpty,
   AI_MODEL_ESCALATION: optionalNonEmpty,
   AI_MODEL_OFFLINE_EVALUATOR: optionalNonEmpty,
@@ -146,6 +147,7 @@ export type ServerEnvironment = Readonly<{
   aiProviderTimeoutMs: number;
   aiModels: Readonly<{
     utility?: string;
+    lookup?: string;
     primary?: string;
     escalation?: string;
     offline_evaluator?: string;
@@ -235,6 +237,7 @@ export function parseServerEnvironment(
     aiProviderTimeoutMs: parsed.AI_PROVIDER_TIMEOUT_MS,
     aiModels: Object.freeze({
       ...(parsed.AI_MODEL_UTILITY ? { utility: parsed.AI_MODEL_UTILITY } : {}),
+      ...(parsed.AI_MODEL_LOOKUP ? { lookup: parsed.AI_MODEL_LOOKUP } : {}),
       ...(parsed.AI_MODEL_PRIMARY ? { primary: parsed.AI_MODEL_PRIMARY } : {}),
       ...(parsed.AI_MODEL_ESCALATION ? { escalation: parsed.AI_MODEL_ESCALATION } : {}),
       ...(parsed.AI_MODEL_OFFLINE_EVALUATOR

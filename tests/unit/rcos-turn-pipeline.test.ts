@@ -61,7 +61,8 @@ const context: TurnContext = {
   approvedTimes: [],
   messages: [{ role: "customer", content: event.text }],
   classification: "webhook",
-  demoMode: false
+  demoMode: false,
+  priorOutcomes: []
 };
 
 const tables = (over: Partial<Record<string, FakeRow[]>> = {}): Record<string, FakeRow[]> => ({

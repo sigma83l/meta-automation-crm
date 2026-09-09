@@ -137,7 +137,14 @@ const gemini: Dialect = {
     if (!usage) return null;
     return {
       inputTokens: numberAt(usage.promptTokenCount),
-      outputTokens: numberAt(usage.candidatesTokenCount),
+      // Reasoning tokens are reported separately and billed at the output
+      // rate, so a turn that spends them and a turn that does not have to be
+      // distinguishable here. On one measured FAQ lookup the thinking model
+      // emitted 796 reasoning tokens against 168 of visible reply and produced
+      // the same answer a non-thinking model produced with none - and reading
+      // only candidatesTokenCount made that the one number that did not move.
+      // Every cost and routing decision downstream reads this.
+      outputTokens: numberAt(usage.candidatesTokenCount) + numberAt(usage.thoughtsTokenCount),
       model
     };
   }
