@@ -1,11 +1,15 @@
 import { z } from "zod";
 import { aiModes } from "@/src/modules/ai/contracts";
+import { setupLanguages } from "@/src/modules/workspaces/onboarding/setup-plan";
 
 export const businessProfileInputSchema = z.object({
   brandName: z.string().trim().min(1).max(120),
   description: z.string().trim().max(4000),
-  primaryLanguage: z.string().trim().min(2).max(16),
-  fallbackLanguage: z.string().trim().min(2).max(16),
+  // A closed list rather than any two-to-sixteen characters. The loose version
+  // is how `primary_language = "jgwejf"` reached a live row, and from there the
+  // system prompt, which tells the model to prefer it by name.
+  primaryLanguage: z.enum(setupLanguages),
+  fallbackLanguage: z.enum(setupLanguages),
   tone: z.enum(["friendly", "formal"]),
   answerLength: z.enum(["short", "medium"]),
   emojiPolicy: z.enum(["allowed", "limited", "off"]),
