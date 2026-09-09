@@ -306,7 +306,13 @@ describe("every dialect reads its own vendor's shape", () => {
     // the routing decision is made on.
     expect(
       DIALECTS.gemini.extractUsage(
-        { usageMetadata: { promptTokenCount: 850, candidatesTokenCount: 168, thoughtsTokenCount: 796 } },
+        {
+          usageMetadata: {
+            promptTokenCount: 850,
+            candidatesTokenCount: 168,
+            thoughtsTokenCount: 796
+          }
+        },
         "m"
       )
     ).toEqual({ inputTokens: 850, outputTokens: 964, model: "m" });

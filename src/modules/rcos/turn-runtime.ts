@@ -50,6 +50,15 @@ const TRANSCRIPT_ROWS = MAX_RECENT_TURN_PAIRS * 2;
  */
 const MEMORY_ROWS = 24;
 
+/**
+ * How far back the router looks for a turn that needed a person.
+ *
+ * Three, because the question is "is this conversation going badly right now",
+ * not "has it ever". A handoff ten turns ago that was resolved should not make
+ * every later turn permanently expensive.
+ */
+const PRIOR_TURN_ROWS = 3;
+
 export type ProfileRow = Readonly<{
   primary_language: string;
   fallback_language: string;
@@ -63,6 +72,7 @@ export type ProfileRow = Readonly<{
 
 type RoleProviders = Readonly<{
   utility?: AiProvider;
+  lookup?: AiProvider;
   primary?: AiProvider;
   escalation?: AiProvider;
 }>;
@@ -177,11 +187,13 @@ export async function providersForWorkspace(
 
   const models = { ...env.aiModels, ...overrides?.models };
   const utility = models.utility ? forModel(models.utility) : undefined;
+  const lookup = models.lookup ? forModel(models.lookup) : undefined;
   const primary = models.primary ? forModel(models.primary) : undefined;
   const escalation = models.escalation ? forModel(models.escalation) : undefined;
 
   return {
     ...(utility ? { utility } : {}),
+    ...(lookup ? { lookup } : {}),
     ...(primary ? { primary } : {}),
     ...(escalation ? { escalation } : {})
   };
@@ -201,7 +213,7 @@ export async function loadTurnContext(
   profile: ProfileRow,
   customerId: string
 ): Promise<TurnContext> {
-  const [faqs, prices, transcript, facts] = await Promise.all([
+  const [faqs, prices, transcript, facts, priorTurns] = await Promise.all([
     admin
       .from("business_faq_items")
       .select("id,question,answer")
@@ -232,7 +244,18 @@ export async function loadTurnContext(
       .eq("workspace_id", event.workspaceId)
       .eq("customer_id", customerId)
       .order("recorded_at", { ascending: false })
-      .limit(MEMORY_ROWS)
+      .limit(MEMORY_ROWS),
+    // How the last few turns ended, for the router. A conversation that already
+    // needed a person is the one signal that no single message carries, and
+    // there is an index on exactly this ordering, so it costs a lookup rather
+    // than a scan.
+    admin
+      .from("turn_records")
+      .select("outcome")
+      .eq("workspace_id", event.workspaceId)
+      .eq("conversation_id", event.conversationId)
+      .order("created_at", { ascending: false })
+      .limit(PRIOR_TURN_ROWS)
   ]);
 
   const messages = (transcript.data ?? [])
@@ -295,7 +318,8 @@ export async function loadTurnContext(
     // the workspace's demo setting says. Mislabelling it would let the privacy
     // gate treat a real customer as a fixture.
     classification: "webhook",
-    demoMode: profile.demo_mode_enabled
+    demoMode: profile.demo_mode_enabled,
+    priorOutcomes: (priorTurns.data ?? []).map((row) => String(row.outcome))
   };
 }
 
@@ -316,7 +340,12 @@ export type TurnRuntime = Readonly<{ ports: TurnPorts }>;
  * configuration rather than a value with no origin.
  */
 export type TurnRuntimeOverrides = Readonly<{
-  models?: Readonly<{ utility?: string; primary?: string; escalation?: string }>;
+  models?: Readonly<{
+    utility?: string;
+    lookup?: string;
+    primary?: string;
+    escalation?: string;
+  }>;
   systemPrompt?: string;
   context?(loaded: TurnContext): TurnContext;
   /** Every model call this turn made, in order. */
@@ -380,7 +409,12 @@ export async function createTurnRuntime(
     // unconfigured workspace, a placeholder key, a credential that failed its
     // test — and the turn resolves every one of them to a handoff.
     providers,
-    models: env.aiModels,
+    // The same merge `providersForWorkspace` made. Passing `env.aiModels` alone
+    // built the providers from an override and then resolved the identifier
+    // from the environment, so the lab reported a model that was not the one
+    // the call went to - and where the environment named nothing, resolution
+    // failed and the override was never used at all.
+    models: { ...env.aiModels, ...overrides?.models },
     loadContext: contextFor,
     onCall: recordCall
   });

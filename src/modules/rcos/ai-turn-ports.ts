@@ -1,14 +1,22 @@
 import { appError, err, ok, type Result } from "@/src/lib/result";
 import { approvedTimeTokens, moneyTokens } from "./validator";
 import type { AiProvider, AiReplyInput } from "@/src/modules/ai/contracts";
+// Imported to measure, not to send: the only truthful answer to "how much will
+// this model read" is the prompt that will actually be built, and these are the
+// pure functions that build it. Estimating from a private approximation here
+// would drift from the request the moment either changed.
+import { buildSystemPrompt, buildUserPrompt } from "@/src/modules/ai/prompt";
+import { estimateTokens } from "./context-budget";
 import { buildModelRegistry, type ModelConfiguration } from "./model-registry";
 import {
   generativeCallBudget,
   mayAnswerCustomer,
   resolveModel,
-  selectRole,
+  resolveReplyModel,
+  selectReplyModel,
   type ModelRegistry,
-  type ModelRole
+  type ModelRole,
+  type ReplyRoutingSignals
 } from "./router";
 import type { ComposedReply, TurnEvent, TurnPorts, TurnUnderstanding } from "./turn-engine";
 
@@ -46,6 +54,15 @@ export type TurnContext = Readonly<{
   messages: AiReplyInput["messages"];
   classification: AiReplyInput["classification"];
   demoMode: boolean;
+  /**
+   * How the last few turns on this conversation ended, newest first.
+   *
+   * A routing input, not a display one. A conversation that already needed a
+   * person is evidence about this conversation that no single message carries,
+   * and it is the cheapest signal there is that the cheap model should not be
+   * the one to try again.
+   */
+  priorOutcomes: readonly string[];
 }>;
 
 export type AiTurnDependencies = Readonly<{
@@ -58,7 +75,12 @@ export type AiTurnDependencies = Readonly<{
    * move the lie to the call site. escalation absent means the turn stays
    * primary.
    */
-  providers: Readonly<{ utility?: AiProvider; primary?: AiProvider; escalation?: AiProvider }>;
+  providers: Readonly<{
+    utility?: AiProvider;
+    lookup?: AiProvider;
+    primary?: AiProvider;
+    escalation?: AiProvider;
+  }>;
   models: ModelConfiguration;
   loadContext(event: TurnEvent): Promise<TurnContext>;
   /** Observes each model call. Never receives message content. */
@@ -80,6 +102,16 @@ export type AiTurnDependencies = Readonly<{
  */
 export type ModelCallRecord = Readonly<{
   role: ModelRole;
+  /**
+   * Which call this was.
+   *
+   * The role no longer identifies it: a reply may be routed to `lookup`,
+   * `primary` or `escalation`, so "the reply call" and "the classification
+   * call" can only be told apart by what the call was for. Every reader that
+   * wanted the reply call was matching on a role name, and one of them was
+   * matching on a name no record ever carried.
+   */
+  task: "classification" | "reply";
   /** Empty when the outcome is `skipped` — there was no model to name. */
   model: string;
   outcome: "ok" | "failed" | "skipped";
@@ -104,6 +136,15 @@ export type ModelCallRecord = Readonly<{
    * never chose -- was produced on every deferral and read by nobody.
    */
   deferralReason?: string;
+  /**
+   * Why this role was chosen, for the reply call only.
+   *
+   * A cost optimisation nobody can see the reasoning of is one nobody can
+   * argue with when it answers a customer badly. The Test Center shows these
+   * beside the model name, so "why did the cheap model take this" has an
+   * answer that does not require reading the router.
+   */
+  routingReasons?: readonly string[];
   usage: ReturnType<AiProvider["getUsageMetadata"]>;
 }>;
 
@@ -165,15 +206,38 @@ export function createAiTurnPorts(
   }
 
   function providerFor(role: ModelRole): Result<AiProvider> {
+    // `escalation` and `lookup` fall back to `primary` for opposite reasons and
+    // both are safe. Escalation falls back because a workspace that never
+    // escalates should not have to configure a model it will not use; lookup
+    // falls back because primary is the more capable model, so the substitute
+    // can cost more and can never answer worse. `resolveReplyModel` names the
+    // same substitution on the identifier side, and the two must agree.
     const provider =
       role === "escalation"
         ? (dependencies.providers.escalation ?? dependencies.providers.primary)
-        : role === "utility"
-          ? dependencies.providers.utility
-          : dependencies.providers.primary;
+        : role === "lookup"
+          ? (dependencies.providers.lookup ?? dependencies.providers.primary)
+          : role === "utility"
+            ? dependencies.providers.utility
+            : dependencies.providers.primary;
     return provider
       ? ok(provider)
       : err(appError("AI_CREDENTIAL_UNAVAILABLE", `No provider for the ${role} role.`));
+  }
+
+  /**
+   * What the reply model will read, in tokens.
+   *
+   * Builds the prompt a second time rather than guessing at its size. Both
+   * builders are pure, so the cost is arithmetic, and the alternative is a
+   * private approximation that stops matching the request the first time
+   * either prompt gains a section. The estimator is the context budget's own:
+   * on a measured turn its chars/4 heuristic returned 505 against the
+   * provider's reported 505, so it is accurate enough to gate on.
+   */
+  function promptTokens(event: TurnEvent, context: TurnContext): number {
+    const input = buildReplyInput(event, context);
+    return estimateTokens(buildSystemPrompt(input)) + estimateTokens(buildUserPrompt(input));
   }
 
   return {
@@ -186,6 +250,7 @@ export function createAiTurnPorts(
         // case, and it looks identical downstream to a provider outage.
         dependencies.onCall?.({
           role: "utility",
+          task: "classification",
           model: model.ok ? model.value : "",
           outcome: "skipped",
           failureCode: model.ok ? "AI_CREDENTIAL_UNAVAILABLE" : model.error.code,
@@ -197,6 +262,7 @@ export function createAiTurnPorts(
       const classified = await provider.value.classifyTurn(buildReplyInput(event, context));
       dependencies.onCall?.({
         role: "utility",
+        task: "classification",
         model: model.value,
         outcome: classified.ok ? "ok" : "failed",
         ...(classified.ok
@@ -261,35 +327,49 @@ export function createAiTurnPorts(
 
     async compose(event, decision) {
       const context = await contextFor(event);
-      const signals = {
-        confidence: classifications.get(event.eventId)?.confidence ?? 0,
-        highStakes: classifications.get(event.eventId)?.highStakes ?? false,
+      const classified = classifications.get(event.eventId);
+      const signals: ReplyRoutingSignals = {
+        confidence: classified?.confidence ?? 0,
+        highStakes: classified?.highStakes ?? false,
         // The decision already answers this: a turn resolved without generation
         // has nothing left for a model to add.
-        answerIsKnown: decision.type === "wait"
+        answerIsKnown: decision.type === "wait",
+        // The workspace's own number, not a platform default. A clinic that set
+        // 0.95 has said it would rather pay for the better model than be
+        // approximately right, and that is its decision to make.
+        lowConfidenceThreshold: context.policy.lowConfidenceThreshold,
+        approvedItemsOffered: context.faqItems.length + context.priceItems.length,
+        contextTokens: promptTokens(event, context),
+        customerMessages: context.messages.filter((message) => message.role === "customer").length,
+        priorHandoff: context.priorOutcomes.includes("handoff")
       };
-      const role = selectRole("customer_reply", signals);
+      const routing = selectReplyModel(signals);
+      const role = routing.role;
 
       // A role that may not speak to a customer, or no budget, means no call.
       if (!mayAnswerCustomer(role) || generativeCallBudget(role, signals) === 0) {
         dependencies.onCall?.({
           role,
+          task: "reply",
           model: "",
           outcome: "skipped",
           failureCode: "NO_GENERATIVE_BUDGET",
+          routingReasons: routing.reasons,
           usage: null
         });
         return { text: "", citedRefs: [], claimsCompletion: false };
       }
 
-      const model = resolveModel(role, registry);
+      const model = resolveReplyModel(role, registry);
       const provider = providerFor(role);
       if (!model.ok || !provider.ok) {
         dependencies.onCall?.({
           role,
+          task: "reply",
           model: model.ok ? model.value : "",
           outcome: "skipped",
           failureCode: model.ok ? "AI_CREDENTIAL_UNAVAILABLE" : model.error.code,
+          routingReasons: routing.reasons,
           usage: null
         });
         return { text: "", citedRefs: [], claimsCompletion: false };
@@ -300,8 +380,10 @@ export function createAiTurnPorts(
       );
       dependencies.onCall?.({
         role,
+        task: "reply",
         model: model.value,
         outcome: generated.ok ? "ok" : "failed",
+        routingReasons: routing.reasons,
         ...(generated.ok
           ? {}
           : {

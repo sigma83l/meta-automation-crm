@@ -5,17 +5,22 @@ import {
   CONFIGURABLE_ROLES,
   ROLE_ENVIRONMENT_KEYS
 } from "@/src/modules/rcos/model-registry";
-import { MODEL_ROLES, resolveModel, selectRole } from "@/src/modules/rcos/router";
+import { MODEL_ROLES, resolveModel, selectReplyModel } from "@/src/modules/rcos/router";
 
 describe("the registry supplies what the router refuses to name", () => {
   it("resolves a role the router selected", () => {
     // The two halves meeting: the router picks a role and names no model, the
     // registry turns that role into the configured identifier.
     const registry = buildModelRegistry({ primary: "vendor-model-a" });
-    const role = selectRole("customer_reply", {
+    const { role } = selectReplyModel({
       confidence: 0.9,
-      highStakes: false,
-      answerIsKnown: false
+      highStakes: true,
+      answerIsKnown: false,
+      lowConfidenceThreshold: 0.6,
+      approvedItemsOffered: 3,
+      contextTokens: 500,
+      customerMessages: 1,
+      priorHandoff: false
     });
     expect(resolveModel(role, registry)).toEqual({ ok: true, value: "vendor-model-a" });
   });

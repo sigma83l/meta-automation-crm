@@ -238,6 +238,7 @@ async function runPromptMode(
   if (classified) {
     calls.push({
       role: "utility",
+      task: "classification",
       model: request.models.utility ?? "",
       outcome: classified.ok ? "ok" : "failed",
       ...(classified.ok ? {} : failureOf(classified.error)),
@@ -248,6 +249,7 @@ async function runPromptMode(
   const generated = await providers.primary.generateStructuredReply(input);
   calls.push({
     role: "primary",
+    task: "reply",
     model: request.models.primary ?? "",
     outcome: generated.ok ? "ok" : "failed",
     ...(generated.ok ? {} : failureOf(generated.error)),

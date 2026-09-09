@@ -81,7 +81,8 @@ export const CLINIC: Omit<TurnContext, "messages"> = {
   },
   approvedTimes: ["09:00", "18:00"],
   classification: "webhook",
-  demoMode: false
+  demoMode: false,
+  priorOutcomes: []
 };
 
 export type GoldenCase = Readonly<{
