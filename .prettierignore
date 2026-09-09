@@ -24,3 +24,8 @@ tests/golden/score-golden-matrix.json
 # sha256 still matches MANIFEST.sha256; reformatting would break that check and
 # the file is a source document, not code we maintain.
 docs/commercial/
+
+# Agent worktrees. Each is a full second copy of the repository, so a format
+# check here scans every file twice and fails on whatever an agent is
+# mid-edit on. `.vercelignore` already keeps them out of a deploy upload.
+.claude/
