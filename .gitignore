@@ -34,3 +34,8 @@ next-env.d.ts
 .env.local
 .env.*.local
 .env*
+# Every rule above matches a name *starting* with `.env`. A pulled copy is
+# usually named the other way round - `prod.env`, `production.env` - and one of
+# those sat untracked in the repo root holding the service-role key until it was
+# noticed by eye rather than by a rule.
+*.env
