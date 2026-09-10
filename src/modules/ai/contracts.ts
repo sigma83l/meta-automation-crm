@@ -79,6 +79,39 @@ export type AiReplyInput = Readonly<{
     escalationKeywords: readonly string[];
     lowConfidenceThreshold: number;
   }>;
+  /**
+   * Who the reply is written on behalf of.
+   *
+   * Every field here is one the owner filled in during onboarding and none of
+   * them reached a model: `business_profiles` has carried a brand name, a
+   * description, a tone, an answer length, an emoji policy, a timezone and
+   * opening hours since the profile table was created, and the prompt was
+   * built from the language pair and the forbidden claims alone. Twenty
+   * workspaces got one voiceless assistant, and a customer asking when a
+   * business opens could only be answered if somebody had also written an FAQ
+   * saying so.
+   *
+   * Required rather than optional. An absent voice is not a smaller prompt, it
+   * is a different business's reply.
+   */
+  business: Readonly<{
+    brandName: string;
+    /** The owner's own words about what the business does. May be empty. */
+    description: string;
+    tone: "friendly" | "formal";
+    answerLength: "short" | "medium";
+    emojiPolicy: "allowed" | "limited" | "off";
+    /** The zone every time in `hours` is stated in. */
+    timezone: string;
+    /**
+     * Opening hours by day, as the owner wrote them.
+     *
+     * Kept as day/value pairs rather than the bare values the validator
+     * approves: "09:00-18:00" with no day attached tells a model nothing it
+     * can answer "are you open on Saturday?" with.
+     */
+    hours: readonly Readonly<{ day: string; value: string }>[];
+  }>;
   classification: DataClassification;
   demoMode: boolean;
 }>;

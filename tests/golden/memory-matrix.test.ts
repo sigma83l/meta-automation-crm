@@ -11,6 +11,7 @@ import {
   type ProposedFact,
   type StoredFact
 } from "@/src/modules/rcos/memory-policy";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 /**
  * The pack's memory golden matrix, case for case.
@@ -71,6 +72,7 @@ const replyInput = (knownFacts: AiReplyInput["knownFacts"]): AiReplyInput => ({
     escalationKeywords: [],
     lowConfidenceThreshold: 0.5
   },
+  business: TEST_BUSINESS,
   classification: "webhook",
   demoMode: false
 });

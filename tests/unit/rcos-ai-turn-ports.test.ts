@@ -9,6 +9,7 @@ import {
 } from "@/src/modules/rcos/ai-turn-ports";
 import type { ModelConfiguration } from "@/src/modules/rcos/model-registry";
 import type { TurnDecision, TurnEvent } from "@/src/modules/rcos/turn-engine";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 const FAQ_ID = "11111111-1111-4111-8111-111111111111";
 const PRICE_ID = "22222222-2222-4222-8222-222222222222";
@@ -42,6 +43,7 @@ const context: TurnContext = {
     escalationKeywords: ["refund"],
     lowConfidenceThreshold: 0.6
   },
+  business: TEST_BUSINESS,
   approvedTimes: ["09:00-17:00"],
   messages: [{ role: "customer", content: "Do you deliver?" }],
   classification: "webhook",
@@ -350,6 +352,7 @@ describe("what an approved FAQ answer approves", () => {
       escalationKeywords: [],
       lowConfidenceThreshold: 0.5
     },
+    business: TEST_BUSINESS,
     approvedTimes: [],
     messages: [{ role: "customer", content: "when are you open?" }],
     classification: "webhook",

@@ -49,6 +49,8 @@ export type TurnContext = Readonly<{
     availability: "available" | "unavailable" | "ask_human";
   }>[];
   policy: AiReplyInput["policy"];
+  /** The workspace's voice, hours and timezone. See `AiReplyInput`. */
+  business: AiReplyInput["business"];
   /** Times a reply may state, e.g. opening hours. Approved elsewhere. */
   approvedTimes: readonly string[];
   messages: AiReplyInput["messages"];
@@ -170,6 +172,7 @@ export function buildReplyInput(event: TurnEvent, context: TurnContext): AiReply
     faqItems: context.faqItems,
     priceItems: context.priceItems,
     policy: context.policy,
+    business: context.business,
     classification: context.classification,
     demoMode: context.demoMode
   };

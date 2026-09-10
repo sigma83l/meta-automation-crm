@@ -124,6 +124,29 @@ export function timeTokens(text: string): readonly string[] {
 }
 
 /**
+ * The clock times in a piece of text, and nothing else.
+ *
+ * `timeTokens` deliberately also matches weekday names and bare temporal
+ * adverbs, because a *draft* claiming "Saturday" is making a claim. But a
+ * caller asking "does this line state opening hours" needs the narrower
+ * question, and asking the wider one gets the wrong answer on the very entry
+ * that matters: an opening-hours line reading "Saturday closed" contains the
+ * word Saturday, so `timeTokens` calls it a line that states a time, and
+ * Saturday would be approved for a business that is shut.
+ *
+ * Kept as its own pattern rather than rebuilt out of TIME because TIME is the
+ * load-bearing literal every refusal is decided by, and a refactor of it to
+ * share a fragment risks all of that to save a line. What must hold is that
+ * this only ever matches things TIME also matches - a test asserts exactly
+ * that, so the two cannot drift apart unnoticed.
+ */
+const CLOCK = /\b(?:\d{1,2}:\d{2}\s?(?:am|pm)?|\d{1,2}\s?(?:am|pm))\b/gi;
+
+export function clockTimes(text: string): readonly string[] {
+  return text.match(CLOCK) ?? [];
+}
+
+/**
  * The times a piece of approved text authorises a reply to state.
  *
  * Deliberately more generous than `timeTokens`, and the asymmetry is the point.

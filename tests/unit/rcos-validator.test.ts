@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   approvedTimeTokens,
+  clockTimes,
   safeResolution,
+  timeTokens,
   validateReply,
   type ValidationContext,
   type ValidationFailure
@@ -283,5 +285,44 @@ describe("what an approved range authorises", () => {
 
   it("leaves a weekend day unapproved when the range excludes it", () => {
     expect(approvedTimeTokens("Open Monday to Friday.")).not.toContain("saturday");
+  });
+});
+
+describe("a clock time is the narrow half of a time token", () => {
+  it("reads the clock and ignores the calendar", () => {
+    // The distinction a caller asking "does this line state opening hours"
+    // needs. A weekday name is a time claim in a draft and is not a statement
+    // of hours in a profile row, and only this separates them.
+    expect(clockTimes("Monday 09:00-18:00")).toEqual(["09:00", "18:00"]);
+    expect(clockTimes("Saturday closed")).toEqual([]);
+    expect(clockTimes("open tomorrow")).toEqual([]);
+    expect(clockTimes("from 9am")).toEqual(["9am"]);
+  });
+
+  it("never matches anything the validator would not call a time", () => {
+    // The one property that has to hold between the two patterns. They are
+    // separate literals on purpose - TIME is what every refusal is decided by
+    // and is not worth refactoring to share a fragment - so the containment is
+    // asserted here instead, where a drift shows up as a failing test rather
+    // than as a reply nobody approved.
+    const samples = [
+      "Monday 09:00-18:00",
+      "Saturday closed",
+      "open 9am until 5 pm",
+      "we deliver tomorrow",
+      "Tuesdays and Thursdays",
+      "by appointment",
+      "10:30am",
+      "1200 TL",
+      "call 09:00"
+    ];
+    for (const sample of samples) {
+      const wide = new Set(timeTokens(sample).map((token) => token.toLowerCase()));
+      for (const narrow of clockTimes(sample)) {
+        expect(
+          `${sample} -> ${narrow} is also a time token: ${wide.has(narrow.toLowerCase())}`
+        ).toBe(`${sample} -> ${narrow} is also a time token: true`);
+      }
+    }
   });
 });

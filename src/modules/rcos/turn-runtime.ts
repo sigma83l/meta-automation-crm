@@ -9,6 +9,9 @@ import { DIALECTS } from "@/src/modules/ai/providers/dialects";
 import { createHttpAiProvider } from "@/src/modules/ai/providers/http-provider";
 import { MAX_RECENT_TURN_PAIRS } from "./context-budget";
 import { currentFacts, type StoredFact } from "./memory-policy";
+// The validator's own reading of what a clock time is, so "does this entry
+// state opening hours" is answered by the module that will judge the reply.
+import { clockTimes } from "./validator";
 import { createAiTurnPorts, type ModelCallRecord, type TurnContext } from "./ai-turn-ports";
 import {
   createDraftRegistry,
@@ -60,6 +63,12 @@ const MEMORY_ROWS = 24;
 const PRIOR_TURN_ROWS = 3;
 
 export type ProfileRow = Readonly<{
+  brand_name: string;
+  description: string;
+  tone: string;
+  answer_length: string;
+  emoji_policy: string;
+  timezone: string;
   primary_language: string;
   fallback_language: string;
   forbidden_claims: string[] | null;
@@ -287,6 +296,13 @@ export async function loadTurnContext(
     confidence
   }));
 
+  // Day and value together. `Object.values` threw the day away, which left the
+  // model with "09:00-18:00" and no way to answer "are you open on Saturday?".
+  const businessHours = Object.entries(profile.business_hours ?? {}).map(([day, value]) => ({
+    day,
+    value: String(value)
+  }));
+
   return {
     requiredFields: [],
     knownFacts,
@@ -309,10 +325,48 @@ export async function loadTurnContext(
       escalationKeywords: profile.escalation_keywords ?? [],
       lowConfidenceThreshold: Number(profile.low_confidence_threshold)
     },
+    business: {
+      brandName: profile.brand_name,
+      description: profile.description,
+      // Cast rather than validated: the columns carry database check
+      // constraints naming exactly these values, so a row that reached here
+      // with anything else is a schema change nobody told this file about, and
+      // a silent default would hide it behind a wrong voice.
+      tone: profile.tone as "friendly" | "formal",
+      answerLength: profile.answer_length as "short" | "medium",
+      emojiPolicy: profile.emoji_policy as "allowed" | "limited" | "off",
+      timezone: profile.timezone,
+      hours: businessHours
+    },
     // Business hours are the workspace's own approved statement of when it is
     // open, so they are the one class of time a reply may state. Anything else
-    // the validator blocks.
-    approvedTimes: Object.values(profile.business_hours ?? {}),
+    // the validator blocks. Derived from the same pairs the prompt is given, so
+    // what the model may say and what the validator will accept cannot drift.
+    //
+    // The day is approved alongside the hours, but only for a day that has
+    // hours. "monday: 09:00-18:00" is the workspace saying it opens on Monday,
+    // so a reply saying Monday is quoting it - without this the commonest
+    // answer a business gives was blocked for naming the day it was approved
+    // to name. A day stating no clock time stays unapproved, so "we are open
+    // on Saturday" is still refused for a business that is shut then.
+    //
+    // The test is `clockTimes`, not `timeTokens`, and the difference is the
+    // whole point. Onboarding is moving to values that name their own day -
+    // "Saturday closed" rather than "closed" - and `timeTokens` matches
+    // weekday names. A check built on it would read that entry as one that
+    // states a time and approve Saturday for a closed business. A clock time
+    // is the only thing that separates an open day from a shut one, and it
+    // needs no list of the words for "closed" in three languages.
+    //
+    // A day without hours contributes nothing rather than its literal, and
+    // that is deliberate on both counts. Nothing is lost: "closed" and "by
+    // appointment" contain no time token, so approving them approves nothing.
+    // And passing the literal through would hand `retrieve` a string to expand
+    // - it runs `approvedTimeTokens` over every entry - which is precisely how
+    // "Saturday closed" would put Saturday back into the approved set.
+    approvedTimes: businessHours.flatMap((entry) =>
+      clockTimes(entry.value).length > 0 ? [entry.day, entry.value] : []
+    ),
     messages,
     // A message that arrived from a real provider is provider data, whatever
     // the workspace's demo setting says. Mislabelling it would let the privacy
@@ -372,7 +426,7 @@ export async function createTurnRuntime(
   const { data: profileRow } = await admin
     .from("business_profiles")
     .select(
-      "primary_language,fallback_language,forbidden_claims,escalation_keywords,low_confidence_threshold,business_hours,ai_mode,demo_mode_enabled"
+      "brand_name,description,tone,answer_length,emoji_policy,timezone,primary_language,fallback_language,forbidden_claims,escalation_keywords,low_confidence_threshold,business_hours,ai_mode,demo_mode_enabled"
     )
     .eq("workspace_id", event.workspaceId)
     .maybeSingle();

@@ -95,6 +95,8 @@ export function instrumentPorts(
   // row says what was known *and* what would change, rather than the later
   // sentence silently replacing the earlier one.
   let memoryLoaded = "";
+  // Step 11 is written twice too, for the same reason as step 3.
+  let committed = "";
 
   const ports: TurnPorts = {
     ...real,
@@ -177,7 +179,17 @@ export function instrumentPorts(
       const refs = await real.sentRefs(turn);
       sentRefsSeen = refs;
       eventSeen = turn;
-      note("validate", "Reply checked against approved knowledge and prior sends.");
+      // `sentRefs` is the last thing the engine gathers before it validates, so
+      // this is where step 10 is reported - but the verdict does not exist yet.
+      // Saying what was checked, and against how much, at least distinguishes
+      // "validated against nothing approved" from "validated against six
+      // items", which is the difference between two very different refusals.
+      note(
+        "validate",
+        retrievedSeen
+          ? `Checked against ${retrievedSeen.facts.length} approved fact(s), ${retrievedSeen.approvedAmounts.length} price(s), ${retrievedSeen.approvedTimes.length} time(s) and ${refs.length} prior send(s).`
+          : "Reply checked against approved knowledge and prior sends."
+      );
       return refs;
     },
     // The write ports, all neutralised. Each records what production would have
@@ -194,11 +206,17 @@ export function instrumentPorts(
       return facts.length;
     },
     async commit(record) {
-      note("commit", `Would commit outcome ${record.outcome}. Nothing was written.`);
+      // Kept so `send` can add to it rather than replace it. Both write to step
+      // 11, and the send message used to overwrite the commit message - so a
+      // turn that sent showed the ordering guarantee and lost the outcome,
+      // while a turn that was refused showed the outcome and lost any sign
+      // that it had stopped before the send.
+      committed = `Would commit outcome ${record.outcome}. Nothing was written.`;
+      note("commit", `${committed} The send step was not reached.`);
     },
     async send(reply, sendRef) {
       wouldSend = { text: reply.text, sendRef };
-      note("commit", "Would commit, then send exactly once. Nothing was sent.");
+      note("commit", `${committed} Would then send exactly once. Nothing was sent.`);
     },
     async observe() {
       note("observe", "Would record the turn for review. Nothing was written.");

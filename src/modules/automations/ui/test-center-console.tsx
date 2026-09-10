@@ -105,7 +105,11 @@ export function TestCenterConsole({
    * model answered perfectly well and asked for a person.
    */
   const emptyDraftCause = (calls: readonly SimulationModelCall[]) => {
-    const reply = calls.find((call) => call.role === "customer_reply") ?? calls.at(-1);
+    // `task`, not `role`. This matched `role === "customer_reply"`, which is a
+    // routing task and has never been a role, so the branch was dead and every
+    // lookup fell through to the last call - right by accident while the reply
+    // was always last, and wrong the moment anything is recorded after it.
+    const reply = calls.find((call) => call.task === "reply") ?? calls.at(-1);
     if (!reply) return undefined;
     if (reply.deferredToHuman) {
       if (reply.deferralReason) {
@@ -124,6 +128,82 @@ export function TestCenterConsole({
       return `${text("No call was made", "Çağrı yapılmadı", "تماسی انجام نشد")}: ${reply.failureCode ?? "?"}.`;
     }
     return undefined;
+  };
+
+  /**
+   * The router's reasons, in the operator's language.
+   *
+   * Translated rather than shown raw because the codes are written for a log
+   * and the person reading this screen is deciding whether to switch an
+   * automation on. An unknown code falls through to itself: a reason nobody
+   * translated is still better shown than swallowed.
+   */
+  const routingReason = (code: string) =>
+    ({
+      direct_lookup_against_approved_knowledge: text(
+        "a direct lookup in approved knowledge",
+        "onaylı bilgide doğrudan arama",
+        "جست‌وجوی مستقیم در دانش تأییدشده"
+      ),
+      answer_already_known: text(
+        "the answer was already known",
+        "yanıt zaten biliniyordu",
+        "پاسخ از پیش معلوم بود"
+      ),
+      high_stakes: text("the turn carries stakes", "bu tur riskli", "این نوبت حساس است"),
+      confidence_below_escalation_threshold: text(
+        "confidence too low for the stakes",
+        "risk için güven çok düşük",
+        "اطمینان برای این حساسیت کم است"
+      ),
+      confidence_below_lookup_floor: text(
+        "confidence below the lookup floor",
+        "güven arama eşiğinin altında",
+        "اطمینان کمتر از آستانه جست‌وجو"
+      ),
+      nothing_approved_to_read: text(
+        "nothing approved to read from",
+        "okunacak onaylı bilgi yok",
+        "دانش تأییدشده‌ای برای خواندن نبود"
+      ),
+      too_many_approved_items_to_choose_between: text(
+        "too many approved items to choose between",
+        "aralarından seçilecek çok fazla onaylı öğe",
+        "موارد تأییدشده برای انتخاب بیش از حد است"
+      ),
+      context_too_large: text(
+        "the prompt is too large for a lookup",
+        "istem bir arama için çok büyük",
+        "درخواست برای یک جست‌وجو بزرگ است"
+      ),
+      conversation_too_long_to_be_a_direct_question: text(
+        "the conversation is past a direct question",
+        "görüşme doğrudan bir soruyu aştı",
+        "گفت‌وگو از یک پرسش مستقیم گذشته است"
+      ),
+      prior_turn_needed_a_person: text(
+        "an earlier turn needed a person",
+        "önceki bir tur kişi gerektirdi",
+        "نوبت پیشین به انسان نیاز داشت"
+      )
+    })[code] ?? code;
+
+  /**
+   * What the run would have cost, in tokens.
+   *
+   * Tokens rather than money: the price of a model is configuration this code
+   * deliberately does not know, and a currency figure derived from a rate
+   * hard-coded here would be wrong the first time a vendor repriced. Output
+   * includes reasoning tokens, which are billed as output and are most of what
+   * a thinking model spends.
+   */
+  const tokenTotals = (calls: readonly SimulationModelCall[]) => {
+    const counted = calls.filter((call) => call.inputTokens !== undefined);
+    if (counted.length === 0) return undefined;
+    return {
+      input: counted.reduce((sum, call) => sum + (call.inputTokens ?? 0), 0),
+      output: counted.reduce((sum, call) => sum + (call.outputTokens ?? 0), 0)
+    };
   };
 
   const verdictLabel = (verdict: SimulationTrace["verdict"]) =>
@@ -288,23 +368,59 @@ export function TestCenterConsole({
               </span>
               <ul>
                 {trace.modelCalls.map((call, index) => (
-                  <li key={`${call.role}-${index}`} className={`call-${call.outcome}`}>
-                    <code>{call.role}</code>
-                    <span>{call.model || "—"}</span>
-                    <span>
+                  <li key={`${call.task}-${index}`} className={`call-${call.outcome}`}>
+                    <code>
+                      {call.task === "reply"
+                        ? text("reply", "yanıt", "پاسخ")
+                        : text("classify", "sınıflandırma", "دسته‌بندی")}
+                      {" · "}
+                      {call.role}
+                    </code>
+                    <span dir="ltr">{call.model || "—"}</span>
+                    {/* Named rather than relying on being the last span: the
+                        routing sentence below now takes that position, and the
+                        status was aligned by `span:last-child`. */}
+                    <span className="call-status">
                       {call.outcome}
                       {call.deferredToHuman
                         ? ` · ${text("asked for a person", "kişi istedi", "درخواست انسان")}`
                         : ""}
                       {call.failureCode ? ` · ${call.failureCode}` : ""}
                       {call.failureKind ? ` (${call.failureKind})` : ""}
+                      {call.inputTokens === undefined
+                        ? ""
+                        : ` · ${call.inputTokens} ${text("in", "giriş", "ورودی")} / ${call.outputTokens} ${text("out", "çıkış", "خروجی")}`}
                     </span>
+                    {/* Why this model and not a dearer one, which is the
+                        question a dynamically routed reply raises and the
+                        trace could not previously answer. */}
+                    {call.routingReasons && call.routingReasons.length > 0 && (
+                      <span className="routing-reasons">
+                        {text("Chosen because", "Seçilme nedeni", "دلیل انتخاب")}:{" "}
+                        {call.routingReasons.map(routingReason).join("; ")}
+                      </span>
+                    )}
                     {call.deferralReason && (
                       <span className="deferral-reason">{call.deferralReason}</span>
                     )}
                   </li>
                 ))}
               </ul>
+              {(() => {
+                const totals = tokenTotals(trace.modelCalls);
+                return totals ? (
+                  <p className="token-totals">
+                    {text("This turn", "Bu tur", "این نوبت")}: {totals.input}{" "}
+                    {text("input tokens", "giriş jetonu", "توکن ورودی")}, {totals.output}{" "}
+                    {text(
+                      "output tokens including reasoning",
+                      "akıl yürütme dahil çıkış jetonu",
+                      "توکن خروجی شامل استدلال"
+                    )}
+                    .
+                  </p>
+                ) : null;
+              })()}
             </div>
           )}
           {trace.subject === "synthetic" && (
