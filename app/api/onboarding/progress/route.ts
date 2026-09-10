@@ -17,7 +17,9 @@ import { assertWorkspaceManager } from "@/src/modules/workspaces/server/resolve-
 
 const safeValue = z.union([
   z.string().trim().max(2_000),
-  z.number().finite(),
+  // Not `.finite()`: deprecated in zod 4, where a plain number already rejects
+  // NaN and both infinities. Same values accepted, one fewer deprecation.
+  z.number(),
   z.boolean(),
   z.array(z.string().trim().max(200)).max(20)
 ]);
