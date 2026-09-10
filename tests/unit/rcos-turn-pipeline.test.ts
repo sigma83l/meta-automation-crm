@@ -12,6 +12,7 @@ import {
   createSupabaseTurnPorts
 } from "@/src/modules/rcos/supabase-turn-ports";
 import { runTurn, type TurnEvent, type TurnPorts } from "@/src/modules/rcos/turn-engine";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 /**
  * One turn, start to finish, over the real engine and the real ports.
@@ -58,6 +59,7 @@ const context: TurnContext = {
     escalationKeywords: [],
     lowConfidenceThreshold: 0.5
   },
+  business: TEST_BUSINESS,
   approvedTimes: [],
   messages: [{ role: "customer", content: event.text }],
   classification: "webhook",

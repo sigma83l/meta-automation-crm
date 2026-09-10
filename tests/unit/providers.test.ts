@@ -3,6 +3,7 @@ import { createDeterministicAiProvider } from "@/src/modules/ai/providers/determ
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
 import { createFakeMessagingProvider } from "@/src/modules/integrations/providers/fake-messaging-provider";
 import { syntheticInboundFixture, syntheticWorkspace } from "@/tests/fixtures/synthetic";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 const sandboxAuthorization = Object.freeze({
   mode: "sandbox" as const,
@@ -102,6 +103,7 @@ describe("provider seams", () => {
         escalationKeywords: [],
         lowConfidenceThreshold: 0.65
       },
+      business: TEST_BUSINESS,
       classification: "synthetic",
       demoMode: true
     });

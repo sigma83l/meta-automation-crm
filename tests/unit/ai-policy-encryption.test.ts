@@ -8,6 +8,7 @@ import {
 } from "@/src/modules/ai/provider-policy";
 import { createDeterministicAiProvider } from "@/src/modules/ai/providers/deterministic-provider";
 import { selectAiProvider } from "@/src/modules/ai/provider-selector";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 const faqId = "10000000-0000-4000-8000-000000000001";
 function input(overrides: Record<string, unknown> = {}) {
@@ -26,6 +27,7 @@ function input(overrides: Record<string, unknown> = {}) {
       escalationKeywords: ["lawyer"],
       lowConfidenceThreshold: 0.65
     },
+    business: TEST_BUSINESS,
     classification: "synthetic" as const,
     demoMode: true,
     ...overrides

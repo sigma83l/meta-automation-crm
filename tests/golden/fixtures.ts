@@ -79,10 +79,72 @@ export const CLINIC: Omit<TurnContext, "messages"> = {
     escalationKeywords: ["refund", "complaint", "lawyer", "emergency"],
     lowConfidenceThreshold: 0.6
   },
-  approvedTimes: ["09:00", "18:00"],
+  // The clinic's own voice and hours. Written to agree with FAQ_HOURS on
+  // purpose: a fixture whose profile says one thing and whose FAQ says another
+  // tests which of two contradictions a model happens to prefer, which is not
+  // a property anybody wants to lock in.
+  business: {
+    brandName: "Meridian Dental",
+    description: "A two-surgery dental practice taking check-ups, cleaning and cosmetic work.",
+    tone: "friendly",
+    answerLength: "short",
+    emojiPolicy: "off",
+    timezone: "Europe/Istanbul",
+    hours: [
+      { day: "monday", value: "09:00-18:00" },
+      { day: "tuesday", value: "09:00-18:00" },
+      { day: "wednesday", value: "09:00-18:00" },
+      { day: "thursday", value: "09:00-18:00" },
+      { day: "friday", value: "09:00-18:00" },
+      { day: "saturday", value: "closed" },
+      { day: "sunday", value: "closed" }
+    ]
+  },
+  // Exactly what `loadTurnContext` derives from those hours: for each day that
+  // states a clock time, the day name and the entry; for a day that does not,
+  // nothing. Saturday and Sunday are therefore absent, so a reply claiming the
+  // clinic opens at the weekend is still refused. Written out rather than
+  // computed so the set the validator will use is visible in the fixture.
+  approvedTimes: ["monday", "09:00-18:00", "tuesday", "wednesday", "thursday", "friday"],
   classification: "webhook",
   demoMode: false,
   priorOutcomes: []
+};
+
+/**
+ * The same clinic, with its opening hours and nothing written down about them.
+ *
+ * The commonest question a business is asked, against the commonest state a
+ * new workspace is in: hours filled in during onboarding, no FAQ yet. Measured
+ * on the previous prompt this reached a person on 3 of 3 attempts, because the
+ * hours were carried into the turn for the validator and never shown to the
+ * model at all.
+ */
+export const CLINIC_HOURS_ONLY: Omit<TurnContext, "messages"> = {
+  ...CLINIC,
+  faqItems: [],
+  priceItems: []
+};
+
+/**
+ * A workspace whose approved answer is not in the language it was asked in.
+ *
+ * Turkish knowledge, an English question. The approved facts - the days and
+ * the times - must survive verbatim; the sentence around them must not, or
+ * approved knowledge is unusable to exactly the multilingual workspaces this
+ * product exists for.
+ */
+export const CLINIC_TURKISH: Omit<TurnContext, "messages"> = {
+  ...CLINIC,
+  faqItems: [
+    {
+      id: FAQ_HOURS,
+      question: "Çalışma saatleriniz nedir?",
+      answer: "Pazartesiden Cumaya 09:00 - 18:00 arası açığız. Hafta sonu kapalıyız."
+    }
+  ],
+  priceItems: [],
+  policy: { ...CLINIC.policy, primaryLanguage: "tr", fallbackLanguage: "en" }
 };
 
 export type GoldenCase = Readonly<{
@@ -94,6 +156,16 @@ export type GoldenCase = Readonly<{
   citesOneOf?: readonly string[];
   /** Substrings that must never appear, whatever else the reply says. */
   mustNotContain?: readonly string[];
+  /**
+   * Substrings the reply must contain, compared case-insensitively.
+   *
+   * Only ever an approved value - a time, a day, a price - never a phrasing.
+   * Pinning prose would fail on paraphrase; pinning the number is the whole
+   * property, because reproducing it unchanged is what grounding means.
+   */
+  mustContain?: readonly string[];
+  /** The workspace this case is asked against. Defaults to CLINIC. */
+  context?: Omit<TurnContext, "messages">;
   why: string;
 }>;
 
@@ -103,6 +175,7 @@ export const GOLDEN_CASES: readonly GoldenCase[] = [
     message: "Hi, what time do you open on Tuesday?",
     expect: "answers",
     citesOneOf: [FAQ_HOURS],
+    mustContain: ["09:00"],
     why: "Directly covered by an approved FAQ."
   },
   {
@@ -110,7 +183,47 @@ export const GOLDEN_CASES: readonly GoldenCase[] = [
     message: "How much is a dental cleaning?",
     expect: "answers",
     citesOneOf: [PRICE_CLEANING],
+    mustContain: ["2500.00"],
     why: "An approved, available price exists."
+  },
+  {
+    // The reported failure, as a case. Asked a question its own approved
+    // knowledge answered, the assistant replied with a greeting and cited
+    // nothing, and the customer got a handoff instead of the answer.
+    name: "greets instead of answering",
+    message: "Hello there! Quick question - what time do you open?",
+    expect: "answers",
+    citesOneOf: [FAQ_HOURS],
+    mustContain: ["09:00"],
+    mustNotContain: ["how can I help"],
+    why: "A greeting in the customer's message must not become a greeting for an answer."
+  },
+  {
+    name: "answerable from the workspace's opening hours alone",
+    message: "What time do you open?",
+    expect: "answers",
+    context: CLINIC_HOURS_ONLY,
+    mustContain: ["09:00"],
+    why: "Hours were configured during onboarding and were never shown to the model."
+  },
+  {
+    name: "answerable from knowledge written in another language",
+    message: "Hi, what are your opening hours?",
+    expect: "answers",
+    context: CLINIC_TURKISH,
+    citesOneOf: [FAQ_HOURS],
+    mustContain: ["09:00"],
+    why: "The times must survive the language the sentence is written in."
+  },
+  {
+    // The other half of grounding in the hours: Saturday is configured closed,
+    // so it is absent from the approved times and a claim about it is refused.
+    // The bias under test is the one the validator exists for.
+    name: "asks about a day the business is closed",
+    message: "Are you open on Saturday?",
+    expect: "handoff",
+    context: CLINIC_HOURS_ONLY,
+    why: "Saturday states no hours, so nothing approves a claim that the clinic opens then."
   },
   {
     name: "not covered by any approved fact",

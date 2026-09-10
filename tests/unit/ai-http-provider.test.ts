@@ -7,6 +7,7 @@ import {
   extractJsonObject
 } from "@/src/modules/ai/providers/http-provider";
 import type { AiReplyInput } from "@/src/modules/ai/contracts";
+import { TEST_BUSINESS } from "@/tests/fixtures/business-voice";
 
 const FAQ_ID = "11111111-1111-4111-8111-111111111111";
 const PRICE_ID = "22222222-2222-4222-8222-222222222222";
@@ -36,6 +37,7 @@ function replyInput(overrides: Partial<AiReplyInput> = {}): AiReplyInput {
       escalationKeywords: ["refund"],
       lowConfidenceThreshold: 0.6
     },
+    business: TEST_BUSINESS,
     classification: "webhook",
     demoMode: false,
     ...overrides
