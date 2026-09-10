@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/src/lib/i18n/client";
 import { useHydrated } from "@/src/lib/react/use-hydrated";
+import { setupLanguages } from "@/src/modules/workspaces/onboarding/setup-plan";
 import { PreferenceControls } from "@/src/modules/workspaces/ui/preference-controls";
 import type { BusinessProfile, CredentialStatus, FaqItem, PriceItem } from "../contracts";
 
@@ -191,11 +192,23 @@ export function SettingsPanel({
           </label>
           <label>
             {text("Primary language", "Birincil dil", "زبان اصلی")}
-            <input name="primaryLanguage" defaultValue={profile.primaryLanguage} />
+            <select name="primaryLanguage" defaultValue={profile.primaryLanguage}>
+              {setupLanguages.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {text("Fallback language", "Yedek dil", "زبان جایگزین")}
-            <input name="fallbackLanguage" defaultValue={profile.fallbackLanguage} />
+            <select name="fallbackLanguage" defaultValue={profile.fallbackLanguage}>
+              {setupLanguages.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {text("Tone", "Üslup", "لحن")}
