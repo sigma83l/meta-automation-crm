@@ -229,4 +229,44 @@ describe("test centre simulation", () => {
     expect(memoryStep?.detail).toContain("No remembered facts for this contact.");
     expect(memoryStep?.detail).toContain("1 new fact would be stored");
   });
+
+  it("keeps the committed outcome when the turn goes on to send", async () => {
+    // Step 11 is written twice as well, and the send message replaced the
+    // commit message rather than adding to it - so a sending turn showed the
+    // ordering guarantee and lost the outcome it had committed.
+    const { ports } = realPorts();
+    const instrumented = instrumentPorts(ports, { subject: "conversation" });
+    await runTurn(event, instrumented.ports);
+
+    const commitStep = instrumented.steps().find((step) => step.id === "commit");
+    expect(commitStep?.detail).toContain("Would commit outcome sent");
+    expect(commitStep?.detail).toContain("Would then send exactly once");
+  });
+
+  it("says the send step was not reached when the validator refused", async () => {
+    // The other half: a refused turn commits and stops, and the row has to say
+    // so rather than leaving a reader to infer it from an absent sentence.
+    const { ports } = realPorts({ compose: async () => reply({ text: "" }) });
+    const instrumented = instrumentPorts(ports, { subject: "conversation" });
+    await runTurn(event, instrumented.ports);
+
+    const commitStep = instrumented.steps().find((step) => step.id === "commit");
+    expect(commitStep?.detail).toContain("Would commit outcome handoff");
+    expect(commitStep?.detail).toContain("The send step was not reached");
+  });
+
+  it("says how much approved knowledge the reply was checked against", async () => {
+    // "Reply checked against approved knowledge" was true of every run and
+    // told an operator nothing. The counts separate a refusal from a workspace
+    // with nothing approved from a refusal despite six approved items, which
+    // have different fixes.
+    const { ports } = realPorts();
+    const instrumented = instrumentPorts(ports, { subject: "conversation" });
+    await runTurn(event, instrumented.ports);
+
+    const validateStep = instrumented.steps().find((step) => step.id === "validate");
+    expect(validateStep?.detail).toContain("1 approved fact(s)");
+    expect(validateStep?.detail).toContain("1 price(s)");
+    expect(validateStep?.detail).toContain("0 prior send(s)");
+  });
 });

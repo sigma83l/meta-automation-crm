@@ -4787,3 +4787,33 @@ main {
   color: var(--ink);
   font-size: 0.8rem;
 }
+
+/* Test Center: why the router chose this model, and what the turn cost.
+
+   The reply model is now picked per turn, so a row saying only which model ran
+   answers half the question. `.routing-reasons` carries the other half.
+
+   Both of these sit below the row rather than in it. `.model-calls li
+   span:last-child` right-aligns the status, and prose inherited that and ended
+   up floating at the end of a line - so the status is now named explicitly and
+   the sentences are full-width blocks. */
+.model-calls li .call-status {
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
+.model-calls li span.routing-reasons {
+  flex-basis: 100%;
+  margin-inline-start: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Tokens, never a currency figure: a model's price is configuration this app
+   deliberately does not hold, and a rate hard-coded in a stylesheet's sibling
+   would be wrong the first time a vendor repriced. */
+.model-calls .token-totals {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}

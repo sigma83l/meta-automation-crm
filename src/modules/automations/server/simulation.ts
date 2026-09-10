@@ -150,6 +150,7 @@ export async function simulateAutomationTurn(
       onCall: (record) =>
         void modelCalls.push({
           role: String(record.role),
+          task: record.task,
           model: record.model,
           outcome: record.outcome,
           ...(record.failureCode ? { failureCode: record.failureCode } : {}),
@@ -157,7 +158,14 @@ export async function simulateAutomationTurn(
           ...(record.deferredToHuman === undefined
             ? {}
             : { deferredToHuman: record.deferredToHuman }),
-          ...(record.deferralReason ? { deferralReason: record.deferralReason } : {})
+          ...(record.deferralReason ? { deferralReason: record.deferralReason } : {}),
+          ...(record.routingReasons ? { routingReasons: record.routingReasons } : {}),
+          // Reported by the provider, so absent for a call that never happened
+          // rather than zero - a skipped call and a free one are different
+          // things and only one of them is worth investigating.
+          ...(record.usage
+            ? { inputTokens: record.usage.inputTokens, outputTokens: record.usage.outputTokens }
+            : {})
         })
     }
   );

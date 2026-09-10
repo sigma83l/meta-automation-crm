@@ -87,6 +87,15 @@ export type SimulationVerdict = "would_send" | "would_block" | "would_hand_off";
  */
 export type SimulationModelCall = Readonly<{
   role: string;
+  /**
+   * Which call this was: the cheap classification pass, or the reply.
+   *
+   * The role stopped identifying it when reply routing became dynamic - a
+   * reply is `lookup`, `primary` or `escalation` depending on the turn - so a
+   * reader looking for "the call that wrote to the customer" has to ask what
+   * the call was for.
+   */
+  task: "classification" | "reply";
   model: string;
   outcome: "ok" | "failed" | "skipped";
   failureCode?: string;
@@ -95,6 +104,19 @@ export type SimulationModelCall = Readonly<{
   deferredToHuman?: boolean;
   /** The model's own words for why, when it deferred. */
   deferralReason?: string;
+  /**
+   * Why the router chose this role, for the reply call.
+   *
+   * The reply model is now picked per turn from confidence, stakes, how much
+   * approved knowledge there was, how big the prompt is and how the last turns
+   * ended. An operator seeing a cheaper model answer a customer needs to be
+   * able to see which of those decided it, without reading the router.
+   */
+  routingReasons?: readonly string[];
+  /** Tokens the provider reported. Absent when the call never happened. */
+  inputTokens?: number;
+  /** Includes reasoning tokens, which are billed as output. */
+  outputTokens?: number;
 }>;
 
 export type SimulationTrace = Readonly<{
