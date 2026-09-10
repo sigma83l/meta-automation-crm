@@ -12,6 +12,11 @@ export default defineConfig([
     "test-results/**",
     "coverage/**",
     "supabase/.temp/**",
-    "supabase/.branches/**"
+    "supabase/.branches/**",
+    // Agent worktrees. Each is a full second copy of this repository, so
+    // linting here walks every file twice and reports whatever an agent is
+    // mid-edit on as a failure of the main checkout. `.prettierignore` and
+    // `.vercelignore` exclude the same directory for the same reason.
+    ".claude/**"
   ])
 ]);
