@@ -172,13 +172,44 @@ function parseComparison(term: string): Comparison {
   };
 }
 
+/**
+ * Splits a PostgREST column list at the top level only.
+ *
+ * An embed carries its own comma-separated list inside parentheses --
+ * `plans(price,seats)` -- and splitting on every comma shatters it into
+ * fragments that match no column at all. The symptom was quiet: the embedded
+ * key simply never appeared, so code reading it saw undefined and every test
+ * that depended on it passed for the wrong reason.
+ */
+function splitColumns(columns: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of columns) {
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (character === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  parts.push(current);
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
 function project(row: FakeRow, columns: string): FakeRow {
   if (columns.trim() === "*") return { ...row };
   const projected: FakeRow = {};
-  for (const raw of columns.split(",")) {
-    const column = raw.trim();
-    if (!column) continue;
-    projected[column] = row[column] ?? null;
+  for (const column of splitColumns(columns)) {
+    // `relation(...)` is an embed. PostgREST returns it under the relation
+    // name, so that is the key the fixture row is expected to carry, and the
+    // inner list only says which of its columns came back -- which a fixture
+    // supplies in full or not at all.
+    const embed = column.indexOf("(") > 0 ? column.slice(0, column.indexOf("(")).trim() : null;
+    const key = embed ?? column;
+    projected[key] = row[key] ?? null;
   }
   return projected;
 }

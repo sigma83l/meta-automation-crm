@@ -147,6 +147,8 @@ const en = {
     "The trial or subscription does not currently allow replies.",
   "review.ai_replies_disabled": "Assistant replies are not included on this plan.",
   "review.ai_replies_paused": "Assistant replies are paused. Nothing was lost; try again shortly.",
+  "review.usage_cap_reached":
+    "This plan\u2019s AI allowance for the current cycle is used up. The inbox and exports are unaffected.",
   "automations.create": "Create automation",
   "automations.recipes": "Recipe gallery",
   "automations.testCenter": "Test Center",
@@ -331,6 +333,8 @@ const tr: Dictionary = {
   "review.ai_replies_disabled": "Asistan yanıtları bu plana dahil değil.",
   "review.ai_replies_paused":
     "Asistan yanıtları duraklatıldı. Hiçbir şey kaybolmadı; kısa süre sonra tekrar deneyin.",
+  "review.usage_cap_reached":
+    "Bu planın mevcut dönemdeki yapay zeka hakkı doldu. Gelen kutusu ve dışa aktarma etkilenmez.",
   "automations.create": "Otomasyon oluştur",
   "automations.recipes": "Tarif galerisi",
   "automations.testCenter": "Test Merkezi",
@@ -492,6 +496,8 @@ const fa: Dictionary = {
   "review.ai_replies_disabled": "پاسخ‌های دستیار در این طرح گنجانده نشده است.",
   "review.ai_replies_paused":
     "پاسخ‌های دستیار موقتاً متوقف شده است. چیزی از دست نرفت؛ کمی بعد دوباره تلاش کنید.",
+  "review.usage_cap_reached":
+    "سهمیه هوش مصنوعی این طرح در دوره جاری تمام شده است. صندوق ورودی و خروجی‌گرفتن تأثیری نمی‌پذیرند.",
   "automations.create": "ساخت اتوماسیون",
   "automations.recipes": "گالری دستورکارها",
   "automations.testCenter": "مرکز آزمایش",

@@ -10,9 +10,13 @@ import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate
 import { CONTACT_FACTS_CONFLICT } from "@/src/modules/crm/ai-write";
 import { isFeatureEnabled, isPlatformSwitchEnabled } from "@/src/modules/features/server/gate";
 import {
+  authorizeUsage,
+  limitsForPlanRow,
   workUnitsFor,
   workUnitsIdempotencyKey,
-  type BilledReplyRole
+  type BilledReplyRole,
+  type PlanLimitRow,
+  type UsageTotals
 } from "@/src/modules/billing/usage-meters";
 import type { ModelCallRecord } from "./ai-turn-ports";
 import type { StoredFact } from "./memory-policy";
@@ -115,7 +119,12 @@ export const POLICY_BLOCKS = [
   // the two have different owners and different fixes: one is a conversation
   // with us about the plan, the other is us, and only one of them will resolve
   // on its own.
-  "ai_replies_paused"
+  "ai_replies_paused",
+  // The plan's AI allowance for this cycle is spent. Distinct from
+  // `ai_replies_disabled`, which is a capability the plan never included: this
+  // one is a capability they have and have used up, and it resolves by itself
+  // at the next cycle.
+  "usage_cap_reached"
 ] as const;
 
 export type PolicyBlock = (typeof POLICY_BLOCKS)[number];
@@ -124,6 +133,62 @@ export function createSupabaseTurnPorts(
   dependencies: SupabaseTurnDependencies
 ): Omit<TurnPorts, "understand" | "retrieve" | "compose"> {
   const { admin, subject } = dependencies;
+
+  /**
+   * Whether this workspace has spent its AI allowance for the open cycle.
+   *
+   * Reads the open cycle rather than opening one. A policy check that created a
+   * billing cycle as a side effect would be a write on the read path, and the
+   * absence of a cycle already answers the question: no cycle means no usage
+   * recorded, which means nothing is spent.
+   *
+   * ## Fails open, unlike everything around it
+   *
+   * Every other refusal in `evaluatePolicy` fails closed, because a turn that
+   * cannot establish permission must not reach a model. This one is the
+   * exception and the asymmetry is deliberate: wrongly blocking costs a paying
+   * customer a reply they are entitled to, and wrongly allowing costs us a few
+   * units we under-bill. A ledger we cannot read is our fault, and the customer
+   * should not pay for it in service. The failure still reaches the audit row
+   * `observe` writes, so it is findable rather than silent.
+   */
+  async function aiAllowanceSpent(
+    workspaceId: string,
+    subscription: Readonly<Record<string, unknown>> | null
+  ): Promise<boolean> {
+    const embedded = subscription?.subscription_plans;
+    const plan = Array.isArray(embedded) ? embedded[0] : embedded;
+    if (!plan || typeof plan !== "object") return false;
+
+    const limits = limitsForPlanRow(plan as PlanLimitRow);
+    // No recorded allowance is fair use, not a limit of zero.
+    if (limits.ai_work_units === undefined) return false;
+
+    const { data: cycle } = await admin
+      .from("billing_cycles")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .is("closed_at", null)
+      .maybeSingle();
+    if (!cycle) return false;
+
+    const { data: rows, error } = await admin.rpc("usage_totals_for_cycle", {
+      trusted_workspace_id: workspaceId,
+      requested_cycle_id: cycle.id as string
+    });
+    if (error) return false;
+
+    const totals: UsageTotals = Object.fromEntries(
+      ((rows ?? []) as readonly { meter: string; total: number | string }[]).map((row) => [
+        row.meter,
+        Number(row.total)
+      ])
+    );
+
+    // One unit is the cheapest a billable reply can be, so no room for one is
+    // no room at all.
+    return !authorizeUsage("ai_work_units", totals, limits, 1).allowed;
+  }
 
   /**
    * Records what this turn cost the workspace, in work units.
@@ -259,7 +324,7 @@ export function createSupabaseTurnPorts(
         admin
           .from("workspace_subscriptions")
           .select(
-            "status,trial_ends_at,current_period_ends_at,subscription_plans(price_minor_units)"
+            "status,trial_ends_at,current_period_ends_at,subscription_plans(price_minor_units,mac,ai_work_units,automation_actions,connector_units,seats,storage_mb)"
           )
           .eq("workspace_id", event.workspaceId)
           .maybeSingle()
@@ -310,6 +375,21 @@ export function createSupabaseTurnPorts(
       }
       if (!(await isFeatureEnabled(admin, event.workspaceId, "ai_replies"))) {
         return blocked("ai_replies_disabled");
+      }
+
+      // Last, because it is the only check here that reads the ledger, and
+      // every cheaper refusal above should short-circuit it.
+      //
+      // Deliberately at step 4, which the engine runs before any model call:
+      // a cap discovered after the work has already cost the customer a reply
+      // they cannot unsend, and cost us the tokens to produce it.
+      //
+      // This gates the assistant only. The inbox, the CRM and export are
+      // reached by other routes and stay open, because the billing contract is
+      // explicit that getting your own data out must never be hostage to usage
+      // exhaustion.
+      if (await aiAllowanceSpent(event.workspaceId, subscription.data)) {
+        return blocked("usage_cap_reached");
       }
 
       return { canSend: true, allowedActions };

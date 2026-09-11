@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createFakeSupabase, type FakeRow } from "@/tests/fixtures/fake-supabase";
+import {
+  createFakeSupabase,
+  type FakeRow,
+  type FakeRpcHandler
+} from "@/tests/fixtures/fake-supabase";
 import type { ProposedFact } from "@/src/modules/rcos/memory-policy";
 import {
   createDraftRegistry,
@@ -68,9 +72,11 @@ function harness(
     escalationKeywords: readonly string[];
     lowConfidenceThreshold: number;
     admin: SupabaseClient;
+    rpc: Record<string, FakeRpcHandler>;
   }> = {}
 ) {
   const fake = createFakeSupabase({
+    ...(over.rpc ? { rpc: over.rpc } : {}),
     tables: over.tables ?? {
       conversations: [openConversation],
       workspace_subscriptions: [activeTrial],
@@ -573,5 +579,120 @@ describe("persisting accepted facts", () => {
     } as unknown as SupabaseClient;
     const { ports } = harness({ admin: failing });
     expect(await ports.persistFacts(event, [proposed()])).toBe(0);
+  });
+});
+
+describe("the AI allowance, spent", () => {
+  const GROWTH_LIMITS = {
+    price_minor_units: 4500,
+    mac: 2500,
+    ai_work_units: 3000,
+    automation_actions: 15000,
+    connector_units: 5000,
+    seats: 3,
+    storage_mb: 10240
+  };
+  const CYCLE = "44444444-4444-4444-8444-444444444444";
+
+  function cappedHarness(
+    totals: readonly { meter: string; total: number }[],
+    options: {
+      limits?: Record<string, unknown> | null;
+      totalsError?: boolean;
+      cycle?: boolean;
+    } = {}
+  ) {
+    return harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [
+          {
+            ...activeTrial,
+            subscription_plans: options.limits === undefined ? GROWTH_LIMITS : options.limits
+          }
+        ],
+        billing_cycles:
+          options.cycle === false ? [] : [{ id: CYCLE, workspace_id: WORKSPACE, closed_at: null }],
+        turn_records: [],
+        messages: [],
+        ai_execution_audit_events: []
+      },
+      rpc: {
+        usage_totals_for_cycle: () =>
+          options.totalsError
+            ? {
+                data: null,
+                error: { code: "PGRST000", message: "ledger unavailable" },
+                count: null
+              }
+            : { data: totals, error: null, count: null }
+      }
+    });
+  }
+
+  it("refuses before any model runs once the allowance is gone", async () => {
+    // At step 4 on purpose. A cap found after the work has already cost the
+    // customer a reply they cannot unsend, and cost us the tokens for it.
+    const { ports } = cappedHarness([{ meter: "ai_work_units", total: 3000 }]);
+    const policy = await ports.evaluatePolicy(event);
+    expect(policy.canSend).toBe(false);
+    expect(policy.blockedReason).toBe("usage_cap_reached");
+  });
+
+  it("permits a turn while there is room for even the cheapest reply", async () => {
+    const { ports } = cappedHarness([{ meter: "ai_work_units", total: 2999 }]);
+    expect((await ports.evaluatePolicy(event)).canSend).toBe(true);
+  });
+
+  it("treats an unrecorded allowance as fair use, not as zero", async () => {
+    // Business and Agency record no number for some meters. Reading absent as
+    // zero would stop exactly the plans sold as unmetered.
+    const { ports } = cappedHarness([{ meter: "ai_work_units", total: 99999 }], {
+      limits: { ...GROWTH_LIMITS, ai_work_units: null }
+    });
+    expect((await ports.evaluatePolicy(event)).canSend).toBe(true);
+  });
+
+  it("permits the turn when the ledger cannot be read", async () => {
+    // The one refusal here that fails open, and the asymmetry is deliberate:
+    // wrongly blocking costs a paying customer a reply they are entitled to,
+    // wrongly allowing costs us a few units we under-bill. A ledger we cannot
+    // read is our fault.
+    const { ports } = cappedHarness([], { totalsError: true });
+    expect((await ports.evaluatePolicy(event)).canSend).toBe(true);
+  });
+
+  it("permits the turn when no cycle is open, because nothing has been spent", async () => {
+    const { ports } = cappedHarness([{ meter: "ai_work_units", total: 99999 }], { cycle: false });
+    expect((await ports.evaluatePolicy(event)).canSend).toBe(true);
+  });
+
+  it("still refuses for a reason the customer can act on first", async () => {
+    // Entitlement outranks the cap: a lapsed subscription is the thing they can
+    // fix, and reporting ours instead would hide it.
+    const { ports } = harness({
+      tables: {
+        conversations: [openConversation],
+        workspace_subscriptions: [
+          {
+            ...activeTrial,
+            trial_ends_at: "2020-01-01T00:00:00.000Z",
+            subscription_plans: GROWTH_LIMITS
+          }
+        ],
+        billing_cycles: [{ id: CYCLE, workspace_id: WORKSPACE, closed_at: null }],
+        turn_records: [],
+        messages: [],
+        ai_execution_audit_events: []
+      },
+      rpc: {
+        usage_totals_for_cycle: () => ({
+          data: [{ meter: "ai_work_units", total: 3000 }],
+          error: null,
+          count: null
+        })
+      }
+    });
+    expect((await ports.evaluatePolicy(event)).blockedReason).toBe("billing_entitlement_required");
   });
 });
