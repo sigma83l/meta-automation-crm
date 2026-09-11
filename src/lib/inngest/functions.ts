@@ -14,6 +14,7 @@ import {
   stateForUnchargeableTrial,
   trialEndAfterTransition
 } from "@/src/modules/billing/renewal-policy";
+import { FREE_PLAN_KEY } from "@/src/modules/billing/entitlement";
 import { projectMetaMessage } from "@/src/modules/integrations/meta/message-projection";
 import { createTurnRuntime } from "@/src/modules/rcos/turn-runtime";
 import { runTurn, type TurnEvent } from "@/src/modules/rcos/turn-engine";
@@ -430,16 +431,37 @@ export const chargeDueTrialsAndSubscriptions = inngest.createFunction(
           .limit(1)
           .maybeSingle();
 
-        // A grace window that has closed ends the subscription. Checked before
-        // anything else: there is nothing to charge and nothing to retry.
+        // A grace window that has closed moves the workspace to the free tier.
+        // Checked before anything else: there is nothing to charge and nothing
+        // to retry.
+        //
+        // It used to cancel, which locked the customer out of their own data
+        // over a trial they never paid for. The commercial contract is
+        // `downgrade_to_free_unless_user_explicitly_purchases`, and a free plan
+        // now exists to land on -- with its own much smaller limits, and with
+        // export left on, because the billing document is explicit that getting
+        // data out must never be hostage to a lapsed subscription.
+        //
+        // Cancelling remains what an explicit cancellation does; this path is
+        // only ever reached by a deadline nobody acted on.
         if (row.status === "trial_expired_grace") {
           if (graceHasLapsed((row.grace_ends_at as string | null) ?? null)) {
+            const { data: freePlan } = await admin
+              .from("subscription_plans")
+              .select("id")
+              .eq("plan_key", FREE_PLAN_KEY)
+              .eq("active", true)
+              .maybeSingle();
+            // No free plan configured is not a reason to strand somebody on an
+            // expired trial with full access, so the old terminal state is kept
+            // as the fallback rather than silently doing nothing.
             await admin.rpc("transition_workspace_subscription", {
               trusted_workspace_id: row.workspace_id,
-              trusted_new_status: "canceled",
-              trusted_plan_id: row.plan_id,
+              trusted_new_status: freePlan ? "active" : "canceled",
+              trusted_plan_id: freePlan ? freePlan.id : row.plan_id,
               trusted_trial_ends_at: row.trial_ends_at,
-              trusted_current_period_ends_at: row.current_period_ends_at,
+              // A free plan does not renew, so it has no period to end.
+              trusted_current_period_ends_at: null,
               trusted_grace_ends_at: null
             });
           }

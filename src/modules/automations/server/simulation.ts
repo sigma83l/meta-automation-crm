@@ -3,7 +3,10 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement";
+import {
+  authorizeWorkspaceEntitlement,
+  embeddedPlanPrice
+} from "@/src/modules/billing/entitlement";
 import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { isFeatureEnabled, isPlatformSwitchEnabled } from "@/src/modules/features/server/gate";
 import { runTurn, type TurnEvent, type TurnPolicy } from "@/src/modules/rcos/turn-engine";
@@ -82,7 +85,7 @@ async function stipulatedPolicy(
 
   const { data, error } = await admin
     .from("workspace_subscriptions")
-    .select("status,trial_ends_at,current_period_ends_at")
+    .select("status,trial_ends_at,current_period_ends_at,subscription_plans(price_minor_units)")
     .eq("workspace_id", workspaceId)
     .maybeSingle();
   if (error) throw new Error("TURN_POLICY_READ_FAILED");
@@ -91,7 +94,8 @@ async function stipulatedPolicy(
     ? authorizeWorkspaceEntitlement({
         status: data.status as SubscriptionStatus,
         trialEndsAt: data.trial_ends_at as string | null,
-        currentPeriodEndsAt: data.current_period_ends_at as string | null
+        currentPeriodEndsAt: data.current_period_ends_at as string | null,
+        planPriceMinorUnits: embeddedPlanPrice(data.subscription_plans)
       })
     : null;
   if (!entitlement || !entitlement.ok) return blocked("billing_entitlement_required");

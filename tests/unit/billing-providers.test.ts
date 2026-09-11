@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement";
+import {
+  authorizeWorkspaceEntitlement,
+  embeddedPlanPrice
+} from "@/src/modules/billing/entitlement";
 import { authorizeLiveBillingAction } from "@/src/modules/billing/live-billing-gate";
 import { createFakePaymentProvider } from "@/src/modules/billing/providers/fake-payment-provider";
 
@@ -44,6 +47,56 @@ describe("billing entitlement", () => {
       now: "2026-08-09T06:00:00.000Z"
     });
     expect(result).toEqual({ ok: true, value: "ACTIVE" });
+  });
+
+  it("entitles a free plan without consulting any clock", () => {
+    // Nothing renews on the free tier, so nothing can expire. Before this a
+    // lapsed trial was cancelled outright, which locked somebody out of their
+    // own data over a trial they had never paid for.
+    const result = authorizeWorkspaceEntitlement({
+      status: "active",
+      trialEndsAt: "2026-01-01T00:00:00.000Z",
+      currentPeriodEndsAt: null,
+      planPriceMinorUnits: 0,
+      now: "2030-01-01T00:00:00.000Z"
+    });
+    expect(result).toEqual({ ok: true, value: "FREE" });
+  });
+
+  it("does not extend the free tier to somebody who cancelled", () => {
+    // Closing the account is a request to be gone. A free tier is not a reason
+    // to keep serving them.
+    const result = authorizeWorkspaceEntitlement({
+      status: "canceled",
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+      planPriceMinorUnits: 0,
+      now: "2026-09-09T00:00:00.000Z"
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("treats an unreadable plan price as paid, not as free", () => {
+    // The zero has to be stated. Inferring "free" from a missing price would
+    // turn every failed join into unlimited free access.
+    const lapsed = {
+      status: "active" as const,
+      trialEndsAt: null,
+      currentPeriodEndsAt: "2026-08-01T00:00:00.000Z",
+      now: "2026-09-09T00:00:00.000Z"
+    };
+    expect(authorizeWorkspaceEntitlement({ ...lapsed, planPriceMinorUnits: null }).ok).toBe(false);
+    expect(authorizeWorkspaceEntitlement(lapsed).ok).toBe(false);
+  });
+
+  it("reads an embedded plan price in either shape PostgREST returns", () => {
+    // Typed as an array, delivered as an object. Anything else is null, so an
+    // unreadable embed can never be mistaken for a free plan.
+    expect(embeddedPlanPrice([{ price_minor_units: 0 }])).toBe(0);
+    expect(embeddedPlanPrice({ price_minor_units: 4500 })).toBe(4500);
+    expect(embeddedPlanPrice(null)).toBeNull();
+    expect(embeddedPlanPrice([])).toBeNull();
+    expect(embeddedPlanPrice({ price_minor_units: "free" })).toBeNull();
   });
 
   it("denies an active subscription with no recorded period end", () => {

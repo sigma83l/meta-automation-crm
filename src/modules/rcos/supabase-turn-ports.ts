@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { authorizeWorkspaceEntitlement } from "@/src/modules/billing/entitlement";
+import {
+  authorizeWorkspaceEntitlement,
+  embeddedPlanPrice
+} from "@/src/modules/billing/entitlement";
 import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
 import { CONTACT_FACTS_CONFLICT } from "@/src/modules/crm/ai-write";
@@ -171,7 +174,9 @@ export function createSupabaseTurnPorts(
           .maybeSingle(),
         admin
           .from("workspace_subscriptions")
-          .select("status,trial_ends_at,current_period_ends_at")
+          .select(
+            "status,trial_ends_at,current_period_ends_at,subscription_plans(price_minor_units)"
+          )
           .eq("workspace_id", event.workspaceId)
           .maybeSingle()
       ]);
@@ -197,7 +202,8 @@ export function createSupabaseTurnPorts(
         ? authorizeWorkspaceEntitlement({
             status: subscription.data.status as SubscriptionStatus,
             trialEndsAt: subscription.data.trial_ends_at as string | null,
-            currentPeriodEndsAt: subscription.data.current_period_ends_at as string | null
+            currentPeriodEndsAt: subscription.data.current_period_ends_at as string | null,
+            planPriceMinorUnits: embeddedPlanPrice(subscription.data.subscription_plans)
           })
         : null;
       // Checked before the model, not after: an unentitled workspace should
