@@ -5202,3 +5202,79 @@ main {
     max-width: 100%;
   }
 }
+
+/* The starter FAQ library. A checklist rather than a form: the question is
+   given, the answer is the owner's, and the hint says what a usable answer
+   has to contain. */
+.faq-template-panel {
+  padding: 20px;
+  margin-block-end: 18px;
+}
+
+.faq-templates {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+}
+
+.faq-templates > li {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+
+.faq-template-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.faq-template-head strong {
+  margin-inline-end: auto;
+}
+
+.faq-template-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.faq-template-answer {
+  display: grid;
+  gap: 8px;
+  margin-block-start: 6px;
+}
+
+.faq-template-answer label {
+  display: grid;
+  gap: 6px;
+}
+
+.faq-template-answer span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.faq-template-answer textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.faq-template-answer button {
+  width: fit-content;
+}

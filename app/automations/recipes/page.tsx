@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { getRequestPreferences } from "@/src/lib/i18n/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { FaqTemplateLibrary } from "@/src/modules/business-profile/ui/faq-template-library";
 import { createMetaRuntime } from "@/src/modules/integrations/meta/runtime";
 import { WorkspaceShell } from "@/src/modules/workspaces/ui/workspace-shell";
 import { BillingEntitlementError } from "@/src/modules/billing/entitlement-gate";
@@ -76,6 +78,16 @@ export default async function RecipeGalleryPage() {
     }
     throw error;
   }
+  // Only the questions, and only to decide which templates are still missing.
+  // A failed read offers the whole library rather than none: a duplicate an
+  // owner can see and delete is a smaller harm than a gap they never learn of.
+  const admin = await createSupabaseAdminClient();
+  const { data: answered } = await admin
+    .from("business_faq_items")
+    .select("question")
+    .eq("workspace_id", workspace.id);
+  const existingQuestions = (answered ?? []).map((row) => String(row.question));
+
   const pick = (en: string, tr: string, fa: string) =>
     locale === "tr" ? tr : locale === "fa" ? fa : en;
   const recipeNames: Record<(typeof recipes)[number]["id"], readonly [string, string]> = {
@@ -107,6 +119,26 @@ export default async function RecipeGalleryPage() {
             )}
           </p>
         </header>
+        <section className="panel faq-template-panel">
+          <header className="page-intro">
+            <span className="eyebrow">
+              {pick(
+                "Answers before automations",
+                "Otomasyondan önce yanıtlar",
+                "پاسخ‌ها پیش از اتوماسیون"
+              )}
+            </span>
+            <h3>{pick("Starter questions", "Başlangıç soruları", "پرسش‌های آغازین")}</h3>
+            <p>
+              {pick(
+                "A recipe decides when the assistant replies. These decide whether it can. It may only answer from knowledge you have approved, so anything missing here becomes a conversation somebody has to take by hand.",
+                "Bir tarif, asistanın ne zaman yanıt vereceğine karar verir; bunlar ise yanıt verebilip veremeyeceğine. Asistan yalnızca onayladığınız bilgiden yanıtlar; burada eksik olan her şey, birinin elle üstlenmesi gereken bir görüşmeye dönüşür.",
+                "دستور تعیین می‌کند دستیار چه زمانی پاسخ دهد؛ این‌ها تعیین می‌کنند که آیا اصلاً می‌تواند. دستیار فقط از دانش تأییدشده پاسخ می‌دهد، پس هر چیزی که اینجا نباشد به گفت‌وگویی تبدیل می‌شود که کسی باید دستی برعهده بگیرد."
+              )}
+            </p>
+          </header>
+          <FaqTemplateLibrary existingQuestions={existingQuestions} />
+        </section>
         <section className="recipe-catalog">
           {recipes.map((recipe) => (
             <article key={recipe.id}>
