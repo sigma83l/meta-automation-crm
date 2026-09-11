@@ -245,6 +245,39 @@ export function TestCenterConsole({
         ? text("WOULD HAND OFF", "DEVREDİLİRDİ", "به انسان واگذار می‌شد")
         : text("WOULD BLOCK", "ENGELLENİRDİ", "مسدود می‌شد");
 
+  /**
+   * What the business bubble says.
+   *
+   * `??` is wrong for this and was the bug: a turn the model deferred returns
+   * `text: ""` from `composedFrom`, and an empty string is not nullish, so it
+   * passed through and rendered an empty bubble. A blank reply is the one
+   * outcome that most needs words.
+   *
+   * When there is nothing to show, the reason codes say why in the customer's
+   * own language, which is the same vocabulary the inbox uses for a flagged
+   * conversation.
+   */
+  function spokenText(trace: SimulationTrace): string {
+    const sent = trace.wouldSend?.text?.trim();
+    if (sent) return sent;
+    const drafted = trace.draft?.text?.trim();
+    if (drafted) return drafted;
+
+    const explained = trace.reasonCodes
+      .filter((code) => isReviewReason(code))
+      .map((code) =>
+        code === "empty_draft"
+          ? (emptyDraftCause(trace.modelCalls) ?? t(`review.${code}`))
+          : t(`review.${code}`)
+      );
+    if (explained.length > 0) return explained.join(" ");
+    return text(
+      "No reply was produced, and a person would take this conversation.",
+      "Yanıt üretilmedi; bu görüşmeyi bir kişi devralır.",
+      "پاسخی تولید نشد؛ یک نفر این گفت‌وگو را برعهده می‌گیرد."
+    );
+  }
+
   /** One answered message: its verdict, its twelve steps, and what it cost. */
   function renderTrace(trace: SimulationTrace) {
     return (
@@ -495,13 +528,7 @@ export function TestCenterConsole({
                     className={`thread-bubble from-business verdict-${turn.trace.verdict}`}
                     dir="auto"
                   >
-                    {turn.trace.wouldSend?.text ??
-                      turn.trace.draft?.text ??
-                      text(
-                        "Nothing would be sent.",
-                        "Hiçbir şey gönderilmezdi.",
-                        "چیزی ارسال نمی‌شد."
-                      )}
+                    {spokenText(turn.trace)}
                   </p>
                   <details className="thread-trace">
                     <summary>
