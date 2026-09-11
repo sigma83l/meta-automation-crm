@@ -9,6 +9,11 @@ import type { SubscriptionStatus } from "@/src/modules/billing/contracts";
 import { authorizeOutboundSend } from "@/src/modules/integrations/live-send-gate";
 import { CONTACT_FACTS_CONFLICT } from "@/src/modules/crm/ai-write";
 import { isFeatureEnabled, isPlatformSwitchEnabled } from "@/src/modules/features/server/gate";
+import {
+  workUnitsFor,
+  workUnitsIdempotencyKey,
+  type BilledReplyRole
+} from "@/src/modules/billing/usage-meters";
 import type { ModelCallRecord } from "./ai-turn-ports";
 import type { StoredFact } from "./memory-policy";
 import {
@@ -119,6 +124,85 @@ export function createSupabaseTurnPorts(
   dependencies: SupabaseTurnDependencies
 ): Omit<TurnPorts, "understand" | "retrieve" | "compose"> {
   const { admin, subject } = dependencies;
+
+  /**
+   * Records what this turn cost the workspace, in work units.
+   *
+   * Returns a small note rather than throwing. Metering runs inside `observe`,
+   * which the engine calls last precisely so that nothing here can undo a
+   * committed turn -- but a silently dropped ledger row is lost revenue, so the
+   * note goes into the audit row beside the turn it describes and a failure is
+   * findable by reading it.
+   *
+   * Only a sent turn is billed. The engine's other outcomes all end without a
+   * reply reaching anybody: a policy block, a duplicate, a refused tool, and
+   * both validator resolutions commit and return without calling `send`.
+   */
+  async function meterTurn(
+    record: TurnRecord
+  ): Promise<
+    Readonly<{ meter: "ai_work_units"; units: number; recorded: boolean; error?: string }>
+  > {
+    const calls = dependencies.modelCalls?.(record.eventId) ?? [];
+    // The role that wrote to the customer. `utility` is the classifier and is
+    // never billed: the customer asked for a reply, not for however many calls
+    // our pipeline needed to produce one, and metering internals would mean a
+    // refactor changes somebody's bill.
+    const replyCall = calls.find((call) =>
+      ["lookup", "primary", "escalation"].includes(String(call.role))
+    );
+    const role: BilledReplyRole = replyCall
+      ? (String(replyCall.role) as BilledReplyRole)
+      : "deterministic";
+
+    const units = workUnitsFor({
+      role,
+      outcome: record.outcome === "sent" ? "sent" : "failed",
+      toolExecuted: record.toolExecuted
+    });
+
+    // A zero still gets a row. It is the difference between a turn that cost
+    // nothing and a turn nobody metered, and only one of those is a bug.
+    const cycle = await admin.rpc("ensure_open_billing_cycle", {
+      trusted_workspace_id: record.workspaceId
+    });
+    if (cycle.error || !cycle.data) {
+      return {
+        meter: "ai_work_units",
+        units,
+        recorded: false,
+        error: cycle.error?.message ?? "NO_OPEN_BILLING_CYCLE"
+      };
+    }
+
+    const { error } = await admin.from("usage_ledger").insert({
+      workspace_id: record.workspaceId,
+      billing_cycle_id: cycle.data as string,
+      meter: "ai_work_units",
+      quantity: units,
+      // One row per event, so a redelivered webhook that re-runs the same turn
+      // cannot bill twice. The unique index is what enforces it; this is the
+      // key it enforces on.
+      idempotency_key: workUnitsIdempotencyKey(record.eventId),
+      source_event_ref: record.eventId,
+      ...(replyCall?.model ? { model_ref: replyCall.model } : {}),
+      ...(replyCall?.usage
+        ? {
+            input_tokens: replyCall.usage.inputTokens,
+            output_tokens: replyCall.usage.outputTokens
+          }
+        : {})
+    });
+
+    // A duplicate is the idempotency key doing its job, not a failure.
+    const duplicate = error?.code === "23505";
+    return {
+      meter: "ai_work_units",
+      units,
+      recorded: !error || duplicate,
+      ...(error && !duplicate ? { error: error.message } : {})
+    };
+  }
 
   return {
     async isNewEvent(event) {
@@ -374,6 +458,12 @@ export function createSupabaseTurnPorts(
     },
 
     async observe(record: TurnRecord) {
+      // Metered before the audit row is written, so the audit row can say
+      // whether it worked. A dropped ledger row is lost revenue and has to be
+      // discoverable; the alternative -- failing the turn over it -- would
+      // charge the customer a conversation for our own accounting problem.
+      const metered = await meterTurn(record);
+
       // Never the message, never the draft: reason codes and counts only. This
       // table is read by operators and is not covered by the conversation's
       // retention policy.
@@ -404,7 +494,8 @@ export function createSupabaseTurnPorts(
           acceptedMemoryWrites: record.acceptedMemoryWrites,
           refusedMemoryWrites: record.refusedMemoryWrites,
           // Empty means no model was reached at all this turn.
-          modelCalls: calls
+          modelCalls: calls,
+          usage: metered
         }
       });
       // Deliberately swallowed. Observation failing must not undo a committed
