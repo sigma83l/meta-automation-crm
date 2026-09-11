@@ -45,11 +45,23 @@ test("the AI lab answers through the real provider in both modes", async ({ page
   await expect(page.getByRole("button", { name: "Clear" })).toBeEnabled();
   await page.getByLabel("Customer message").fill("When are you open?");
   await page.getByRole("button", { name: "Ask the model" }).click();
-  // The primary row is the one that must have succeeded: utility is a cheaper
+  // The reply row is the one that must have succeeded: utility is a cheaper
   // pre-pass and the engine treats its absence as an uncertain understanding,
   // so asserting on it would make this test fail for a latency blip rather
   // than for a broken lab.
-  const primaryRow = page.locator(".ai-lab-calls tbody tr", { hasText: "primary" });
+  //
+  // Which role writes the reply is no longer fixed. `selectReplyModel` picks
+  // the cheapest role that can answer the turn, and "When are you open?" is a
+  // direct lookup against approved knowledge, so it now routes to `lookup`
+  // rather than `primary`. Naming one role here asserted the old static
+  // mapping, not the wiring this test is about.
+  const primaryRow = page
+    .locator(".ai-lab-calls tbody tr")
+    // No word boundaries: `hasText` tests `textContent`, which concatenates the
+    // cells with no separator, so the row reads "primarygemini-3.5-flash-lite…"
+    // and `\bprimary\b` cannot match what follows it.
+    .filter({ hasText: /lookup|primary|escalation/ })
+    .first();
   await expect(primaryRow).toBeVisible({ timeout: 120_000 });
   // What this test owns is the wiring: that the form reached the configured
   // model in the primary role and that the lab reported the outcome. Whether

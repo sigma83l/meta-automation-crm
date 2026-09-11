@@ -12,7 +12,9 @@ test("configures structured business knowledge and shows the Demo privacy bounda
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Business Profile" })).toBeVisible();
   await page.locator('textarea[name="description"]').first().fill("Synthetic business description");
-  await page.getByLabel("Primary language").fill("tr");
+  // A closed list now, not free text: the column had no check and a workspace
+  // reached production with `primary_language = "jgwejf"`.
+  await page.getByLabel("Primary language").selectOption("tr");
   await page.getByLabel("AI mode").selectOption("FREE_GEMINI_DEMO_SYNTHETIC_ONLY");
   await page.getByLabel("Explicit Demo mode").check();
   await page.getByRole("button", { name: "Save profile" }).click();

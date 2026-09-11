@@ -16,7 +16,12 @@ test("locale, RTL, theme and resumable onboarding persist without mobile overflo
     page.getByRole("heading", { name: "Set up safely. Go live only when ready." })
   ).toBeVisible();
 
-  await page.getByLabel("Language").first().selectOption("fa");
+  // Addressed by position in the preference controls, not by label. Onboarding
+  // now has a reply-language field of its own whose label also contains the
+  // word "language" in all three locales, and `getByLabel` matches substrings -
+  // so `.first()` started selecting the wrong control and the locale never
+  // changed.
+  await page.locator(".preference-controls select").first().selectOption("fa");
   await expect(page.locator("html")).toHaveAttribute("lang", "fa");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.getByLabel("زبان").first()).toBeVisible();
@@ -35,10 +40,10 @@ test("locale, RTL, theme and resumable onboarding persist without mobile overflo
   await expect(page.locator('input[name="workspaceName"]')).toHaveValue("فضای کاری آزمایشی");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
-  await page.getByLabel("زبان").first().selectOption("tr");
+  await page.locator(".preference-controls select").first().selectOption("tr");
   await expect(page.locator("html")).toHaveAttribute("lang", "tr");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await page.getByLabel("Dil").first().selectOption("en");
+  await page.locator(".preference-controls select").first().selectOption("en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
   await page.emulateMedia({ reducedMotion: "reduce" });

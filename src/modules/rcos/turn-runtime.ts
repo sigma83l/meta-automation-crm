@@ -62,6 +62,18 @@ const MEMORY_ROWS = 24;
  */
 const PRIOR_TURN_ROWS = 3;
 
+/**
+ * Every column `ProfileRow` promises, as one string.
+ *
+ * Exported because the AI lab reads the same row through its own client and
+ * kept its own copy of this list. When `business` was added to `TurnContext`,
+ * this select gained six columns and the lab's did not -- so `loadTurnContext`
+ * read `description` as undefined from a row that had never selected it, and
+ * the lab died on `.trim()` of undefined. One list cannot drift from itself.
+ */
+export const PROFILE_COLUMNS =
+  "brand_name,description,tone,answer_length,emoji_policy,timezone,primary_language,fallback_language,forbidden_claims,escalation_keywords,low_confidence_threshold,business_hours,ai_mode,demo_mode_enabled";
+
 export type ProfileRow = Readonly<{
   brand_name: string;
   description: string;
@@ -425,9 +437,7 @@ export async function createTurnRuntime(
   const env = getServerEnvironment();
   const { data: profileRow } = await admin
     .from("business_profiles")
-    .select(
-      "brand_name,description,tone,answer_length,emoji_policy,timezone,primary_language,fallback_language,forbidden_claims,escalation_keywords,low_confidence_threshold,business_hours,ai_mode,demo_mode_enabled"
-    )
+    .select(PROFILE_COLUMNS)
     .eq("workspace_id", event.workspaceId)
     .maybeSingle();
   if (!profileRow) return undefined;

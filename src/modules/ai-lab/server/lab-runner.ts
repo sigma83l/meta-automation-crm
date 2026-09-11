@@ -16,6 +16,7 @@ import {
 } from "@/src/modules/rcos/ai-turn-ports";
 import { runTurn, type TurnEvent, type TurnRecord } from "@/src/modules/rcos/turn-engine";
 import {
+  PROFILE_COLUMNS,
   createTurnRuntime,
   loadTurnContext,
   providersForWorkspace,
@@ -24,9 +25,6 @@ import {
 } from "@/src/modules/rcos/turn-runtime";
 import type { TrustedWorkspace } from "@/src/modules/workspaces/server/resolve-workspace";
 import type { LabRunRequest } from "../contracts";
-
-const PROFILE_COLUMNS =
-  "primary_language,fallback_language,forbidden_claims,escalation_keywords,low_confidence_threshold,business_hours,ai_mode,demo_mode_enabled";
 
 /** Names the lab's own rows so they are obvious in the CRM and the inbox. */
 const SYNTHETIC_CUSTOMER_NAME = "AI Lab (synthetic)";
