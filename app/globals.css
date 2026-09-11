@@ -5128,3 +5128,77 @@ main {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* Test Center thread. A rehearsal of a real exchange, so it reads like one:
+   the customer on one side, the business on the other, and the evidence for
+   each answer folded away underneath it rather than between the messages. */
+.simulation-thread {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.simulation-thread > li {
+  display: grid;
+  gap: 6px;
+}
+
+.thread-bubble {
+  max-width: min(78%, 560px);
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+/* Logical properties, so the sides swap with the document direction rather
+   than staying pinned to the left in Persian. */
+.thread-bubble.from-customer {
+  margin-inline-end: auto;
+  border-start-start-radius: 4px;
+  background: var(--surface-tertiary);
+  color: var(--ink);
+}
+
+.thread-bubble.from-business {
+  margin-inline-start: auto;
+  border-start-end-radius: 4px;
+  background: var(--message-outbound);
+  color: var(--ink);
+}
+
+/* A refusal is still shown in the thread, because what the assistant nearly
+   said is the thing worth reading. The border says it never went out. */
+.thread-bubble.from-business.verdict-would_block,
+.thread-bubble.from-business.verdict-would_hand_off {
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+
+.thread-trace {
+  margin-inline-start: auto;
+  max-width: min(78%, 560px);
+}
+
+.thread-trace > summary {
+  cursor: pointer;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.thread-trace[open] > summary {
+  margin-block-end: 8px;
+}
+
+@media (max-width: 640px) {
+  .thread-bubble,
+  .thread-trace {
+    max-width: 100%;
+  }
+}

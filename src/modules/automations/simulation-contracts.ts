@@ -32,7 +32,26 @@ export const simulationRequestSchema = z
     channel: z.enum(SIMULATION_CHANNELS),
     message: z.string().trim().min(1).max(4000),
     /** Present for `conversation` mode; absent means `synthetic`. */
-    conversationId: z.uuid().optional()
+    conversationId: z.uuid().optional(),
+    /**
+     * What was said before this message, oldest first.
+     *
+     * Carried by the client rather than read back from a database, because the
+     * Test Center writes nothing: a synthetic exchange that persisted would put
+     * invented messages in a real inbox. The trade is that the transcript lives
+     * only as long as the page, which is the right lifetime for a rehearsal.
+     */
+    history: z
+      .array(
+        z
+          .object({
+            role: z.enum(["customer", "business"]),
+            content: z.string().trim().min(1).max(4000)
+          })
+          .strict()
+      )
+      .max(40)
+      .default([])
   })
   .strict();
 
@@ -118,6 +137,8 @@ export type SimulationModelCall = Readonly<{
   /** Includes reasoning tokens, which are billed as output. */
   outputTokens?: number;
 }>;
+
+export type SimulationTurn = Readonly<{ role: "customer" | "business"; content: string }>;
 
 export type SimulationTrace = Readonly<{
   verdict: SimulationVerdict;

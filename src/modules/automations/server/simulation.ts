@@ -151,6 +151,35 @@ export async function simulateAutomationTurn(
       connectionMode: "sandbox"
     },
     {
+      /**
+       * The transcript the model answers, supplied rather than read.
+       *
+       * `loadTurnContext` builds `messages` from the `messages` table for this
+       * conversation id. A synthetic run's id matches no row, so the transcript
+       * came back empty -- and the prompt's instruction is "answer the last
+       * Customer line", of which there were none. The model, given a question
+       * it could not see, greeted instead. That is why a workspace with an
+       * approved answer to "what time do you open?" got "Hello! How can I help
+       * you today?".
+       *
+       * Everything else the workspace knows -- its FAQs, prices, hours, voice,
+       * policy and remembered facts -- still comes from `loaded`, so only the
+       * conversation itself is supplied here.
+       */
+      context: (loaded) => ({
+        ...loaded,
+        messages: [
+          // A real conversation keeps its own history, which is the point of
+          // choosing one. A synthetic exchange has only what the page is
+          // holding.
+          ...(subject === "conversation"
+            ? loaded.messages
+            : request.history.map((turn) => ({ role: turn.role, content: turn.content }))),
+          // Appended either way: the message being tested is never in the
+          // transcript, because nothing about this run is written down.
+          { role: "customer" as const, content: request.message }
+        ]
+      }),
       onCall: (record) =>
         void modelCalls.push({
           role: String(record.role),

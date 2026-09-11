@@ -121,6 +121,39 @@ describe("the workspace's own voice reaches the prompt", () => {
     ]);
   });
 
+  it("puts the customer's message in the prompt, or there is nothing to answer", async () => {
+    // The failure this guards against was silent and total. A synthetic Test
+    // Center run has a conversation id matching no row, so `messages` came back
+    // empty -- and the prompt's instruction is "answer the last Customer line",
+    // of which there were none. Asked "what time do you open?" against a
+    // workspace whose approved FAQ answered exactly that, the model returned
+    // "Hello! How can I help you today?", because the question never reached
+    // it. The reply looked like a grounding failure and was an empty
+    // transcript.
+    const context = await contextFor();
+    const withTranscript = {
+      ...context,
+      messages: [
+        { role: "customer" as const, content: "are you open saturday?" },
+        { role: "business" as const, content: "We are closed on Saturday." },
+        { role: "customer" as const, content: "what time do you open?" }
+      ]
+    };
+
+    const user = buildUserPrompt(buildReplyInput(event, withTranscript));
+
+    expect(user).toContain("what time do you open?");
+    // The prior exchange travels too, which is what makes a second message a
+    // conversation rather than another first contact.
+    expect(user).toContain("are you open saturday?");
+    expect(user).toContain("We are closed on Saturday.");
+    // And the message to answer is last, because that is what the instruction
+    // points at.
+    expect(user.lastIndexOf("what time do you open?")).toBeGreaterThan(
+      user.lastIndexOf("are you open saturday?")
+    );
+  });
+
   it("names the business, its voice and its hours in the prompt", async () => {
     const context = await contextFor();
     const input = buildReplyInput(event, context);

@@ -46,7 +46,18 @@ export function TestCenterConsole({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [trace, setTrace] = useState<SimulationTrace | undefined>();
+  /**
+   * The exchange so far, and what each answer cost.
+   *
+   * Held here rather than fetched, because the run writes nothing: a synthetic
+   * conversation that persisted would put invented messages in a real inbox.
+   * It is sent back with each message so the model can see what was already
+   * said, which is what makes this a conversation rather than a series of
+   * unrelated first contacts.
+   */
+  const [turns, setTurns] = useState<
+    readonly Readonly<{ customer: string; trace?: SimulationTrace; error?: string }>[]
+  >([]);
 
   const failureText = (code: string) =>
     code === "NO_BUSINESS_PROFILE"
@@ -68,10 +79,24 @@ export function TestCenterConsole({
           );
 
   async function run() {
-    if (!automationId || message.trim().length === 0) return;
+    const said = message.trim();
+    if (!automationId || said.length === 0) return;
     setBusy(true);
     setError("");
-    setTrace(undefined);
+    // Cleared straight away, the way a chat box empties when you press send.
+    setMessage("");
+    // Only what the assistant actually said goes back as history. A draft the
+    // validator refused was never sent, so treating it as something the
+    // business said would have the model answer a message its customer never
+    // received.
+    const history = turns.flatMap((turn) =>
+      turn.trace?.wouldSend
+        ? [
+            { role: "customer" as const, content: turn.customer },
+            { role: "business" as const, content: turn.trace.wouldSend.text }
+          ]
+        : [{ role: "customer" as const, content: turn.customer }]
+    );
     try {
       const response = await fetch("/api/automations/test-center", {
         method: "POST",
@@ -79,18 +104,25 @@ export function TestCenterConsole({
         body: JSON.stringify({
           automationId,
           channel,
-          message: message.trim(),
+          message: said,
+          history,
           ...(conversationId ? { conversationId } : {})
         })
       });
       const body = (await response.json()) as SimulationTrace | { error: string };
       if (!response.ok || "error" in body) {
-        setError(failureText("error" in body ? body.error : "SIMULATION_FAILED"));
+        setTurns((previous) => [
+          ...previous,
+          { customer: said, error: failureText("error" in body ? body.error : "SIMULATION_FAILED") }
+        ]);
         return;
       }
-      setTrace(body);
+      setTurns((previous) => [...previous, { customer: said, trace: body }]);
     } catch {
-      setError(failureText("SIMULATION_FAILED"));
+      setTurns((previous) => [
+        ...previous,
+        { customer: said, error: failureText("SIMULATION_FAILED") }
+      ]);
     } finally {
       setBusy(false);
     }
@@ -213,6 +245,140 @@ export function TestCenterConsole({
         ? text("WOULD HAND OFF", "DEVREDİLİRDİ", "به انسان واگذار می‌شد")
         : text("WOULD BLOCK", "ENGELLENİRDİ", "مسدود می‌شد");
 
+  /** One answered message: its verdict, its twelve steps, and what it cost. */
+  function renderTrace(trace: SimulationTrace) {
+    return (
+      <div className="simulation-result">
+        <div className={`simulation-verdict verdict-${trace.verdict}`}>
+          <span className="eyebrow">{text("Verdict", "Karar", "حکم")}</span>
+          <strong>{verdictLabel(trace.verdict)}</strong>
+          {trace.reasonCodes.length > 0 && (
+            <ul className="reason-codes">
+              {trace.reasonCodes.map((code) => (
+                <li key={code}>
+                  <code>{code}</code>
+                  {isReviewReason(code) && (
+                    <span>
+                      {code === "empty_draft" && emptyDraftCause(trace.modelCalls)
+                        ? emptyDraftCause(trace.modelCalls)
+                        : t(`review.${code}`)}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <ol className="simulation-steps">
+          {trace.steps.map((step) => (
+            <li key={step.id} className={STATUS_TONE[step.status]}>
+              <span className="step-number">{step.step}</span>
+              <span className="step-label">{step.label}</span>
+              <span className="step-detail">{step.detail}</span>
+            </li>
+          ))}
+        </ol>
+        {trace.draft && (
+          <div className="simulation-draft">
+            <span className="eyebrow">
+              {trace.wouldSend
+                ? text("Reply that would go out", "Gönderilecek yanıt", "پاسخی که ارسال می‌شد")
+                : text(
+                    "Draft the validator refused",
+                    "Doğrulayıcının reddettiği taslak",
+                    "پیش‌نویسی که اعتبارسنج رد کرد"
+                  )}
+            </span>
+            <p dir="auto">{trace.draft.text}</p>
+            {trace.draft.citedRefs.length > 0 && (
+              <p className="cited-refs">
+                {text("Cited", "Alıntılanan", "استناد")}: {trace.draft.citedRefs.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+        {trace.validationDetail && trace.validationDetail.length > 0 && (
+          <ul className="validation-detail">
+            {trace.validationDetail.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {trace.modelCalls.length > 0 && (
+          <div className="model-calls">
+            <span className="eyebrow">
+              {text("Model calls", "Model çağrıları", "تماس‌های مدل")}
+            </span>
+            <ul>
+              {trace.modelCalls.map((call, index) => (
+                <li key={`${call.task}-${index}`} className={`call-${call.outcome}`}>
+                  <code>
+                    {call.task === "reply"
+                      ? text("reply", "yanıt", "پاسخ")
+                      : text("classify", "sınıflandırma", "دسته‌بندی")}
+                    {" · "}
+                    {call.role}
+                  </code>
+                  <span dir="ltr">{call.model || "—"}</span>
+                  {/* Named rather than relying on being the last span: the
+                      routing sentence below now takes that position, and the
+                      status was aligned by `span:last-child`. */}
+                  <span className="call-status">
+                    {call.outcome}
+                    {call.deferredToHuman
+                      ? ` · ${text("asked for a person", "kişi istedi", "درخواست انسان")}`
+                      : ""}
+                    {call.failureCode ? ` · ${call.failureCode}` : ""}
+                    {call.failureKind ? ` (${call.failureKind})` : ""}
+                    {call.inputTokens === undefined
+                      ? ""
+                      : ` · ${call.inputTokens} ${text("in", "giriş", "ورودی")} / ${call.outputTokens} ${text("out", "çıkış", "خروجی")}`}
+                  </span>
+                  {/* Why this model and not a dearer one, which is the
+                      question a dynamically routed reply raises and the
+                      trace could not previously answer. */}
+                  {call.routingReasons && call.routingReasons.length > 0 && (
+                    <span className="routing-reasons">
+                      {text("Chosen because", "Seçilme nedeni", "دلیل انتخاب")}:{" "}
+                      {call.routingReasons.map(routingReason).join("; ")}
+                    </span>
+                  )}
+                  {call.deferralReason && (
+                    <span className="deferral-reason">{call.deferralReason}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {(() => {
+              const totals = tokenTotals(trace.modelCalls);
+              return totals ? (
+                <p className="token-totals">
+                  {text("This turn", "Bu tur", "این نوبت")}: {totals.input}{" "}
+                  {text("input tokens", "giriş jetonu", "توکن ورودی")}, {totals.output}{" "}
+                  {text(
+                    "output tokens including reasoning",
+                    "akıl yürütme dahil çıkış jetonu",
+                    "توکن خروجی شامل استدلال"
+                  )}
+                  .
+                </p>
+              ) : null;
+            })()}
+          </div>
+        )}
+        {trace.subject === "synthetic" && (
+          <p className="simulation-caveat" role="note">
+            {text(
+              "Step 4 used a stipulated open conversation. Entitlement, platform switch and feature flags were read live.",
+              "4. adım varsayılan açık bir görüşme kullandı. Hak sahipliği, platform anahtarı ve özellik bayrakları canlı okundu.",
+              "گام ۴ از یک گفت‌وگوی بازِ فرضی استفاده کرد. اشتراک، کلید پلتفرم و پرچم‌های ویژگی به‌صورت زنده خوانده شدند."
+            )}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <section className="panel simulation-runner">
       <div className="simulation-controls">
@@ -283,9 +449,19 @@ export function TestCenterConsole({
           onClick={run}
         >
           {busy
-            ? text("Running…", "Çalışıyor…", "در حال اجرا…")
-            : text("Run simulation", "Simülasyonu çalıştır", "اجرای شبیه‌سازی")}
+            ? text("Sending…", "Gönderiliyor…", "در حال ارسال…")
+            : text("Send", "Gönder", "ارسال")}
         </button>
+        {turns.length > 0 && (
+          <button
+            type="button"
+            className="button-muted"
+            disabled={!ready || busy}
+            onClick={() => setTurns([])}
+          >
+            {text("New conversation", "Yeni görüşme", "گفت‌وگوی جدید")}
+          </button>
+        )}
         <span className="status-pill">
           {text(
             "Nothing is sent or stored",
@@ -304,135 +480,44 @@ export function TestCenterConsole({
         </p>
       )}
       {error && <p role="alert">{error}</p>}
-      {trace && (
-        <div className="simulation-result">
-          <div className={`simulation-verdict verdict-${trace.verdict}`}>
-            <span className="eyebrow">{text("Verdict", "Karar", "حکم")}</span>
-            <strong>{verdictLabel(trace.verdict)}</strong>
-            {trace.reasonCodes.length > 0 && (
-              <ul className="reason-codes">
-                {trace.reasonCodes.map((code) => (
-                  <li key={code}>
-                    <code>{code}</code>
-                    {isReviewReason(code) && (
-                      <span>
-                        {code === "empty_draft" && emptyDraftCause(trace.modelCalls)
-                          ? emptyDraftCause(trace.modelCalls)
-                          : t(`review.${code}`)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <ol className="simulation-steps">
-            {trace.steps.map((step) => (
-              <li key={step.id} className={STATUS_TONE[step.status]}>
-                <span className="step-number">{step.step}</span>
-                <span className="step-label">{step.label}</span>
-                <span className="step-detail">{step.detail}</span>
-              </li>
-            ))}
-          </ol>
-          {trace.draft && (
-            <div className="simulation-draft">
-              <span className="eyebrow">
-                {trace.wouldSend
-                  ? text("Reply that would go out", "Gönderilecek yanıt", "پاسخی که ارسال می‌شد")
-                  : text(
-                      "Draft the validator refused",
-                      "Doğrulayıcının reddettiği taslak",
-                      "پیش‌نویسی که اعتبارسنج رد کرد"
-                    )}
-              </span>
-              <p dir="auto">{trace.draft.text}</p>
-              {trace.draft.citedRefs.length > 0 && (
-                <p className="cited-refs">
-                  {text("Cited", "Alıntılanan", "استناد")}: {trace.draft.citedRefs.join(", ")}
-                </p>
-              )}
-            </div>
-          )}
-          {trace.validationDetail && trace.validationDetail.length > 0 && (
-            <ul className="validation-detail">
-              {trace.validationDetail.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          )}
-          {trace.modelCalls.length > 0 && (
-            <div className="model-calls">
-              <span className="eyebrow">
-                {text("Model calls", "Model çağrıları", "تماس‌های مدل")}
-              </span>
-              <ul>
-                {trace.modelCalls.map((call, index) => (
-                  <li key={`${call.task}-${index}`} className={`call-${call.outcome}`}>
-                    <code>
-                      {call.task === "reply"
-                        ? text("reply", "yanıt", "پاسخ")
-                        : text("classify", "sınıflandırma", "دسته‌بندی")}
-                      {" · "}
-                      {call.role}
-                    </code>
-                    <span dir="ltr">{call.model || "—"}</span>
-                    {/* Named rather than relying on being the last span: the
-                        routing sentence below now takes that position, and the
-                        status was aligned by `span:last-child`. */}
-                    <span className="call-status">
-                      {call.outcome}
-                      {call.deferredToHuman
-                        ? ` · ${text("asked for a person", "kişi istedi", "درخواست انسان")}`
-                        : ""}
-                      {call.failureCode ? ` · ${call.failureCode}` : ""}
-                      {call.failureKind ? ` (${call.failureKind})` : ""}
-                      {call.inputTokens === undefined
-                        ? ""
-                        : ` · ${call.inputTokens} ${text("in", "giriş", "ورودی")} / ${call.outputTokens} ${text("out", "çıkış", "خروجی")}`}
-                    </span>
-                    {/* Why this model and not a dearer one, which is the
-                        question a dynamically routed reply raises and the
-                        trace could not previously answer. */}
-                    {call.routingReasons && call.routingReasons.length > 0 && (
-                      <span className="routing-reasons">
-                        {text("Chosen because", "Seçilme nedeni", "دلیل انتخاب")}:{" "}
-                        {call.routingReasons.map(routingReason).join("; ")}
-                      </span>
-                    )}
-                    {call.deferralReason && (
-                      <span className="deferral-reason">{call.deferralReason}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {(() => {
-                const totals = tokenTotals(trace.modelCalls);
-                return totals ? (
-                  <p className="token-totals">
-                    {text("This turn", "Bu tur", "این نوبت")}: {totals.input}{" "}
-                    {text("input tokens", "giriş jetonu", "توکن ورودی")}, {totals.output}{" "}
-                    {text(
-                      "output tokens including reasoning",
-                      "akıl yürütme dahil çıkış jetonu",
-                      "توکن خروجی شامل استدلال"
-                    )}
-                    .
+      {turns.length > 0 && (
+        <ol className="simulation-thread">
+          {turns.map((turn, index) => (
+            <li key={index}>
+              <p className="thread-bubble from-customer" dir="auto">
+                {turn.customer}
+              </p>
+              {turn.error ? (
+                <p role="alert">{turn.error}</p>
+              ) : turn.trace ? (
+                <>
+                  <p
+                    className={`thread-bubble from-business verdict-${turn.trace.verdict}`}
+                    dir="auto"
+                  >
+                    {turn.trace.wouldSend?.text ??
+                      turn.trace.draft?.text ??
+                      text(
+                        "Nothing would be sent.",
+                        "Hiçbir şey gönderilmezdi.",
+                        "چیزی ارسال نمی‌شد."
+                      )}
                   </p>
-                ) : null;
-              })()}
-            </div>
-          )}
-          {trace.subject === "synthetic" && (
-            <p className="simulation-caveat" role="note">
-              {text(
-                "Step 4 used a stipulated open conversation. Entitlement, platform switch and feature flags were read live.",
-                "4. adım varsayılan açık bir görüşme kullandı. Hak sahipliği, platform anahtarı ve özellik bayrakları canlı okundu.",
-                "گام ۴ از یک گفت‌وگوی بازِ فرضی استفاده کرد. اشتراک، کلید پلتفرم و پرچم‌های ویژگی به‌صورت زنده خوانده شدند."
-              )}
-            </p>
-          )}
-        </div>
+                  <details className="thread-trace">
+                    <summary>
+                      {verdictLabel(turn.trace.verdict)}
+                      {turn.trace.modelCalls
+                        .filter((call) => call.task === "reply")
+                        .map((call) => ` · ${call.model}`)
+                        .join("")}
+                    </summary>
+                    {renderTrace(turn.trace)}
+                  </details>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ol>
       )}
     </section>
   );
