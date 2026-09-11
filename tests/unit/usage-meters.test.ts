@@ -7,7 +7,10 @@ import {
   automationActionCounts,
   capStateFor,
   limitsForEntitlements,
+  limitsForPlanRow,
   macIdempotencyKey,
+  workUnitsFor,
+  workUnitsIdempotencyKey,
   trialPauseFor,
   type MeterLimits
 } from "@/src/modules/billing/usage-meters";
@@ -134,8 +137,12 @@ describe("quota authorisation happens before the work", () => {
     expect(authorizeUsage("mac", {}, { ...trialLimits, mac: 0 })).toMatchObject({ allowed: false });
   });
 
-  it("has a limit for every meter", () => {
-    for (const meter of USAGE_METERS) {
+  it("has a limit for every meter the retired catalogue knows about", () => {
+    // Not every meter any more. The 2026-09-v2 catalogue meters work units and
+    // connector units, which the Paddle catalogue file has nowhere to put -
+    // those limits come from the `subscription_plans` row instead, and
+    // `limitsForPlanRow` is what reads them.
+    for (const meter of ["mac", "ai_reply", "automation_action", "seat", "media_bytes"] as const) {
       expect(`${meter}:${typeof trialLimits[meter]}`).toBe(`${meter}:number`);
     }
   });
@@ -184,5 +191,94 @@ describe("exhausting a trial quota pauses AI, not the inbox", () => {
     expect(
       trialPauseFor({ ai_reply: 999, automation_action: 999, mac: 999 }, trialLimits).manualAllowed
     ).toBe(true);
+  });
+});
+
+describe("AI work units", () => {
+  it("keeps the retired meters listed so historical rows stay readable", () => {
+    // Nothing writes them any more. Dropping them from the union would make a
+    // ledger row written under the old model unreadable by the code that has
+    // to explain an old invoice.
+    expect(USAGE_METERS).toContain("ai_reply");
+    expect(USAGE_METERS).toContain("automation_action");
+    expect(USAGE_METERS).toContain("ai_work_units");
+  });
+
+  it("prices a cheap lookup below a reasoned reply", () => {
+    // The whole reason the meter changed. `ai_reply` charged these the same,
+    // so a one-line read of approved hours subsidised a reasoned reply to a
+    // complaint and neither price meant anything.
+    const lookup = workUnitsFor({ role: "lookup", outcome: "sent" });
+    const primary = workUnitsFor({ role: "primary", outcome: "sent" });
+    const escalation = workUnitsFor({ role: "escalation", outcome: "sent" });
+    expect(lookup).toBe(1);
+    expect(primary).toBe(2);
+    expect(escalation).toBe(5);
+    expect(lookup).toBeLessThan(primary);
+    expect(primary).toBeLessThan(escalation);
+  });
+
+  it("charges nothing when no model ran", () => {
+    expect(workUnitsFor({ role: "deterministic", outcome: "sent" })).toBe(0);
+  });
+
+  it("charges nothing for a reply the customer never received", () => {
+    // Tokens were spent either way, but billing for an undelivered reply is
+    // indefensible and removes our own incentive to stop producing them. The
+    // same rule `aiReplyCounts` applies, and the two must not disagree.
+    for (const outcome of ["failed", "rejected_by_validator"] as const) {
+      expect(`${outcome}:${workUnitsFor({ role: "escalation", outcome })}`).toBe(`${outcome}:0`);
+    }
+  });
+
+  it("charges an ambiguous send, because it is not free to us either", () => {
+    expect(workUnitsFor({ role: "primary", outcome: "sent_unknown" })).toBe(2);
+  });
+
+  it("prices a turn that drove a tool above one that did not", () => {
+    expect(workUnitsFor({ role: "primary", outcome: "sent", toolExecuted: true })).toBe(3);
+    expect(workUnitsFor({ role: "escalation", outcome: "sent", toolExecuted: true })).toBe(8);
+  });
+
+  it("keys one row per event, so a redelivered turn cannot bill twice", () => {
+    expect(workUnitsIdempotencyKey("evt-1")).toBe(workUnitsIdempotencyKey("evt-1"));
+    expect(workUnitsIdempotencyKey("evt-1")).not.toBe(workUnitsIdempotencyKey("evt-2"));
+  });
+});
+
+describe("limits read from the plan catalogue row", () => {
+  const growth = {
+    mac: 2500,
+    ai_work_units: 3000,
+    automation_actions: 15000,
+    connector_units: 5000,
+    seats: 3,
+    storage_mb: 10240
+  };
+
+  it("carries the 2026-09-v2 numbers across, converting storage to bytes", () => {
+    const limits = limitsForPlanRow(growth);
+    expect(limits.mac).toBe(2500);
+    expect(limits.ai_work_units).toBe(3000);
+    expect(limits.connector_units).toBe(5000);
+    expect(limits.seat).toBe(3);
+    expect(limits.media_bytes).toBe(10240 * 1024 * 1024);
+  });
+
+  it("leaves a fair-use column absent rather than calling it zero", () => {
+    // Business and Agency record no workflow number. Reading null as 0 would
+    // stop the very plans that were sold as unmetered.
+    const limits = limitsForPlanRow({ ...growth, connector_units: null });
+    expect(limits.connector_units).toBeUndefined();
+    expect(authorizeUsage("connector_units", { connector_units: 999999 }, limits)).toEqual({
+      allowed: true,
+      state: "ok"
+    });
+  });
+
+  it("still refuses a meter that has a limit and has reached it", () => {
+    const limits = limitsForPlanRow(growth);
+    const verdict = authorizeUsage("ai_work_units", { ai_work_units: 3000 }, limits);
+    expect(verdict).toEqual({ allowed: false, meter: "ai_work_units", used: 3000, limit: 3000 });
   });
 });

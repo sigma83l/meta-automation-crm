@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
+import { USAGE_METERS } from "@/src/modules/billing/usage-meters";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 /**
@@ -15,6 +16,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const migrationPath = fileURLToPath(
   new URL("../../supabase/migrations/20260816120000_usage_ledger.sql", import.meta.url)
+);
+// Applied on top, so the constraints under test are the ones production has.
+const vocabularyPath = fileURLToPath(
+  new URL(
+    "../../supabase/migrations/20260911120000_usage_meters_v2_vocabulary.sql",
+    import.meta.url
+  )
 );
 const preludePath = fileURLToPath(new URL("./prelude.sql", import.meta.url));
 
@@ -75,6 +83,7 @@ beforeAll(async () => {
   db = await PGlite.create();
   await db.exec(readFileSync(preludePath, "utf8"));
   await db.exec(readFileSync(migrationPath, "utf8"));
+  await db.exec(readFileSync(vocabularyPath, "utf8"));
   workspaceId = await newWorkspace("acme");
   cycleId = await newCycle(workspaceId);
 });
@@ -251,5 +260,95 @@ describe("tenant isolation and privileges", () => {
         where routine_name = 'usage_totals_for_cycle' and grantee in ('anon', 'authenticated')`
     );
     expect(Number(result.rows[0]!.count)).toBe(0);
+  });
+});
+
+describe("the 2026-09-v2 meter vocabulary", () => {
+  /** A workspace of its own, because only one cycle per workspace may be open. */
+  async function ownCycle(label: string): Promise<{ workspace: string; cycle: string }> {
+    const workspace = await newWorkspace(label);
+    const result = await db.query<{ id: string }>(
+      `insert into public.billing_cycles
+         (workspace_id, started_at, ends_at, catalogue_version, plan)
+       values ($1, '2026-10-01T00:00:00Z', '2026-11-01T00:00:00Z', '2026-09-v2', 'growth')
+       returning id`,
+      [workspace]
+    );
+    return { workspace, cycle: result.rows[0]!.id };
+  }
+
+  async function write(workspace: string, cycle: string, meter: string, quantity: number) {
+    await db.query(
+      `insert into public.usage_ledger
+         (workspace_id, billing_cycle_id, meter, quantity, idempotency_key)
+       values ($1, $2, $3, $4, $5)`,
+      [workspace, cycle, meter, quantity, `${meter}:1`]
+    );
+  }
+
+  it("accepts every meter the current catalogue prices", async () => {
+    const { workspace, cycle } = await ownCycle("meters-current");
+    await write(workspace, cycle, "ai_work_units", 5);
+    await write(workspace, cycle, "automation_actions", 2);
+    await write(workspace, cycle, "connector_units", 7);
+    const result = await db.query<{ meter: string; total: string }>(
+      "select meter, total from public.usage_totals_for_cycle($1, $2)",
+      [workspace, cycle]
+    );
+    const byMeter = Object.fromEntries(result.rows.map((r) => [r.meter, Number(r.total)]));
+    expect(byMeter).toMatchObject({ ai_work_units: 5, automation_actions: 2, connector_units: 7 });
+  });
+
+  it("still reads a row written under the retired meters", async () => {
+    // Additive on purpose: an append-only ledger whose old rows stop being
+    // insertable is a ledger whose old invoices stop being explainable.
+    const { workspace, cycle } = await ownCycle("meters-legacy");
+    await write(workspace, cycle, "ai_reply", 3);
+    const result = await db.query<{ total: string }>(
+      "select total from public.usage_totals_for_cycle($1, $2) where meter = 'ai_reply'",
+      [workspace, cycle]
+    );
+    expect(Number(result.rows[0]!.total)).toBe(3);
+  });
+
+  it("refuses a meter nobody defined", async () => {
+    const { workspace, cycle } = await ownCycle("meters-invented");
+    await expect(write(workspace, cycle, "invented_meter", 1)).rejects.toThrow(
+      /usage_ledger_meter_check/
+    );
+  });
+
+  it("accepts a cycle on any current tier, and still on a retired one", async () => {
+    for (const plan of ["free", "solo", "growth", "business", "agency", "trial", "starter"]) {
+      const result = await db.query<{ id: string }>(
+        `insert into public.billing_cycles
+           (workspace_id, started_at, ends_at, catalogue_version, plan)
+         values ($1, '2027-01-01T00:00:00Z', '2027-02-01T00:00:00Z', '2026-09-v2', $2)
+         returning id`,
+        [await newWorkspace(`plan-${plan}`), plan]
+      );
+      expect(`${plan}:${result.rows.length}`).toBe(`${plan}:1`);
+    }
+  });
+
+  it("admits exactly the meters the application declares", async () => {
+    // The union and the check constraint are written in two languages and can
+    // drift silently: the symptom would be a turn that meters correctly in
+    // tests and throws on insert in production.
+    for (const meter of USAGE_METERS) {
+      const { workspace, cycle } = await ownCycle(`drift-${meter}`);
+      await expect(write(workspace, cycle, meter, 1)).resolves.not.toThrow();
+    }
+  });
+
+  it("refuses a tier nobody sells", async () => {
+    await expect(
+      db.query(
+        `insert into public.billing_cycles
+           (workspace_id, started_at, ends_at, catalogue_version, plan)
+         values ($1, '2027-01-01T00:00:00Z', '2027-02-01T00:00:00Z', '2026-09-v2', 'enterprise')`,
+        [await newWorkspace("plan-enterprise")]
+      )
+    ).rejects.toThrow(/billing_cycles_plan_check/);
   });
 });
