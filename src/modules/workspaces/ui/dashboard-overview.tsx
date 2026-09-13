@@ -175,7 +175,10 @@ export function DashboardOverview({
               ))}
             </div>
           </section>
-          <section className="panel">
+          {/* The target of the topbar's Notifications link. Without the id the
+              link navigated here and nothing moved, which reads as a dead
+              control rather than a working one. */}
+          <section className="panel" id="attention">
             <div className="panel-heading">
               <div>
                 <span className="eyebrow">{t("overview.activity")}</span>

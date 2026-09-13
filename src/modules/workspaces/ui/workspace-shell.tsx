@@ -105,7 +105,6 @@ export function WorkspaceShell({
       <main className="workspace-main">
         <header className="topbar">
           <div>
-            <span className="eyebrow">{t("shell.workspaceData")}</span>
             <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
@@ -133,7 +132,6 @@ export function WorkspaceShell({
               </Link>
             ) : null}
             <PreferenceControls compact />
-            <span className="environment-chip">{t("shell.safeMode")}</span>
             <LogoutButton />
           </div>
         </header>

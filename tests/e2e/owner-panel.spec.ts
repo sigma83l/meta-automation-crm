@@ -19,6 +19,14 @@ test("owner completes onboarding, creates every recipe, tests, activates and use
   await page.getByRole("button", { name: "Save and exit" }).click();
   await expect(page).toHaveURL(/dashboard/);
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+
+  // The topbar's Notifications link pointed at `#attention` and nothing carried
+  // that id, so it navigated here and moved nothing -- a control that looks
+  // broken because it is. Following it has to land on a real element.
+  await page.getByRole("link", { name: "Notifications" }).click();
+  await expect(page).toHaveURL(/#attention$/);
+  await expect(page.locator("#attention")).toBeVisible();
+
   await page.goto("/automations");
   const recipes = [
     "Instagram Comment → DM lead collection",

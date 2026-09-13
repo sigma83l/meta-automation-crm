@@ -25,7 +25,13 @@ test("locale, RTL, theme and resumable onboarding persist without mobile overflo
   await expect(page.locator("html")).toHaveAttribute("lang", "fa");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.getByLabel("زبان").first()).toBeVisible();
-  await page.locator(".preference-controls select").nth(1).selectOption("dark");
+  // The theme is a cycling icon button now, not a select. Clicked until it
+  // reaches dark rather than a fixed number of times, so the test does not
+  // encode the cycle's length.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((await page.locator("html").getAttribute("data-theme")) === "dark") break;
+    await page.locator(".preference-controls .theme-toggle").click();
+  }
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   const workspaceName = page.locator('input[name="workspaceName"]');

@@ -5278,3 +5278,36 @@ main {
 .faq-template-answer button {
   width: fit-content;
 }
+
+/* Theme toggle. Square, icon-only, and the same height as the controls beside
+   it so the topbar keeps one baseline. */
+.preference-controls .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.preference-controls .theme-toggle:hover:not(:disabled) {
+  border-color: var(--blue);
+  color: var(--ink);
+}
+
+.preference-controls .theme-toggle:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* The language select loses its visible caption with the codes: two letters in
+   a box read as a language picker, and "Language: EN" did not earn the width.
+   The accessible name stays on the control itself. */
+.preference-controls.compact label > span {
+  display: none;
+}
